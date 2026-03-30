@@ -60,10 +60,19 @@ export const useAuth = create<AuthStore>((set, get) => ({
     try {
       const registerResult = await registerUser(payload);
       setAccessToken(registerResult.accessToken);
-      return { success: true, message: "Registration successful. You can now login." };
+
+      const user = await getCurrentUser();
+      set({
+        user,
+        isAuthenticated: true,
+      });
+
+      return { success: true, message: "Registration successful." };
     } catch (error) {
       const message = getErrorMessage(error);
       console.error("[AUTH] register() action failed.", { message, error });
+      clearAccessToken();
+      set({ user: null, isAuthenticated: false });
       return { success: false, message };
     } finally {
       set({ loading: false });
