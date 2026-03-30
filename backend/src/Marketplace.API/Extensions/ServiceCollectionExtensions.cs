@@ -5,6 +5,7 @@ using Marketplace.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.OpenApi;
 
 namespace Marketplace.API.Extensions;
 
@@ -22,7 +23,35 @@ public static class ServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddControllers(options => options.Filters.Add<ValidateModelAttribute>());
         services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen();
+        services.AddSwaggerGen(options =>
+        {
+            options.SwaggerDoc("v1", new OpenApiInfo
+            {
+                Title = "Marketplace API",
+                Version = "v1"
+            });
+
+            var bearerScheme = new OpenApiSecurityScheme
+            {
+                Name = "Authorization",
+                Description = "Введіть токен у форматі: Bearer {your_access_token}",
+                In = ParameterLocation.Header,
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            };
+
+            options.AddSecurityDefinition("Bearer", bearerScheme);
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+                { bearerScheme, [] }
+            });
+        });
 
         services.AddOpenApi("v1", options =>
         {
