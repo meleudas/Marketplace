@@ -1,0 +1,12 @@
+@*
+  Шаблон підтвердження email (Razor / рендер у сервісі).
+  Плейсхолдери: {{ConfirmationLink}}, {{UserName}}
+*@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /><title>Підтвердження email</title></head>
+<body>
+<p>Вітаємо{{UserName}}!</p>
+<p>Підтвердіть email за посиланням: <a href="{{ConfirmationLink}}">{{ConfirmationLink}}</a></p>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".dockerignore" />
+    <File Path="docker-compose.yml" />
+    <File Path="Dockerfile" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="../../../../../../../../Programing/Projects/Marketplace/src/Marketplace.API/Marketplace.API.csproj" />
+    <Project Path="../../../../../../../../Programing/Projects/Marketplace/src/Marketplace.Application/Marketplace.Application.csproj" />
+    <Project Path="../../../../../../../../Programing/Projects/Marketplace/src/Marketplace.Domain/Marketplace.Domain.csproj" />
+    <Project Path="../../../../../../../../Programing/Projects/Marketplace/src/Marketplace.Infrastructure/Marketplace.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="../../../../../../../../Programing/Projects/Marketplace/tests/Marketplace.Tests/Marketplace.Tests.csproj" />
+  </Folder>
+</Solution>
