@@ -1,6 +1,7 @@
 "use client";
 
 import type { CurrentUser } from "@/types/user";
+import styles from "./ProfileCard.module.css";
 
 interface ProfileCardProps {
   user: CurrentUser;
@@ -10,19 +11,22 @@ interface ProfileCardProps {
 
 export function ProfileCard({ user, onLogout, loading = false }: ProfileCardProps) {
   return (
-    <section className="w-full rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <h2 className="text-xl font-semibold text-zinc-900">Profile</h2>
-      <p className="mt-1 text-sm text-zinc-500">You are authenticated.</p>
+    <section className={styles.card}>
+      <h2 className={styles.title}>Profile</h2>
+      <p className={styles.subtitle}>You are authenticated.</p>
 
-      <div className="mt-4 space-y-2 rounded-lg bg-zinc-50 p-4 text-sm text-zinc-700">
-        <p>
-          <span className="font-medium">Email:</span> {user.email}
+      <div className={styles.infoBlock}>
+        <p className={styles.infoRow}>
+          <span className={styles.infoLabel}>Name:</span> {user.firstName} {user.lastName}
         </p>
-        <p>
-          <span className="font-medium">Username:</span> {user.userName ?? "-"}
+        <p className={styles.infoRow}>
+          <span className={styles.infoLabel}>Role:</span> {user.role}
         </p>
-        <p>
-          <span className="font-medium">Phone:</span> {user.phoneNumber ?? "-"}
+        <p className={styles.infoRow}>
+          <span className={styles.infoLabel}>Verified:</span> {user.isVerified ? "Yes" : "No"}
+        </p>
+        <p className={styles.infoRow}>
+          <span className={styles.infoLabel}>Last login:</span> {user.lastLoginAt ?? "-"}
         </p>
       </div>
 
@@ -33,7 +37,7 @@ export function ProfileCard({ user, onLogout, loading = false }: ProfileCardProp
           void onLogout();
         }}
         disabled={loading}
-        className="mt-5 w-full rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+        className={styles.logoutButton}
       >
         {loading ? "Logging out..." : "Logout"}
       </button>

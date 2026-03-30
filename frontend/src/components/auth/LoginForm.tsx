@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import styles from "./LoginForm.module.css";
 
 export function LoginForm() {
   const login = useAuth((state) => state.login);
@@ -29,11 +30,11 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-      <h2 className="text-xl font-semibold text-zinc-900">Login</h2>
+    <form onSubmit={handleSubmit} className={styles.form}>
+      <h2 className={styles.title}>Login</h2>
 
-      <div className="space-y-1">
-        <label className="text-sm font-medium text-zinc-700" htmlFor="login-email">
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor="login-email">
           Email
         </label>
         <input
@@ -42,13 +43,13 @@ export function LoginForm() {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           required
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring"
+          className={styles.input}
           placeholder="you@example.com"
         />
       </div>
 
-      <div className="space-y-1">
-        <label className="text-sm font-medium text-zinc-700" htmlFor="login-password">
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor="login-password">
           Password
         </label>
         <input
@@ -57,18 +58,18 @@ export function LoginForm() {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           required
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring"
+          className={styles.input}
           placeholder="********"
         />
       </div>
 
-      {error ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
-      {success ? <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</p> : null}
+      {error ? <p className={styles.errorMessage}>{error}</p> : null}
+      {success ? <p className={styles.successMessage}>{success}</p> : null}
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
+        className={styles.submitButton}
       >
         {loading ? "Logging in..." : "Login"}
       </button>

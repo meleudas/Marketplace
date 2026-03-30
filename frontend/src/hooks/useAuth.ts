@@ -6,7 +6,6 @@ import {
   getCurrentUser,
   loginUser,
   logoutUser,
-  refreshAuth,
   registerUser,
 } from "@/lib/api/auth";
 import { clearAccessToken, getAccessToken, setAccessToken } from "@/lib/storage/token";
@@ -25,9 +24,14 @@ const getErrorMessage = (error: unknown): string => {
   }
 
   if (data && typeof data === "object") {
-    const maybeMessage = (data as Record<string, unknown>).message;
-    if (typeof maybeMessage === "string") {
-      return maybeMessage;
+    const problemDetail = (data as Record<string, unknown>).detail;
+    if (typeof problemDetail === "string") {
+      return problemDetail;
+    }
+
+    const legacyMessage = (data as Record<string, unknown>).message;
+    if (typeof legacyMessage === "string") {
+      return legacyMessage;
     }
   }
 
@@ -63,35 +67,18 @@ export const useAuth = create<AuthStore>((set, get) => ({
     set({ loading: true });
     try {
       const loginResult = await loginUser(payload);
-      if (loginResult.token) {
-        setAccessToken(loginResult.token);
-      } else {
-        console.warn("[AUTH] login() completed without access token. Trying refresh endpoint.");
-        const refreshResult = await refreshAuth({ refreshToken: null });
-        if (refreshResult.token) {
-          setAccessToken(refreshResult.token);
-        } else {
-          console.warn("[AUTH] refresh did not return access token. Proceeding with /users/me only.");
-        }
-      }
+      setAccessToken(loginResult.accessToken);
 
       const user = await getCurrentUser();
       set({
         user,
-        isAuthenticated: Boolean(user),
+        isAuthenticated: true,
       });
 
       console.log("[AUTH] login() action completed.", {
-        isAuthenticated: Boolean(user),
+        isAuthenticated: true,
         user,
       });
-
-      if (!user) {
-        return {
-          success: false,
-          message: "Login succeeded but user mapping failed. Check mapCurrentUser().",
-        };
-      }
 
       return { success: true, message: "Login successful." };
     } catch (error) {
@@ -151,12 +138,12 @@ export const useAuth = create<AuthStore>((set, get) => ({
       const user = await getCurrentUser();
       set({
         user,
-        isAuthenticated: Boolean(user),
+        isAuthenticated: true,
         initialized: true,
       });
 
       console.log("[AUTH] loadMe() finished.", {
-        isAuthenticated: Boolean(user),
+        isAuthenticated: true,
         user,
       });
     } catch (error) {

@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import styles from "./RegisterForm.module.css";
 
 export function RegisterForm() {
   const register = useAuth((state) => state.register);
@@ -36,11 +37,11 @@ export function RegisterForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-      <h2 className="text-xl font-semibold text-zinc-900">Register</h2>
+    <form onSubmit={handleSubmit} className={styles.form}>
+      <h2 className={styles.title}>Register</h2>
 
-      <div className="space-y-1">
-        <label className="text-sm font-medium text-zinc-700" htmlFor="register-userName">
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor="register-userName">
           Username
         </label>
         <input
@@ -49,13 +50,13 @@ export function RegisterForm() {
           value={userName}
           onChange={(event) => setUserName(event.target.value)}
           required
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring"
+          className={styles.input}
           placeholder="john"
         />
       </div>
 
-      <div className="space-y-1">
-        <label className="text-sm font-medium text-zinc-700" htmlFor="register-email">
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor="register-email">
           Email
         </label>
         <input
@@ -64,13 +65,13 @@ export function RegisterForm() {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           required
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring"
+          className={styles.input}
           placeholder="you@example.com"
         />
       </div>
 
-      <div className="space-y-1">
-        <label className="text-sm font-medium text-zinc-700" htmlFor="register-phoneNumber">
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor="register-phoneNumber">
           Phone number (optional)
         </label>
         <input
@@ -78,13 +79,13 @@ export function RegisterForm() {
           type="tel"
           value={phoneNumber}
           onChange={(event) => setPhoneNumber(event.target.value)}
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring"
+          className={styles.input}
           placeholder="+380..."
         />
       </div>
 
-      <div className="space-y-1">
-        <label className="text-sm font-medium text-zinc-700" htmlFor="register-password">
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor="register-password">
           Password
         </label>
         <input
@@ -93,18 +94,18 @@ export function RegisterForm() {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           required
-          className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring"
+          className={styles.input}
           placeholder="********"
         />
       </div>
 
-      {error ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
-      {success ? <p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</p> : null}
+      {error ? <p className={styles.errorMessage}>{error}</p> : null}
+      {success ? <p className={styles.successMessage}>{success}</p> : null}
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+        className={styles.submitButton}
       >
         {loading ? "Registering..." : "Register"}
       </button>

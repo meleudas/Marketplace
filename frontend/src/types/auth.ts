@@ -7,9 +7,18 @@ export interface RegisterPayload {
   phoneNumber: string | null;
 }
 
+export interface AuthTokensResponse {
+  accessToken: string;
+  refreshToken: string;
+  accessTokenExpiresAt: string;
+  refreshTokenExpiresAt: string;
+}
+
 export interface LoginPayload {
   email: string;
   password: string;
+  rememberMe?: boolean;
+  twoFactorCode?: string | null;
 }
 
 export interface RefreshPayload {

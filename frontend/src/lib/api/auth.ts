@@ -1,17 +1,16 @@
 import { AxiosError } from "axios";
 import { apiClient } from "@/lib/api/client";
-import { extractAccessToken, mapCurrentUser } from "@/lib/helpers/auth-mappers";
 import type { CurrentUser } from "@/types/user";
-import type { LoginPayload, RefreshPayload, RegisterPayload } from "@/types/auth";
+import type { AuthTokensResponse, LoginPayload, RefreshPayload, RegisterPayload } from "@/types/auth";
 
-export const registerUser = async (payload: RegisterPayload): Promise<unknown> => {
+export const registerUser = async (payload: RegisterPayload): Promise<AuthTokensResponse> => {
   console.log("[AUTH] Register started.", {
     endpoint: "/auth/register",
     payload,
   });
 
   try {
-    const response = await apiClient.post("/auth/register", payload);
+    const response = await apiClient.post<AuthTokensResponse>("/auth/register", payload);
     console.log("[AUTH] Register completed.", {
       endpoint: "/auth/register",
       response: response.data,
@@ -30,23 +29,22 @@ export const registerUser = async (payload: RegisterPayload): Promise<unknown> =
   }
 };
 
-export const loginUser = async (payload: LoginPayload): Promise<{ token: string | null; raw: unknown }> => {
+export const loginUser = async (payload: LoginPayload): Promise<AuthTokensResponse> => {
   console.log("[AUTH] Login started.", {
     endpoint: "/auth/login",
     payload,
   });
 
   try {
-    const response = await apiClient.post("/auth/login", payload);
-    const token = extractAccessToken(response.data);
+    const response = await apiClient.post<AuthTokensResponse>("/auth/login", payload);
 
     console.log("[AUTH] Login completed.", {
       endpoint: "/auth/login",
       response: response.data,
-      tokenFound: Boolean(token),
+      tokenFound: Boolean(response.data.accessToken),
     });
 
-    return { token, raw: response.data };
+    return response.data;
   } catch (error) {
     const axiosError = error as AxiosError;
     console.error("[AUTH] Login failed.", {
@@ -60,23 +58,22 @@ export const loginUser = async (payload: LoginPayload): Promise<{ token: string 
   }
 };
 
-export const refreshAuth = async (payload: RefreshPayload): Promise<{ token: string | null; raw: unknown }> => {
+export const refreshAuth = async (payload: RefreshPayload): Promise<AuthTokensResponse> => {
   console.log("[AUTH] Refresh started.", {
     endpoint: "/auth/refresh",
     payload,
   });
 
   try {
-    const response = await apiClient.post("/auth/refresh", payload);
-    const token = extractAccessToken(response.data);
+    const response = await apiClient.post<AuthTokensResponse>("/auth/refresh", payload);
 
     console.log("[AUTH] Refresh completed.", {
       endpoint: "/auth/refresh",
       response: response.data,
-      tokenFound: Boolean(token),
+      tokenFound: Boolean(response.data.accessToken),
     });
 
-    return { token, raw: response.data };
+    return response.data;
   } catch (error) {
     const axiosError = error as AxiosError;
     console.error("[AUTH] Refresh failed.", {
@@ -96,10 +93,9 @@ export const logoutUser = async (): Promise<void> => {
   });
 
   try {
-    const response = await apiClient.post("/auth/logout");
+    await apiClient.post("/auth/logout");
     console.log("[AUTH] Logout completed.", {
       endpoint: "/auth/logout",
-      response: response.data,
     });
   } catch (error) {
     const axiosError = error as AxiosError;
@@ -113,22 +109,20 @@ export const logoutUser = async (): Promise<void> => {
   }
 };
 
-export const getCurrentUser = async (): Promise<CurrentUser | null> => {
+export const getCurrentUser = async (): Promise<CurrentUser> => {
   console.log("[PROFILE] Load current user started.", {
     endpoint: "/users/me",
   });
 
   try {
-    const response = await apiClient.get("/users/me");
-    const user = mapCurrentUser(response.data);
+    const response = await apiClient.get<CurrentUser>("/users/me");
 
     console.log("[PROFILE] Current user loaded.", {
       endpoint: "/users/me",
       response: response.data,
-      mappedUser: user,
     });
 
-    return user;
+    return response.data;
   } catch (error) {
     const axiosError = error as AxiosError;
     console.error("[PROFILE] Load current user failed.", {
