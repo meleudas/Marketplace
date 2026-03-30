@@ -7,7 +7,6 @@ import type {
   GoogleCallbackExchangePayload,
   GoogleCallbackResponse,
   LoginPayload,
-  RefreshPayload,
   RegisterPayload,
   ResetPasswordPayload,
 } from "@/types/auth";
@@ -44,9 +43,9 @@ export const loginUser = async (payload: LoginPayload): Promise<AuthTokensRespon
   }
 };
 
-export const refreshAuth = async (payload: RefreshPayload): Promise<AuthTokensResponse> => {
+export const refreshAuth = async (): Promise<AuthTokensResponse> => {
   try {
-    const response = await apiClient.post<AuthTokensResponse>("/auth/refresh", payload);
+    const response = await apiClient.post<AuthTokensResponse>("/auth/refresh", null);
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError;

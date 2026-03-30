@@ -21,9 +21,6 @@ export interface LoginPayload {
   twoFactorCode?: string | null;
 }
 
-export interface RefreshPayload {
-  refreshToken: string | null;
-}
 
 export interface ForgotPasswordPayload {
   email: string;

@@ -9,6 +9,7 @@ import {
   getCurrentUser,
   loginUser,
   logoutUser,
+  refreshAuth,
   registerUser,
   resetPassword,
 } from "@/lib/api/auth";
@@ -57,7 +58,8 @@ export const useAuth = create<AuthStore>((set, get) => ({
   register: async (payload: RegisterPayload) => {
     set({ loading: true });
     try {
-      await registerUser(payload);
+      const registerResult = await registerUser(payload);
+      setAccessToken(registerResult.accessToken);
       return { success: true, message: "Registration successful. You can now login." };
     } catch (error) {
       const message = getErrorMessage(error);
@@ -202,6 +204,29 @@ export const useAuth = create<AuthStore>((set, get) => ({
         initialized: true,
       });
     } catch (error) {
+      const axiosError = error as AxiosError;
+
+      if (axiosError.response?.status === 401 && !axiosError.config?.url?.includes("/auth/refresh")) {
+        try {
+          const refreshed = await refreshAuth();
+          setAccessToken(refreshed.accessToken);
+
+          const user = await getCurrentUser();
+          set({
+            user,
+            isAuthenticated: true,
+            initialized: true,
+          });
+          return;
+        } catch (refreshError) {
+          const refreshMessage = getErrorMessage(refreshError);
+          console.error("[AUTH] loadMe() refresh retry failed.", {
+            message: refreshMessage,
+            error: refreshError,
+          });
+        }
+      }
+
       const message = getErrorMessage(error);
       console.error("[AUTH] loadMe() failed.", { message, error });
       clearAccessToken();
