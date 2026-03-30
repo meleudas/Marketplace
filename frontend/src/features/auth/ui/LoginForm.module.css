@@ -17,13 +17,6 @@
   color: #18181b;
 }
 
-.description {
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  color: #52525b;
-}
-
 .field {
   display: flex;
   flex-direction: column;
@@ -45,15 +38,11 @@
   font-size: 0.875rem;
   line-height: 1.25rem;
   outline: none;
-  color: #000000;
+    color: black;
 }
 
 .input:focus {
   box-shadow: 0 0 0 2px #3b82f6;
-}
-
-.input[readonly] {
-  background: #f4f4f5;
 }
 
 .errorMessage {
@@ -86,7 +75,12 @@
   font-weight: 600;
   line-height: 1.25rem;
   color: #ffffff;
+  transition: background-color 0.2s ease;
   cursor: pointer;
+}
+
+.submitButton:hover {
+  background: #3f3f46;
 }
 
 .submitButton:disabled {
@@ -94,11 +88,39 @@
   opacity: 0.6;
 }
 
+.googleButton {
+  width: 100%;
+  border: 1px solid #d4d4d8;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  color: #18181b;
+  cursor: pointer;
+}
+
+.googleButton:hover {
+  background: #f4f4f5;
+}
+
+.googleButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .secondaryActions {
   display: flex;
   flex-direction: column;
+  gap: 0.5rem;
   align-items: center;
-  gap: 0.25rem;
+}
+
+.switchText {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #52525b;
 }
 
 .linkButton {
@@ -109,25 +131,11 @@
   font-weight: 600;
   color: #2563eb;
   cursor: pointer;
-}
-
-.linkButton:disabled {
-  color: #94a3b8;
-  cursor: not-allowed;
+  text-decoration: none;
 }
 
 .linkButton:hover {
   text-decoration: underline;
 }
 
-.linkButton:disabled:hover {
-  text-decoration: none;
-}
-
-.timerText {
-  margin: 0;
-  font-size: 0.75rem;
-  line-height: 1rem;
-  color: #71717a;
-}
 

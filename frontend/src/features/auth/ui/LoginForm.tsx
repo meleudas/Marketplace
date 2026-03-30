@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/features/auth/model/auth.store";
 import styles from "./LoginForm.module.css";
 
 interface LoginFormProps {
@@ -103,4 +103,6 @@ export function LoginForm({ onSwitchToRegister, onForgotPassword }: LoginFormPro
     </form>
   );
 }
+
+
 

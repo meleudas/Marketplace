@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosHeaders, InternalAxiosRequestConfig } from "axios";
-import { clearAccessToken, getAccessToken, setAccessToken } from "@/lib/storage/token";
+import { clearAccessToken, getAccessToken, setAccessToken } from "@/shared/lib/token.storage";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -121,4 +121,6 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+
 

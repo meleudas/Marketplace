@@ -1,6 +1,6 @@
 import { AxiosError } from "axios";
-import { apiClient } from "@/lib/api/client";
-import type { CurrentUser } from "@/types/user";
+import { apiClient } from "@/shared/api/http.client";
+import type { CurrentUser } from "@/shared/types/user.types";
 import type {
   AuthTokensResponse,
   ForgotPasswordPayload,
@@ -9,7 +9,7 @@ import type {
   LoginPayload,
   RegisterPayload,
   ResetPasswordPayload,
-} from "@/types/auth";
+} from "@/features/auth/model/auth.types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -136,4 +136,5 @@ export const exchangeGoogleCallback = async (
     throw error;
   }
 };
+
 

@@ -1,6 +1,6 @@
 "use client";
 
-import type { CurrentUser } from "@/types/user";
+import type { CurrentUser } from "@/shared/types/user.types";
 import styles from "./ProfileCard.module.css";
 
 interface ProfileCardProps {
@@ -43,4 +43,6 @@ export function ProfileCard({ user, onLogout, loading = false }: ProfileCardProp
     </section>
   );
 }
+
+
 

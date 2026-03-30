@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/features/auth/model/auth.store";
 import styles from "./ForgotPasswordForm.module.css";
 
 const RESEND_COOLDOWN_SECONDS = 30;
@@ -191,4 +191,6 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
     </form>
   );
 }
+
+
 

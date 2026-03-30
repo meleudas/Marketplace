@@ -1,4 +1,4 @@
-import type { CurrentUser } from "@/types/user";
+import type { CurrentUser } from "@/shared/types/user.types";
 
 export interface RegisterPayload {
   email: string;
@@ -60,4 +60,6 @@ export interface AuthActions {
 }
 
 export type AuthStore = AuthState & AuthActions;
+
+
 

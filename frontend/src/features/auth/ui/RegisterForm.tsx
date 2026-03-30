@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/features/auth/model/auth.store";
 import styles from "./RegisterForm.module.css";
 
 interface RegisterFormProps {
@@ -123,4 +123,6 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
     </form>
   );
 }
+
+
 

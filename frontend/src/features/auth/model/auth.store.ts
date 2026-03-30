@@ -12,15 +12,15 @@ import {
   refreshAuth,
   registerUser,
   resetPassword,
-} from "@/lib/api/auth";
-import { clearAccessToken, getAccessToken, setAccessToken } from "@/lib/storage/token";
+} from "@/features/auth/api/auth.api";
+import { clearAccessToken, getAccessToken, setAccessToken } from "@/shared/lib/token.storage";
 import type {
   AuthStore,
   ForgotPasswordPayload,
   LoginPayload,
   RegisterPayload,
   ResetPasswordPayload,
-} from "@/types/auth";
+} from "@/features/auth/model/auth.types";
 
 const getErrorMessage = (error: unknown): string => {
   const axiosError = error as AxiosError;
@@ -245,4 +245,6 @@ export const useAuth = create<AuthStore>((set, get) => ({
     }
   },
 }));
+
+
 
