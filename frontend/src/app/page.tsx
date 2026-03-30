@@ -1,57 +1,78 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { RegisterForm } from "@/components/auth/RegisterForm";
 import { ProfileCard } from "@/components/profile/ProfileCard";
 import { useAuth } from "@/hooks/useAuth";
+import styles from "./page.module.css";
 
 export default function Home() {
-  const user = useAuth((state) => state.user);
-  const isAuthenticated = useAuth((state) => state.isAuthenticated);
-  const loading = useAuth((state) => state.loading);
-  const initialized = useAuth((state) => state.initialized);
-  const loadMe = useAuth((state) => state.loadMe);
-  const logout = useAuth((state) => state.logout);
+    const [authMode, setAuthMode] = useState<"login" | "register" | "forgotPassword">("login");
 
-  useEffect(() => {
-    console.log("[AUTH] App mounted, triggering loadMe().");
-    void loadMe();
-  }, [loadMe]);
+    const user = useAuth((state) => state.user);
+    const isAuthenticated = useAuth((state) => state.isAuthenticated);
+    const loading = useAuth((state) => state.loading);
+    const initialized = useAuth((state) => state.initialized);
+    const loadMe = useAuth((state) => state.loadMe);
+    const logout = useAuth((state) => state.logout);
 
-  return (
-    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center px-4 py-10">
-      <div className="w-full space-y-6">
-        <header className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold text-zinc-900">Auth MVP</h1>
-          <p className="text-sm text-zinc-600">
-            Next.js + Axios + Zustand + localStorage token strategy.
-          </p>
-        </header>
+    useEffect(() => {
+        void loadMe();
+    }, [loadMe]);
 
-        {!initialized || (loading && !isAuthenticated) ? (
-          <div className="rounded-xl border border-zinc-200 bg-white p-6 text-center text-sm text-zinc-600 shadow-sm">
-            Loading auth state...
-          </div>
-        ) : null}
+    return (
+        <main className={styles.main}>
+            <div className={styles.container}>
+                <header className={styles.header}>
+                    <h1 className={styles.title}>Auth MVP</h1>
+                    <p className={styles.subtitle}>
+                        Next.js + Axios + Zustand + localStorage token strategy.
+                    </p>
+                </header>
 
-        {initialized && !isAuthenticated ? (
-          <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <LoginForm />
-            <RegisterForm />
-          </section>
-        ) : null}
+                {!initialized && !loading ? (
+                    <div className={styles.initCard}>
+                        Initializing auth...
+                    </div>
+                ) : null}
 
-        {initialized && isAuthenticated && user ? (
-          <ProfileCard
-            user={user}
-            loading={loading}
-            onLogout={async () => {
-              await logout();
-            }}
-          />
-        ) : null}
-      </div>
-    </main>
-  );
+                {initialized && !isAuthenticated ? (
+                    <section className={styles.authSection}>
+                        {authMode === "login" ? (
+                            <LoginForm
+                                onSwitchToRegister={() => setAuthMode("register")}
+                                onForgotPassword={() => setAuthMode("forgotPassword")}
+                            />
+                        ) : null}
+
+                        {authMode === "register" ? (
+                            <RegisterForm onSwitchToLogin={() => setAuthMode("login")} />
+                        ) : null}
+
+                        {authMode === "forgotPassword" ? (
+                            <ForgotPasswordForm onSwitchToLogin={() => setAuthMode("login")} />
+                        ) : null}
+                    </section>
+                ) : null}
+
+                {initialized && isAuthenticated && user ? (
+                    <ProfileCard
+                        user={user}
+                        loading={loading}
+                        onLogout={async () => {
+                            await logout();
+                        }}
+                    />
+                ) : null}
+            </div>
+
+            {loading ? (
+                <div className={styles.loadingOverlay}>
+                    <div className={styles.spinner}/>
+                </div>
+            ) : null}
+        </main>
+    );
 }

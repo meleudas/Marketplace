@@ -33,7 +33,6 @@ export function ProfileCard({ user, onLogout, loading = false }: ProfileCardProp
       <button
         type="button"
         onClick={() => {
-          console.log("[PROFILE] Logout button clicked.");
           void onLogout();
         }}
         disabled={loading}

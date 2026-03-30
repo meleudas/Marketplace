@@ -25,6 +25,16 @@ export interface RefreshPayload {
   refreshToken: string | null;
 }
 
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ResetPasswordPayload {
+  email: string;
+  token: string;
+  newPassword: string;
+}
+
 export interface AuthState {
   user: CurrentUser | null;
   isAuthenticated: boolean;
@@ -35,6 +45,8 @@ export interface AuthState {
 export interface AuthActions {
   register: (payload: RegisterPayload) => Promise<{ success: boolean; message: string }>;
   login: (payload: LoginPayload) => Promise<{ success: boolean; message: string }>;
+  forgotPassword: (payload: ForgotPasswordPayload) => Promise<{ success: boolean; message: string }>;
+  resetPassword: (payload: ResetPasswordPayload) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<{ success: boolean; message: string }>;
   loadMe: () => Promise<void>;
 }

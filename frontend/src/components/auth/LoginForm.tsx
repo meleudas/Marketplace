@@ -4,7 +4,12 @@ import { FormEvent, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import styles from "./LoginForm.module.css";
 
-export function LoginForm() {
+interface LoginFormProps {
+  onSwitchToRegister: () => void;
+  onForgotPassword: () => void;
+}
+
+export function LoginForm({ onSwitchToRegister, onForgotPassword }: LoginFormProps) {
   const login = useAuth((state) => state.login);
   const loading = useAuth((state) => state.loading);
 
@@ -73,6 +78,18 @@ export function LoginForm() {
       >
         {loading ? "Logging in..." : "Login"}
       </button>
+
+      <div className={styles.secondaryActions}>
+        <button type="button" onClick={onForgotPassword} className={styles.linkButton}>
+          Forgot password?
+        </button>
+        <p className={styles.switchText}>
+          No account yet?{" "}
+          <button type="button" onClick={onSwitchToRegister} className={styles.linkButton}>
+            Register
+          </button>
+        </p>
+      </div>
     </form>
   );
 }
