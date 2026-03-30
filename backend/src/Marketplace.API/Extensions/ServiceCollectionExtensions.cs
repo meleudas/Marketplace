@@ -38,19 +38,10 @@ public static class ServiceCollectionExtensions
                 In = ParameterLocation.Header,
                 Type = SecuritySchemeType.Http,
                 Scheme = "bearer",
-                BearerFormat = "JWT",
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
+                BearerFormat = "JWT"
             };
 
             options.AddSecurityDefinition("Bearer", bearerScheme);
-            options.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
-                { bearerScheme, [] }
-            });
         });
 
         services.AddOpenApi("v1", options =>
