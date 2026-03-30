@@ -3,6 +3,8 @@
 import { AxiosError } from "axios";
 import { create } from "zustand";
 import {
+  buildGoogleAuthUrl,
+  exchangeGoogleCallback,
   forgotPassword,
   getCurrentUser,
   loginUser,
@@ -82,6 +84,39 @@ export const useAuth = create<AuthStore>((set, get) => ({
     } catch (error) {
       const message = getErrorMessage(error);
       console.error("[AUTH] login() action failed.", { message, error });
+      clearAccessToken();
+      set({ user: null, isAuthenticated: false });
+      return { success: false, message };
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  startGoogleLogin: () => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const redirectUrl = buildGoogleAuthUrl("/auth/callback");
+    window.location.assign(redirectUrl);
+  },
+
+  completeGoogleLogin: async (code: string) => {
+    set({ loading: true });
+    try {
+      const result = await exchangeGoogleCallback({ code });
+      setAccessToken(result.accessToken);
+
+      const user = await getCurrentUser();
+      set({
+        user,
+        isAuthenticated: true,
+      });
+
+      return { success: true, message: "Google login successful." };
+    } catch (error) {
+      const message = getErrorMessage(error);
+      console.error("[AUTH] completeGoogleLogin() action failed.", { message, error });
       clearAccessToken();
       set({ user: null, isAuthenticated: false });
       return { success: false, message };

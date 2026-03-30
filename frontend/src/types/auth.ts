@@ -35,6 +35,15 @@ export interface ResetPasswordPayload {
   newPassword: string;
 }
 
+export interface GoogleCallbackExchangePayload {
+  code: string;
+}
+
+export interface GoogleCallbackResponse {
+  accessToken: string;
+  accessTokenExpiresAt: string;
+}
+
 export interface AuthState {
   user: CurrentUser | null;
   isAuthenticated: boolean;
@@ -45,6 +54,8 @@ export interface AuthState {
 export interface AuthActions {
   register: (payload: RegisterPayload) => Promise<{ success: boolean; message: string }>;
   login: (payload: LoginPayload) => Promise<{ success: boolean; message: string }>;
+  startGoogleLogin: () => void;
+  completeGoogleLogin: (code: string) => Promise<{ success: boolean; message: string }>;
   forgotPassword: (payload: ForgotPasswordPayload) => Promise<{ success: boolean; message: string }>;
   resetPassword: (payload: ResetPasswordPayload) => Promise<{ success: boolean; message: string }>;
   logout: () => Promise<{ success: boolean; message: string }>;

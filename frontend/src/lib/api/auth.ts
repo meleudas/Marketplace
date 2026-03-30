@@ -4,11 +4,15 @@ import type { CurrentUser } from "@/types/user";
 import type {
   AuthTokensResponse,
   ForgotPasswordPayload,
+  GoogleCallbackExchangePayload,
+  GoogleCallbackResponse,
   LoginPayload,
   RefreshPayload,
   RegisterPayload,
   ResetPasswordPayload,
 } from "@/types/auth";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 export const registerUser = async (payload: RegisterPayload): Promise<AuthTokensResponse> => {
   try {
@@ -105,6 +109,28 @@ export const resetPassword = async (payload: ResetPasswordPayload): Promise<void
     const axiosError = error as AxiosError;
     console.error("[AUTH] Reset password failed.", {
       endpoint: "/account/reset-password",
+      status: axiosError.response?.status,
+      message: axiosError.message,
+    });
+    throw error;
+  }
+};
+
+export const buildGoogleAuthUrl = (returnPath = "/auth/callback"): string => {
+  const query = new URLSearchParams({ returnPath });
+  return `${API_BASE_URL}/auth/google?${query.toString()}`;
+};
+
+export const exchangeGoogleCallback = async (
+  payload: GoogleCallbackExchangePayload,
+): Promise<GoogleCallbackResponse> => {
+  try {
+    const response = await apiClient.post<GoogleCallbackResponse>("/auth/google/callback", payload);
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError;
+    console.error("[AUTH] Google callback exchange failed.", {
+      endpoint: "/auth/google/callback",
       status: axiosError.response?.status,
       message: axiosError.message,
     });

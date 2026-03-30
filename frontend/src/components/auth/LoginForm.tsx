@@ -11,6 +11,7 @@ interface LoginFormProps {
 
 export function LoginForm({ onSwitchToRegister, onForgotPassword }: LoginFormProps) {
   const login = useAuth((state) => state.login);
+  const startGoogleLogin = useAuth((state) => state.startGoogleLogin);
   const loading = useAuth((state) => state.loading);
 
   const [email, setEmail] = useState("");
@@ -77,6 +78,15 @@ export function LoginForm({ onSwitchToRegister, onForgotPassword }: LoginFormPro
         className={styles.submitButton}
       >
         {loading ? "Logging in..." : "Login"}
+      </button>
+
+      <button
+        type="button"
+        disabled={loading}
+        onClick={startGoogleLogin}
+        className={styles.googleButton}
+      >
+        Continue with Google
       </button>
 
       <div className={styles.secondaryActions}>
