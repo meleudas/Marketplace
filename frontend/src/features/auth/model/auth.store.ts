@@ -13,6 +13,7 @@ import {
   registerUser,
   resetPassword,
 } from "@/features/auth/api/auth.api";
+import { isTwoFactorRequiredError } from "@/features/auth/api/is-two-factor-required-error";
 import { clearAccessToken, getAccessToken, setAccessToken } from "@/shared/lib/token.storage";
 import type {
   AuthStore,
@@ -94,6 +95,15 @@ export const useAuth = create<AuthStore>((set, get) => ({
       return { success: true, message: "Login successful." };
     } catch (error) {
       const message = getErrorMessage(error);
+
+      if (isTwoFactorRequiredError(error)) {
+        return {
+          success: false,
+          message,
+          requiresTwoFactor: true,
+        };
+      }
+
       console.error("[AUTH] login() action failed.", { message, error });
       clearAccessToken();
       set({ user: null, isAuthenticated: false });
