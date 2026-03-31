@@ -1,0 +1,69 @@
+.card {
+  width: 100%;
+  border: 1px solid #e4e4e7;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  padding: 1.5rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.75rem;
+  color: #18181b;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #71717a;
+}
+
+.infoBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  border-radius: 0.5rem;
+  background: #f4f4f5;
+  padding: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #3f3f46;
+}
+
+.infoRow {
+  margin: 0;
+}
+
+.infoLabel {
+  font-weight: 500;
+}
+
+.logoutButton {
+  width: 100%;
+  margin-top: 1.25rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: #dc2626;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  color: #ffffff;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.logoutButton:hover {
+  background: #ef4444;
+}
+
+.logoutButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
