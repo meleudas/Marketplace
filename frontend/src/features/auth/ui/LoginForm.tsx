@@ -16,7 +16,6 @@ export function LoginForm({ onSwitchToRegister, onForgotPassword }: LoginFormPro
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [isTwoFactorStep, setIsTwoFactorStep] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +29,6 @@ export function LoginForm({ onSwitchToRegister, onForgotPassword }: LoginFormPro
     const result = await login({
       email: email.trim(),
       password,
-      rememberMe,
       twoFactorCode: isTwoFactorStep ? twoFactorCode.trim() : null,
     });
 
@@ -93,17 +91,6 @@ export function LoginForm({ onSwitchToRegister, onForgotPassword }: LoginFormPro
               placeholder="********"
             />
           </div>
-
-          <label className={styles.checkboxRow} htmlFor="login-remember-me">
-            <input
-              id="login-remember-me"
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(event) => setRememberMe(event.target.checked)}
-              className={styles.checkbox}
-            />
-            Remember me
-          </label>
         </>
       ) : (
         <>
