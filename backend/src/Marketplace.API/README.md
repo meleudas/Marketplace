@@ -65,6 +65,14 @@
 
 - `code: string` (6 цифр)
 
+`EnableTelegramTwoFactorRequest`
+
+- `code: string` (6 цифр)
+
+`TelegramLinkCodeResponse`
+
+- `linkCode: string`
+
 ### Users DTO
 
 `UserDto`
@@ -213,6 +221,49 @@
 - **Auth:** потрібна
 - **Request body:** немає
 - **200 OK body:** порожній
+
+### `POST /account/2fa/telegram/link-code`
+
+Генерує одноразовий код для привʼязки Telegram бота до поточного акаунта.
+
+- **Auth:** потрібна
+- **Request body:** немає
+- **200 OK body:** `TelegramLinkCodeResponse`
+
+### `POST /account/2fa/telegram/send-code`
+
+Надсилає одноразовий код 2FA у Telegram поточного користувача.
+
+- **Auth:** потрібна
+- **Request body:** немає
+- **200 OK body:** порожній
+
+### `POST /account/2fa/telegram/enable`
+
+Вмикає Telegram 2FA для акаунта після перевірки коду.
+
+- **Auth:** потрібна
+- **Request body:** `EnableTelegramTwoFactorRequest`
+- **200 OK body:** порожній
+
+### `POST /account/2fa/telegram/disable`
+
+Вимикає Telegram 2FA для поточного користувача.
+
+- **Auth:** потрібна
+- **Request body:** немає
+- **200 OK body:** порожній
+
+## TelegramIntegrationsController (`/integrations/telegram`)
+
+### `POST /integrations/telegram/webhook`
+
+Webhook endpoint для Telegram bot updates. Для привʼязки акаунта бот очікує команду `/start <link_code>`.
+
+- **Auth:** не потрібна
+- **Header (optional):** `X-Telegram-Bot-Api-Secret-Token` (якщо задано `Telegram:WebhookSecret`)
+- **200 OK:** update прийнято/проігноровано
+- **400 Bad Request:** link-code невалідний або прострочений
 
 ## UsersController (`/users`)
 

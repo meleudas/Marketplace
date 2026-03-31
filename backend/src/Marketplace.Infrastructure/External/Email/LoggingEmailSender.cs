@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Marketplace.Infrastructure.External.Email;
 
-public sealed class LoggingEmailSender : IEmailPort, IEmailSender
+public sealed class LoggingEmailSender : IEmailPort, IEmailSender, IEmailHealthProbe
 {
     private readonly ILogger<LoggingEmailSender> _logger;
 
@@ -35,4 +35,10 @@ public sealed class LoggingEmailSender : IEmailPort, IEmailSender
         _logger.LogInformation("2FA email to {To}, code length {Len}", to, code.Length);
         return Task.CompletedTask;
     }
+
+    public Task<EmailHealthStatus> CheckAsync(CancellationToken ct = default)
+        => Task.FromResult(new EmailHealthStatus(
+            IsHealthy: true,
+            Provider: "LoggingEmailSender",
+            Message: "SendGrid is not configured. Using logging email sender."));
 }

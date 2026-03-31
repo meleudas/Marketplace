@@ -48,7 +48,7 @@ public static class ResultExtensions
             e.Contains("invalid or expired refresh") ||
             e.Contains("invalid confirmation") ||
             e.Contains("invalid reset") ||
-            e.Contains("2fa code"))
+            e.Contains("2fa code required"))
             return StatusCodes.Status401Unauthorized;
         return StatusCodes.Status400BadRequest;
     }

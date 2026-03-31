@@ -9,6 +9,8 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {
         builder.Property(x => x.IsDeleted).HasDefaultValue(false);
+        builder.Property(x => x.TelegramChatId).HasMaxLength(64);
+        builder.Property(x => x.TelegramTwoFactorEnabled).HasDefaultValue(false);
         builder.HasQueryFilter(u => !u.IsDeleted);
     }
 }

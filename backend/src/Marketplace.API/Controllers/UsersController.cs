@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Marketplace.API.Extensions;
 using Marketplace.Application.Users.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -25,8 +24,7 @@ public class UsersController : ControllerBase
     [HttpGet("me")]
     public async Task<IActionResult> Me(CancellationToken ct)
     {
-        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (sub is null || !Guid.TryParse(sub, out var identityUserId))
+        if (!User.TryGetUserId(out var identityUserId))
             return Unauthorized();
 
         var result = await _userReadService.GetMeAsync(identityUserId, ct);
@@ -50,8 +48,7 @@ public class UsersController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
-        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (sub is null || !Guid.TryParse(sub, out var currentId))
+        if (!User.TryGetUserId(out var currentId))
             return Unauthorized();
 
         if (currentId != id)

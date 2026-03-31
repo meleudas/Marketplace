@@ -34,7 +34,7 @@ public static class ServiceCollectionExtensions
             var bearerScheme = new OpenApiSecurityScheme
             {
                 Name = "Authorization",
-                Description = "Введіть токен у форматі: Bearer {your_access_token}",
+                Description = "Вставте тільки access token (без префікса Bearer).",
                 In = ParameterLocation.Header,
                 Type = SecuritySchemeType.Http,
                 Scheme = "bearer",

@@ -4,6 +4,7 @@ using Marketplace.Infrastructure.Caching;
 using Marketplace.Infrastructure.External.Email;
 using Marketplace.Infrastructure.External.OAuth;
 using Marketplace.Infrastructure.External.Sms;
+using Marketplace.Infrastructure.External.Telegram;
 using Marketplace.Infrastructure.Identity;
 using Marketplace.Infrastructure.Identity.Entities;
 using Marketplace.Infrastructure.Identity.Managers;
@@ -29,6 +30,7 @@ public static class DependencyInjection
     {
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<SendGridOptions>(configuration.GetSection(SendGridOptions.SectionName));
+        services.Configure<TelegramOptions>(configuration.GetSection(TelegramOptions.SectionName));
 
         var connectionString = configuration.GetConnectionString("Database")
             ?? throw new InvalidOperationException("Connection string 'Database' is not configured.");
@@ -71,6 +73,22 @@ public static class DependencyInjection
             {
                 options.TokenValidationParameters = JwtParameterHelper.CreateValidationParameters(jwt);
                 options.RequireHttpsMetadata = true;
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var authHeader = context.Request.Headers.Authorization.ToString();
+                        if (authHeader.StartsWith("Bearer Bearer ", StringComparison.OrdinalIgnoreCase))
+                        {
+                            context.Token = authHeader["Bearer Bearer ".Length..].Trim();
+                        }
+                        else if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(context.Token))
+                        {
+                            context.Token = authHeader["Bearer ".Length..].Trim();
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
         configureAuthentication?.Invoke(authenticationBuilder);
@@ -97,6 +115,19 @@ public static class DependencyInjection
         services.AddScoped<IAuthenticationPort, IdentityAuthService>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<GoogleOAuthService>();
+        services.AddScoped<ITelegramLinkCodeStore, TelegramLinkCodeStore>();
+        services.AddHttpClient<TelegramBotSender>();
+
+        var telegramOptions = configuration.GetSection(TelegramOptions.SectionName).Get<TelegramOptions>() ?? new TelegramOptions();
+        if (!string.IsNullOrWhiteSpace(telegramOptions.BotToken))
+        {
+            services.AddScoped<ITelegramPort>(sp => sp.GetRequiredService<TelegramBotSender>());
+        }
+        else
+        {
+            services.AddScoped<LoggingTelegramSender>();
+            services.AddScoped<ITelegramPort>(sp => sp.GetRequiredService<LoggingTelegramSender>());
+        }
 
         var sendGridOptions = configuration.GetSection(SendGridOptions.SectionName).Get<SendGridOptions>() ?? new SendGridOptions();
         var hasSendGrid = !string.IsNullOrWhiteSpace(sendGridOptions.ApiKey) &&
@@ -107,12 +138,14 @@ public static class DependencyInjection
             services.AddScoped<SendGridEmailSender>();
             services.AddScoped<IEmailPort>(sp => sp.GetRequiredService<SendGridEmailSender>());
             services.AddScoped<IEmailSender>(sp => sp.GetRequiredService<SendGridEmailSender>());
+            services.AddScoped<IEmailHealthProbe>(sp => sp.GetRequiredService<SendGridEmailSender>());
         }
         else
         {
             services.AddScoped<LoggingEmailSender>();
             services.AddScoped<IEmailPort>(sp => sp.GetRequiredService<LoggingEmailSender>());
             services.AddScoped<IEmailSender>(sp => sp.GetRequiredService<LoggingEmailSender>());
+            services.AddScoped<IEmailHealthProbe>(sp => sp.GetRequiredService<LoggingEmailSender>());
         }
 
         services.AddScoped<LoggingSmsSender>();

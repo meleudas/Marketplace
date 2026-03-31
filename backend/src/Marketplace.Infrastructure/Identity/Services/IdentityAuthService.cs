@@ -5,14 +5,18 @@ using Marketplace.Domain.Users.Repositories;
 using Marketplace.Domain.Users.ValueObjects;
 using Marketplace.Infrastructure.Identity.Entities;
 using Marketplace.Infrastructure.Identity.Security;
+using Marketplace.Infrastructure.External.Telegram;
 using Marketplace.Infrastructure.Persistence;
 using Marketplace.Infrastructure.Persistence.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace Marketplace.Infrastructure.Identity.Services;
 
-/// <summary>–Â‡Î≥Á‡ˆ≥ˇ <see cref="IAuthenticationPort"/> Ì‡ ·‡Á≥ ASP.NET Identity.</summary>
+/// <summary>ùùùùùùùùù <see cref="IAuthenticationPort"/> ùù ùùù ASP.NET Identity.</summary>
 public class IdentityAuthService : IAuthenticationPort
 {
     private readonly UserManager<ApplicationUser> _userManager;
@@ -21,6 +25,9 @@ public class IdentityAuthService : IAuthenticationPort
     private readonly IdentityUserService _identityUserService;
     private readonly IUserRepository _userRepository;
     private readonly IEmailPort _emailPort;
+    private readonly ITelegramPort _telegramPort;
+    private readonly ITelegramLinkCodeStore _telegramLinkCodeStore;
+    private readonly TelegramOptions _telegramOptions;
 
     public IdentityAuthService(
         UserManager<ApplicationUser> userManager,
@@ -28,7 +35,10 @@ public class IdentityAuthService : IAuthenticationPort
         ITokenPort tokenPort,
         IdentityUserService identityUserService,
         IUserRepository userRepository,
-        IEmailPort emailPort)
+        IEmailPort emailPort,
+        ITelegramPort telegramPort,
+        ITelegramLinkCodeStore telegramLinkCodeStore,
+        IOptions<TelegramOptions> telegramOptions)
     {
         _userManager = userManager;
         _db = db;
@@ -36,6 +46,9 @@ public class IdentityAuthService : IAuthenticationPort
         _identityUserService = identityUserService;
         _userRepository = userRepository;
         _emailPort = emailPort;
+        _telegramPort = telegramPort;
+        _telegramLinkCodeStore = telegramLinkCodeStore;
+        _telegramOptions = telegramOptions.Value;
     }
 
     public async Task<Result<AuthTokens>> RegisterAsync(
@@ -72,17 +85,21 @@ public class IdentityAuthService : IAuthenticationPort
         {
             if (string.IsNullOrWhiteSpace(twoFactorCode))
             {
-                var sendCode = await SendTwoFactorCodeInternalAsync(appUser, ct);
+                var sendCode = appUser.TelegramTwoFactorEnabled
+                    ? await SendTelegramTwoFactorCodeInternalAsync(appUser, ct)
+                    : await SendEmailTwoFactorCodeInternalAsync(appUser, ct);
                 if (sendCode.IsFailure)
                     return Result<AuthTokens>.Failure(sendCode.Error ?? "Failed to send 2FA code.");
 
-                return Result<AuthTokens>.Failure("2FA code required. A verification code was sent to your email.");
+                var channelMessage = appUser.TelegramTwoFactorEnabled
+                    ? "A verification code was sent to your Telegram."
+                    : "A verification code was sent to your email.";
+                return Result<AuthTokens>.Failure($"2FA code required. {channelMessage}");
             }
 
-            var isValid = await _userManager.VerifyTwoFactorTokenAsync(
-                appUser,
-                TokenOptions.DefaultEmailProvider,
-                twoFactorCode);
+            var isValid = appUser.TelegramTwoFactorEnabled
+                ? await _userManager.VerifyTwoFactorTokenAsync(appUser, TokenOptions.DefaultPhoneProvider, twoFactorCode)
+                : await _userManager.VerifyTwoFactorTokenAsync(appUser, TokenOptions.DefaultEmailProvider, twoFactorCode);
 
             if (!isValid)
                 return Result<AuthTokens>.Failure("Invalid 2FA code.");
@@ -220,9 +237,28 @@ public class IdentityAuthService : IAuthenticationPort
     {
         var appUser = await _userManager.FindByIdAsync(userId.Value.ToString());
         if (appUser is null || appUser.IsDeleted)
+        {
+            // #region agent log
+            WriteDebugLog("h7", "IdentityAuthService.cs:SendEmailTwoFactorCodeAsync", "User not found or deleted for email 2FA send", new
+            {
+                runId = "pre-fix-2",
+                userId = userId.Value
+            });
+            // #endregion
             return Result.Failure("User no longer exists.");
+        }
 
-        return await SendTwoFactorCodeInternalAsync(appUser, ct);
+        // #region agent log
+        WriteDebugLog("h7", "IdentityAuthService.cs:SendEmailTwoFactorCodeAsync", "Sending email 2FA code", new
+        {
+            runId = "pre-fix-2",
+            userId = userId.Value,
+            hasEmail = !string.IsNullOrWhiteSpace(appUser.Email),
+            twoFactorEnabled = appUser.TwoFactorEnabled,
+            telegramTwoFactorEnabled = appUser.TelegramTwoFactorEnabled
+        });
+        // #endregion
+        return await SendEmailTwoFactorCodeInternalAsync(appUser, ct);
     }
 
     public async Task<Result> EnableEmailTwoFactorAsync(IdentityUserId userId, string code, CancellationToken ct = default)
@@ -247,13 +283,97 @@ public class IdentityAuthService : IAuthenticationPort
         return Result.Success();
     }
 
+    public async Task<Result<string>> GenerateTelegramLinkCodeAsync(IdentityUserId userId, CancellationToken ct = default)
+    {
+        var appUser = await _userManager.FindByIdAsync(userId.Value.ToString());
+        if (appUser is null || appUser.IsDeleted)
+            return Result<string>.Failure("User no longer exists.");
+
+        var code = GenerateLinkCode();
+        var ttlMinutes = Math.Clamp(_telegramOptions.LinkCodeTtlMinutes, 1, 60);
+        await _telegramLinkCodeStore.StoreAsync(code, appUser.Id, TimeSpan.FromMinutes(ttlMinutes), ct);
+        return Result<string>.Success(code);
+    }
+
+    public async Task<Result> LinkTelegramAccountAsync(string linkCode, string chatId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(linkCode) || string.IsNullOrWhiteSpace(chatId))
+            return Result.Failure("Link code and chat id are required.");
+
+        var userId = await _telegramLinkCodeStore.TakeAsync(linkCode, ct);
+        if (userId is null)
+            return Result.Failure("Link code is invalid or expired.");
+
+        var appUser = await _userManager.FindByIdAsync(userId.Value.ToString());
+        if (appUser is null || appUser.IsDeleted)
+            return Result.Failure("User no longer exists.");
+
+        appUser.TelegramChatId = chatId;
+        appUser.TelegramLinkedAtUtc = DateTime.UtcNow;
+        var update = await _userManager.UpdateAsync(appUser);
+        if (!update.Succeeded)
+            return Result.Failure(string.Join(" ", update.Errors.Select(e => e.Description)));
+
+        return Result.Success();
+    }
+
+    public async Task<Result> SendTelegramTwoFactorCodeAsync(IdentityUserId userId, CancellationToken ct = default)
+    {
+        var appUser = await _userManager.FindByIdAsync(userId.Value.ToString());
+        if (appUser is null || appUser.IsDeleted)
+            return Result.Failure("User no longer exists.");
+
+        return await SendTelegramTwoFactorCodeInternalAsync(appUser, ct);
+    }
+
+    public async Task<Result> EnableTelegramTwoFactorAsync(IdentityUserId userId, string code, CancellationToken ct = default)
+    {
+        var appUser = await _userManager.FindByIdAsync(userId.Value.ToString());
+        if (appUser is null || appUser.IsDeleted)
+            return Result.Failure("User no longer exists.");
+        if (string.IsNullOrWhiteSpace(appUser.TelegramChatId))
+            return Result.Failure("Telegram account is not linked.");
+
+        var isValid = await _userManager.VerifyTwoFactorTokenAsync(
+            appUser,
+            TokenOptions.DefaultPhoneProvider,
+            code);
+
+        if (!isValid)
+            return Result.Failure("Invalid 2FA code.");
+
+        appUser.TelegramTwoFactorEnabled = true;
+        appUser.TwoFactorEnabled = true;
+        var update = await _userManager.UpdateAsync(appUser);
+        if (!update.Succeeded)
+            return Result.Failure(string.Join(" ", update.Errors.Select(e => e.Description)));
+
+        return Result.Success();
+    }
+
+    public async Task<Result> DisableTelegramTwoFactorAsync(IdentityUserId userId, CancellationToken ct = default)
+    {
+        var appUser = await _userManager.FindByIdAsync(userId.Value.ToString());
+        if (appUser is null || appUser.IsDeleted)
+            return Result.Failure("User no longer exists.");
+
+        appUser.TelegramTwoFactorEnabled = false;
+        appUser.TwoFactorEnabled = false;
+
+        var update = await _userManager.UpdateAsync(appUser);
+        if (!update.Succeeded)
+            return Result.Failure(string.Join(" ", update.Errors.Select(e => e.Description)));
+
+        return Result.Success();
+    }
+
     public async Task<Result> DisableEmailTwoFactorAsync(IdentityUserId userId, CancellationToken ct = default)
     {
         var appUser = await _userManager.FindByIdAsync(userId.Value.ToString());
         if (appUser is null || appUser.IsDeleted)
             return Result.Failure("User no longer exists.");
 
-        appUser.TwoFactorEnabled = false;
+        appUser.TwoFactorEnabled = appUser.TelegramTwoFactorEnabled;
         var update = await _userManager.UpdateAsync(appUser);
         if (!update.Succeeded)
             return Result.Failure(string.Join(" ", update.Errors.Select(e => e.Description)));
@@ -282,7 +402,7 @@ public class IdentityAuthService : IAuthenticationPort
         return Result<AuthTokens>.Success(AuthTokens.Create(access, refresh));
     }
 
-    private async Task<Result> SendTwoFactorCodeInternalAsync(ApplicationUser appUser, CancellationToken ct)
+    private async Task<Result> SendEmailTwoFactorCodeInternalAsync(ApplicationUser appUser, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(appUser.Email))
             return Result.Failure("User email is not configured.");
@@ -290,5 +410,44 @@ public class IdentityAuthService : IAuthenticationPort
         var code = await _userManager.GenerateTwoFactorTokenAsync(appUser, TokenOptions.DefaultEmailProvider);
         await _emailPort.SendTwoFactorCodeEmailAsync(appUser.Email, code, ct);
         return Result.Success();
+    }
+
+    private async Task<Result> SendTelegramTwoFactorCodeInternalAsync(ApplicationUser appUser, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(appUser.TelegramChatId))
+            return Result.Failure("Telegram account is not linked.");
+
+        var code = await _userManager.GenerateTwoFactorTokenAsync(appUser, TokenOptions.DefaultPhoneProvider);
+        await _telegramPort.SendMessageAsync(appUser.TelegramChatId, $"Your Marketplace verification code: {code}", ct);
+        return Result.Success();
+    }
+
+    private static string GenerateLinkCode()
+    {
+        Span<byte> bytes = stackalloc byte[6];
+        RandomNumberGenerator.Fill(bytes);
+        return Convert.ToHexString(bytes);
+    }
+
+    private static void WriteDebugLog(string hypothesisId, string location, string message, object data)
+    {
+        try
+        {
+            var payload = new
+            {
+                sessionId = "3ade45",
+                runId = "pre-fix-2",
+                hypothesisId,
+                location,
+                message,
+                data,
+                timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            };
+            File.AppendAllText(@"C:\Programing\Projects\Marketplace\debug-3ade45.log", JsonSerializer.Serialize(payload) + Environment.NewLine);
+        }
+        catch
+        {
+            // no-op for debug logging
+        }
     }
 }

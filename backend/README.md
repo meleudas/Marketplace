@@ -45,6 +45,9 @@ Required variables:
 - `SENDGRID__APIKEY`
 - `SENDGRID__FROMEMAIL`
 - `SENDGRID__FROMNAME` (optional)
+- `TELEGRAM__BOTTOKEN` (required for Telegram 2FA)
+- `TELEGRAM__WEBHOOKSECRET` (optional but recommended)
+- `TELEGRAM__LINKCODETTLMINUTES` (optional, default `10`)
 - `FRONTEND__BASEURL` (e.g. `http://localhost:3000`)
 - `CORS__ALLOWEDORIGINS__0` (allowed SPA origin, usually same as `FRONTEND__BASEURL`)
 - `JWT__SECRETKEY` (minimum 32 chars)
@@ -128,6 +131,19 @@ You can authorize in Swagger via **Authorize** button:
 - `POST /account/2fa/email/send-code` (authorized) - send one-time code to account email.
 - `POST /account/2fa/email/enable` (authorized) - enable 2FA with body `{ "code": "123456" }`.
 - `POST /account/2fa/email/disable` (authorized) - disable 2FA.
+
+### Telegram 2FA endpoints
+
+- `POST /account/2fa/telegram/link-code` (authorized) - generate one-time link code.
+- Open Telegram bot and send `/start <link_code>` to bind chat.
+- `POST /account/2fa/telegram/send-code` (authorized) - send one-time login code to Telegram.
+- `POST /account/2fa/telegram/enable` (authorized) - enable Telegram 2FA with body `{ "code": "123456" }`.
+- `POST /account/2fa/telegram/disable` (authorized) - disable Telegram 2FA.
+
+Telegram webhook endpoint:
+
+- `POST /integrations/telegram/webhook`
+- Optional security header: `X-Telegram-Bot-Api-Secret-Token` must match `TELEGRAM__WEBHOOKSECRET`.
 
 When 2FA is enabled, login requires `twoFactorCode` in request body:
 

@@ -43,5 +43,15 @@ namespace Marketplace.Application.Auth.Ports
         Task<Result> EnableEmailTwoFactorAsync(IdentityUserId userId, string code, CancellationToken ct = default);
 
         Task<Result> DisableEmailTwoFactorAsync(IdentityUserId userId, CancellationToken ct = default);
+
+        Task<Result<string>> GenerateTelegramLinkCodeAsync(IdentityUserId userId, CancellationToken ct = default);
+
+        Task<Result> LinkTelegramAccountAsync(string linkCode, string chatId, CancellationToken ct = default);
+
+        Task<Result> SendTelegramTwoFactorCodeAsync(IdentityUserId userId, CancellationToken ct = default);
+
+        Task<Result> EnableTelegramTwoFactorAsync(IdentityUserId userId, string code, CancellationToken ct = default);
+
+        Task<Result> DisableTelegramTwoFactorAsync(IdentityUserId userId, CancellationToken ct = default);
     }
 }

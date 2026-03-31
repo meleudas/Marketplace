@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Marketplace.API.Extensions;
 using Marketplace.API.Middleware;
 using Marketplace.API.Options;
@@ -77,8 +76,7 @@ public class AuthController : ControllerBase
     [Authorize]
     public async Task<IActionResult> Logout(CancellationToken ct)
     {
-        var sub = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (sub is null || !Guid.TryParse(sub, out var userId))
+        if (!User.TryGetUserId(out var userId))
             return Unauthorized();
 
         var result = await _sender.Send(new LogoutCommand(userId), ct);

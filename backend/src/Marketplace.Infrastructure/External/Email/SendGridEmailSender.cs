@@ -6,7 +6,7 @@ using SendGrid.Helpers.Mail;
 
 namespace Marketplace.Infrastructure.External.Email;
 
-public sealed class SendGridEmailSender : IEmailPort, IEmailSender
+public sealed class SendGridEmailSender : IEmailPort, IEmailSender, IEmailHealthProbe
 {
     private readonly ILogger<SendGridEmailSender> _logger;
     private readonly SendGridClient _client;
@@ -59,5 +59,39 @@ public sealed class SendGridEmailSender : IEmailPort, IEmailSender
             $"Ваш код 2FA: {code}\n\n" +
             "Код одноразовий. Нікому його не повідомляйте.";
         return SendEmailAsync(to, "Код двофакторної автентифікації", body, ct);
+    }
+
+    public async Task<EmailHealthStatus> CheckAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _client.RequestAsync(
+                method: BaseClient.Method.GET,
+                urlPath: "scopes",
+                cancellationToken: ct);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new EmailHealthStatus(
+                    IsHealthy: true,
+                    Provider: "SendGrid",
+                    Message: "SendGrid API authentication succeeded.",
+                    StatusCode: (int)response.StatusCode);
+            }
+
+            var body = await response.Body.ReadAsStringAsync(ct);
+            return new EmailHealthStatus(
+                IsHealthy: false,
+                Provider: "SendGrid",
+                Message: $"SendGrid API auth failed: {body}",
+                StatusCode: (int)response.StatusCode);
+        }
+        catch (Exception ex)
+        {
+            return new EmailHealthStatus(
+                IsHealthy: false,
+                Provider: "SendGrid",
+                Message: $"SendGrid check failed: {ex.Message}");
+        }
     }
 }
