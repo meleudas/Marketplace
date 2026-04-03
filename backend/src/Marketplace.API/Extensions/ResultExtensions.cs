@@ -50,6 +50,8 @@ public static class ResultExtensions
             e.Contains("invalid reset") ||
             e.Contains("2fa code required"))
             return StatusCodes.Status401Unauthorized;
+        if (e.Contains("confirm your email"))
+            return StatusCodes.Status403Forbidden;
         return StatusCodes.Status400BadRequest;
     }
 }

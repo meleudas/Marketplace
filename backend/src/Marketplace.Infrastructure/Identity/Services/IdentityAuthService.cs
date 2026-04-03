@@ -12,13 +12,14 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
-using System.Text.Json;
 
 namespace Marketplace.Infrastructure.Identity.Services;
 
-/// <summary>ùùùùùùùùù <see cref="IAuthenticationPort"/> ùù ùùù ASP.NET Identity.</summary>
+/// <summary>????????? <see cref="IAuthenticationPort"/> ?? ??? ASP.NET Identity.</summary>
 public class IdentityAuthService : IAuthenticationPort
 {
+    public bool RequireConfirmedEmail => _userManager.Options.SignIn.RequireConfirmedEmail;
+
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _db;
     private readonly ITokenPort _tokenPort;
@@ -69,6 +70,9 @@ public class IdentityAuthService : IAuthenticationPort
         if (!inRole.Succeeded)
             return Result<AuthTokens>.Failure(string.Join(" ", inRole.Errors.Select(e => e.Description)));
 
+        if (RequireConfirmedEmail && !appUser.EmailConfirmed)
+            return Result<AuthTokens>.Success(null!);
+
         return await IssueTokensAsync(appUser, ct);
     }
 
@@ -77,6 +81,9 @@ public class IdentityAuthService : IAuthenticationPort
         var appUser = await _userManager.FindByEmailAsync(email.Value);
         if (appUser is null || appUser.IsDeleted)
             return Result<AuthTokens>.Failure("Invalid email or password.");
+
+        if (RequireConfirmedEmail && !appUser.EmailConfirmed)
+            return Result<AuthTokens>.Failure("Please confirm your email before login.");
 
         if (!await _userManager.CheckPasswordAsync(appUser, password))
             return Result<AuthTokens>.Failure("Invalid email or password.");
@@ -125,6 +132,9 @@ public class IdentityAuthService : IAuthenticationPort
         var appUser = await _userManager.FindByIdAsync(stored.UserId.ToString());
         if (appUser is null || appUser.IsDeleted)
             return Result<AuthTokens>.Failure("User no longer exists.");
+
+        if (RequireConfirmedEmail && !appUser.EmailConfirmed)
+            return Result<AuthTokens>.Failure("Please confirm your email before login.");
 
         stored.RevokedAt = DateTime.UtcNow;
 
@@ -237,27 +247,7 @@ public class IdentityAuthService : IAuthenticationPort
     {
         var appUser = await _userManager.FindByIdAsync(userId.Value.ToString());
         if (appUser is null || appUser.IsDeleted)
-        {
-            // #region agent log
-            WriteDebugLog("h7", "IdentityAuthService.cs:SendEmailTwoFactorCodeAsync", "User not found or deleted for email 2FA send", new
-            {
-                runId = "pre-fix-2",
-                userId = userId.Value
-            });
-            // #endregion
             return Result.Failure("User no longer exists.");
-        }
-
-        // #region agent log
-        WriteDebugLog("h7", "IdentityAuthService.cs:SendEmailTwoFactorCodeAsync", "Sending email 2FA code", new
-        {
-            runId = "pre-fix-2",
-            userId = userId.Value,
-            hasEmail = !string.IsNullOrWhiteSpace(appUser.Email),
-            twoFactorEnabled = appUser.TwoFactorEnabled,
-            telegramTwoFactorEnabled = appUser.TelegramTwoFactorEnabled
-        });
-        // #endregion
         return await SendEmailTwoFactorCodeInternalAsync(appUser, ct);
     }
 
@@ -429,25 +419,4 @@ public class IdentityAuthService : IAuthenticationPort
         return Convert.ToHexString(bytes);
     }
 
-    private static void WriteDebugLog(string hypothesisId, string location, string message, object data)
-    {
-        try
-        {
-            var payload = new
-            {
-                sessionId = "3ade45",
-                runId = "pre-fix-2",
-                hypothesisId,
-                location,
-                message,
-                data,
-                timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-            };
-            File.AppendAllText(@"C:\Programing\Projects\Marketplace\debug-3ade45.log", JsonSerializer.Serialize(payload) + Environment.NewLine);
-        }
-        catch
-        {
-            // no-op for debug logging
-        }
-    }
 }

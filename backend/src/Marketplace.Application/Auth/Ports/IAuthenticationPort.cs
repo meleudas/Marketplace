@@ -6,6 +6,8 @@ namespace Marketplace.Application.Auth.Ports
 {
     public interface IAuthenticationPort
     {
+        bool RequireConfirmedEmail { get; }
+
         Task<Result<AuthTokens>> RegisterAsync(
             IdentityUserId identityId,
             Email email,

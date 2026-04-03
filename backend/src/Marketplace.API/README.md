@@ -1,315 +1,374 @@
-# Marketplace.API — документація ендпоінтів
+# Marketplace.API — опис HTTP API
 
-Цей файл описує поточний HTTP API: які сутності (DTO) приймає, які повертає, які ендпоінти потребують авторизації та як працюють токени/cookie.
+Документ описує всі публічні маршрути з `Marketplace.API` та `Program.cs`: призначення, коли викликати, формат вхідних даних, успішні відповіді та що відбувається, якщо тіло відповіді порожнє.
 
-Базовий URL у локальному середовищі (Docker): `http://localhost:8080`
+**Базовий URL (приклад, Docker):** `http://localhost:8080`  
+**Формат:** `application/json`, крім редіректів OAuth.
 
 ## Загальні правила
 
-- Формат тіла запитів/відповідей: `application/json`
-- Авторизація: `Authorization: Bearer <access_token>`
-- Access token повертається у JSON
-- Refresh token ставиться в HTTPOnly cookie (назва за замовчуванням: `refresh_token`)
-- Більшість помилок повертаються як `ProblemDetails`:
-  - `title`
-  - `detail`
-  - `status`
+| Тема | Опис |
+|------|------|
+| Авторизація | Заголовок `Authorization: Bearer <accessToken>` для ендпоінтів з `[Authorize]`. |
+| Access token | Зазвичай у JSON після `login`, `refresh`, `register` (якщо дозволено), обміну Google-коду. |
+| Refresh token | Дублюється в тілі відповіді **і** в HTTP-only cookie `refresh_token` (ім’я з `CookieAuthOptions`). `POST /auth/refresh` може взяти refresh з cookie, якщо в body немає значення. |
+| Помилки | Частіше `ProblemDetails`: `title`, `detail`, `status`. Коди залежать від тексту `detail` (див. `ResultExtensions`). |
+| Підтвердження email | У проєкті ввімкнено `RequireConfirmedEmail` — після реєстрації токени **не** видаються, логін без `EmailConfirmed` блокується (див. `POST /auth/register` та `POST /auth/login`). |
 
-## DTO (сутності запитів/відповідей)
+---
 
-### Auth DTO
+## Довідник полів (JSON)
 
-`RegisterRequest`
+Імена властивостей у JSON — **camelCase** (стандарт ASP.NET Core).
 
-- `email: string`
-- `password: string`
-- `userName: string`
-- `phoneNumber: string | null`
+### Реєстрація та сесія
 
-`LoginRequest`
+**`RegisterRequest`** (body `POST /auth/register`)
 
-- `email: string`
-- `password: string`
-- `rememberMe: boolean`
-- `twoFactorCode: string | null` (6 цифр)
+| Поле | Тип | Опис |
+|------|-----|------|
+| `email` | string | Email акаунта. |
+| `password` | string | Пароль (правила — у Identity, мін. довжина 8, цифра). |
+| `userName` | string | Ім’я користувача (у т.ч. для розбиття на ім’я/прізвище в домені). |
+| `phoneNumber` | string \| null | Опційно. |
 
-`RefreshRequest`
+**`LoginRequest`** (body `POST /auth/login`)
 
-- `refreshToken: string | null`
+| Поле | Тип | Опис |
+|------|-----|------|
+| `email` | string | Email. |
+| `password` | string | Пароль. |
+| `rememberMe` | boolean | Опційно, за замовчуванням `false` (зарезервовано під політику сесії). |
+| `twoFactorCode` | string \| null | Код 2FA з email/Telegram, якщо для акаунта увімкнено 2FA і бекенд попросив код другим кроком. |
 
-`AuthTokensDto` (успішний `register/login/refresh`)
+**`RefreshRequest`** (body `POST /auth/refresh`, опційно)
 
-- `accessToken: string`
-- `refreshToken: string`
-- `accessTokenExpiresAt: string (ISO datetime)`
-- `refreshTokenExpiresAt: string (ISO datetime)`
+| Поле | Тип | Опис |
+|------|-----|------|
+| `refreshToken` | string \| null | Якщо `null`/відсутнє — береться cookie `refresh_token`. |
 
-### Account DTO
+**`AuthTokensDto`** (успіх `register` / `login` / `refresh`, коли токени видані)
 
-`ConfirmEmailRequest`
+| Поле | Тип | Опис |
+|------|-----|------|
+| `accessToken` | string | JWT для `Authorization: Bearer`. |
+| `refreshToken` | string | Рядок refresh (також у cookie). |
+| `accessTokenExpiresAt` | string (ISO 8601) | Закінчення access. |
+| `refreshTokenExpiresAt` | string (ISO 8601) | Закінчення refresh. |
 
-- `email: string`
-- `token: string`
+### Акаунт (email, пароль, 2FA)
 
-`ForgotPasswordRequest`
+**`ConfirmEmailRequest`** — `POST /account/confirm-email`
 
-- `email: string`
+| Поле | Тип | Опис |
+|------|-----|------|
+| `email` | string | Той самий email, що реєстрували. |
+| `token` | string | Токен підтвердження з листа (не JWT access). |
 
-`ResetPasswordRequest`
+**`ForgotPasswordRequest`** — `POST /account/forgot-password`
 
-- `email: string`
-- `token: string`
-- `newPassword: string`
+| Поле | Тип | Опис |
+|------|-----|------|
+| `email` | string | Email для листа зі скиданням. |
 
-`EnableEmailTwoFactorRequest`
+**`ResetPasswordRequest`** — `POST /account/reset-password`
 
-- `code: string` (6 цифр)
+| Поле | Тип | Опис |
+|------|-----|------|
+| `email` | string | Email акаунта. |
+| `token` | string | Токен з листа скидання пароля. |
+| `newPassword` | string | Новий пароль. |
 
-`EnableTelegramTwoFactorRequest`
+**`EnableEmailTwoFactorRequest`** — `POST /account/2fa/email/enable`
 
-- `code: string` (6 цифр)
+| Поле | Тип | Опис |
+|------|-----|------|
+| `code` | string | Одноразовий код після `.../2fa/email/send-code`. |
 
-`TelegramLinkCodeResponse`
+**`EnableTelegramTwoFactorRequest`** — `POST /account/2fa/telegram/enable`
 
-- `linkCode: string`
+| Поле | Тип | Опис |
+|------|-----|------|
+| `code` | string | Код після `.../2fa/telegram/send-code` (прив’язаний Telegram). |
 
-### Users DTO
+**`TelegramLinkCodeResponse`** — відповідь `POST /account/2fa/telegram/link-code`
 
-`UserDto`
+| Поле | Тип | Опис |
+|------|-----|------|
+| `linkCode` | string | Код для команди боту `/start <linkCode>`. |
 
-- `id: string (guid)`
-- `firstName: string`
-- `lastName: string`
-- `role: string` (`buyer | seller | moderator | admin`)
-- `birthday: string | null`
-- `avatar: string | null`
-- `isVerified: boolean`
-- `verificationDocument: string | null`
-- `lastLoginAt: string | null`
-- `createdAt: string`
-- `updatedAt: string`
-- `isDeleted: boolean`
-- `deletedAt: string | null`
+### Користувачі маркетплейсу
 
-### OAuth DTO
+**`UserDto`** — `GET /users/me`, елементи списків `GET /users`, `GET /users/search`
 
-`GoogleCallbackExchangeRequest`
+| Поле | Тип | Опис |
+|------|-----|------|
+| `id` | guid | Співпадає з Identity user id. |
+| `firstName` | string | |
+| `lastName` | string | |
+| `role` | string | Значення enum у нижньому регістрі: `buyer`, `seller`, `moderator`, `admin`. |
+| `birthday` | string \| null | ISO дата або null. |
+| `avatar` | string \| null | URL або null. |
+| `isVerified` | boolean | Оновлюється після успішного підтвердження email (доменний профіль). |
+| `verificationDocument` | string \| null | |
+| `lastLoginAt` | string \| null | |
+| `createdAt` | string | |
+| `updatedAt` | string | |
+| `isDeleted` | boolean | |
+| `deletedAt` | string \| null | |
 
-- `code: string`
+### Google OAuth
 
-Відповідь успішного обміну коду (`POST /auth/google/callback`)
+**`GoogleCallbackExchangeRequest`** — `POST /auth/google/callback`
 
-- `accessToken: string`
-- `accessTokenExpiresAt: string (ISO datetime)`
+| Поле | Тип | Опис |
+|------|-----|------|
+| `code` | string | Одноразовий код з query після редіректу з `GET /auth/google/return`. |
 
-## Ендпоінти
+### Telegram webhook
 
-## AuthController (`/auth`)
+**`TelegramUpdate`** — body `POST /integrations/telegram/webhook`
 
-### `POST /auth/register`
+| Поле | Тип | Опис |
+|------|-----|------|
+| `message` | об’єкт \| null | Див. `TelegramMessage`. |
 
-Створює акаунт, повертає токени.
+**`TelegramMessage`**
 
-- **Auth:** не потрібна
-- **Request body:** `RegisterRequest`
-- **200 OK body:** `AuthTokensDto`
-- **Cookie:** встановлюється refresh cookie
+| Поле | Тип |
+|------|-----|
+| `chat` | `TelegramChat` \| null |
+| `text` | string \| null |
 
-### `POST /auth/login`
+**`TelegramChat`**
 
-Логін по email/password.
+| Поле | Тип |
+|------|-----|
+| `id` | number (long) |
 
-- **Auth:** не потрібна
-- **Request body:** `LoginRequest`
-- **200 OK body:** `AuthTokensDto`
-- **Cookie:** встановлюється refresh cookie
+---
 
-### `POST /auth/refresh`
+## Ендпоінти за контролерами
 
-Оновлює токени по refresh token.
+### `AuthController` — префікс `/auth`
 
-- **Auth:** не потрібна
-- **Request body:** `RefreshRequest` (можна передати `null`)
-- **Fallback:** якщо в body немає токена, API пробує взяти його з cookie
-- **200 OK body:** `AuthTokensDto`
-- **Cookie:** перевстановлюється refresh cookie
+#### `POST /auth/register`
 
-### `POST /auth/logout`
+- **Що робить:** створює користувача в ASP.NET Identity і запис профілю в `marketplace_users`, надсилає лист із токеном підтвердження email.
+- **Коли використовувати:** екран реєстрації в застосунку.
+- **Авторизація:** не потрібна.
+- **Body:** `RegisterRequest` (див. таблицю вище).
+- **Якщо увімкнено підтвердження email (`RequireConfirmedEmail`):** **немає** `200` з токенами. Повертається помилка з `detail` на кшталт «Registration successful. Please confirm your email before login.», статус **403**; **cookie refresh не виставляється**. Клієнт має показати інструкцію «підтвердіть пошту», потім `POST /account/confirm-email` і далі `POST /auth/login`.
+- **Якщо підтвердження email вимкнено (нетипова конфігурація):** **200** і тіло `AuthTokensDto`; встановлюється refresh-cookie (як при логіні).
 
-Логаут користувача.
+#### `POST /auth/login`
 
-- **Auth:** потрібна (`Bearer`)
-- **Request body:** немає
-- **200 OK body:** порожній
-- **Cookie:** refresh cookie видаляється
+- **Що робить:** перевіряє email/пароль; за потреби вимагає 2FA; оновлює `lastLogin` у доменному користувачі; видає пару access/refresh.
+- **Коли використовувати:** вхід після підтвердженого email (якщо увімкнено `RequireConfirmedEmail`).
+- **Авторизація:** не потрібна.
+- **Body:** `LoginRequest`.
+- **Успіх (200):** `AuthTokensDto` + refresh-cookie.
+- **Без повного входу (2FA):** `ProblemDetails`, текст містить «2FA code required» (зазвичай **401**); клієнт повторює `login` з тим самим паролем і полем `twoFactorCode`.
+- **Непідтверджений email:** повідомлення на кшталт «Please confirm your email before login.» (**403**).
 
-## ExternalAuthController (`/auth`)
+#### `POST /auth/refresh`
 
-### `GET /auth/google`
+- **Що робить:** за валідним refresh (hash у БД, не прострочений, не відкликаний) видає новий access і новий refresh, старий refresh ревокається.
+- **Коли використовувати:** коли access JWT закінчився, а сесія має залишитись; зручно з cookie або з явним `refreshToken` у body.
+- **Авторизація:** не потрібна.
+- **Body:** `RefreshRequest` або порожній об’єкт / опускається — тоді refresh з cookie.
+- **Успіх (200):** `AuthTokensDto` + оновлений refresh-cookie.
+- **Непідтверджений email:** як і при логіні, refresh блокується з відповідним `detail` (**403**).
 
-Старт OAuth2 flow з Google.
+#### `POST /auth/logout`
 
-- **Auth:** не потрібна
-- **Query:** `returnPath` (опційно, за замовчуванням `/auth/callback`)
-- **Response:** `302 Redirect` на Google consent screen
+- **Що робить:** ревокує активні refresh-токени користувача в БД; **видаляє** refresh-cookie.
+- **Коли використовувати:** явний вихід з акаунта на клієнті.
+- **Авторизація:** **Bearer** (потрібен валідний access).
+- **Body:** немає.
+- **Успіх (200):** **порожнє тіло** (`Ok()`). Після відповіді клієнт має скинути збережений access token локально; серверні refresh для цього користувача більше не приймаються.
 
-### `GET /auth/google/return`
+---
 
-Внутрішній callback бекенду після Google.
+### `ExternalAuthController` — префікс `/auth` (Google)
 
-- **Auth:** не потрібна
-- **Query:** `appState`
-- **Response:** `302 Redirect` на фронтенд з тимчасовим `code` у query
+#### `GET /auth/google`
 
-> Це технічний endpoint для flow. Викликається редіректом після Google sign-in.
+- **Що робить:** ініціює OAuth Google (`Challenge`), зберігає внутрішній `appState` з `returnPath` для фронту.
+- **Коли використовувати:** кнопка «Увійти через Google» — браузерний перехід на цей URL.
+- **Авторизація:** не потрібна.
+- **Query:** `returnPath` (опційно, за замовчуванням `"/auth/callback"` на фронті) — **має починатися з `/`**.
+- **Успіх:** **302** на сторінку згоди Google. Якщо Google не налаштовано — **503** `ProblemDetails`.
 
-### `POST /auth/google/callback`
+#### `GET /auth/google/return`
 
-Обмінює тимчасовий `code` на локальний access token + ставить refresh cookie.
+- **Що робить:** внутрішній callback після Google; зчитує зовнішній principal, створює/оновлює локального користувача, генерує **одноразовий exchange `code`**, редіректить на `Frontend:BaseUrl` + `returnPath` з `?code=...`.
+- **Коли використовувати:** не викликається вручну з фронту API-клієнтом — лише редірект браузера після Google.
+- **Query:** `appState` (обов’язковий).
+- **Успіх:** **302** на фронт. Помилки — **400/401/500** з `ProblemDetails` (невалідний state, зовнішня автентифікація, відсутній `Frontend:BaseUrl`).
 
-- **Auth:** не потрібна
-- **Request body:** `GoogleCallbackExchangeRequest`
-- **200 OK body:** `{ accessToken, accessTokenExpiresAt }`
-- **Cookie:** встановлюється refresh cookie
+#### `POST /auth/google/callback`
 
-## AccountController (`/account`)
+- **Що робить:** обмінює короткоживучий `code` на access JWT, зберігає refresh у БД і в cookie (email для Google вважається підтвердженим).
+- **Коли використовувати:** фронт після landing з `?code=` з попереднього кроку викликає цей POST.
+- **Body:** `GoogleCallbackExchangeRequest`.
+- **Успіх (200):** JSON `{ "accessToken", "accessTokenExpiresAt" }` (camelCase) **без** `refreshToken` у JSON; refresh лише в **cookie**.
+- **Помилки:** **400** якщо немає `code`; **401** якщо код прострочений/невалідний.
 
-### `POST /account/confirm-email`
+---
 
-Підтвердження email токеном.
+### `AccountController` — префікс `/account`
 
-- **Auth:** не потрібна
-- **Request body:** `ConfirmEmailRequest`
-- **200 OK body:** порожній
+#### `POST /account/confirm-email`
 
-### `POST /account/forgot-password`
+- **Що робить:** валідує токен Identity, виставляє `EmailConfirmed`, для доменного `User` викликає `Verify()` (прапор `isVerified`).
+- **Коли використовувати:** після реєстрації, коли користувач ввів токен з листа або перейшов з посилання, яке ваш фронт перетворює на виклик API.
+- **Авторизація:** не потрібна.
+- **Body:** `ConfirmEmailRequest`.
+- **Успіх (200):** **порожнє тіло**. Наслідок: можна викликати `POST /auth/login`; у профілі `isVerified` стане `true` після цього кроку.
 
-Запит на скидання пароля.
+#### `POST /account/forgot-password`
 
-- **Auth:** не потрібна
-- **Request body:** `ForgotPasswordRequest`
-- **200 OK body:** порожній
+- **Що робить:** за наявного користувача генерує токен скидання і надсилає email (реалізація `IEmailPort`).
+- **Коли використовувати:** форма «забув пароль».
+- **Body:** `ForgotPasswordRequest`.
+- **Успіх (200):** **порожнє тіло** (не розкриває, чи існує email — перевірте поведінку handler за бажанням).
 
-### `POST /account/reset-password`
+#### `POST /account/reset-password`
 
-Скидання пароля токеном.
+- **Що робить:** застосовує новий пароль за токеном з листа.
+- **Коли використовувати:** екран встановлення нового пароля після листа.
+- **Body:** `ResetPasswordRequest`.
+- **Успіх (200):** **порожнє тіло**; далі користувач може логінитись з `newPassword`.
 
-- **Auth:** не потрібна
-- **Request body:** `ResetPasswordRequest`
-- **200 OK body:** порожній
+#### `POST /account/2fa/email/send-code`
 
-### `POST /account/2fa/email/send-code`
+- **Що робить:** генерує одноразовий код 2FA (Identity, email-провайдер) і надсилає на email акаунта.
+- **Коли використовувати:** перед `.../enable`, щоб користувач отримав код.
+- **Авторизація:** **Bearer**.
+- **Body:** немає.
+- **Успіх (200):** **порожнє тіло**; код у пошті.
 
-Надсилає одноразовий код 2FA на email поточного користувача.
+#### `POST /account/2fa/email/enable`
 
-- **Auth:** потрібна
-- **Request body:** немає
-- **200 OK body:** порожній
+- **Що робить:** перевіряє код і вмикає 2FA по email для акаунта.
+- **Авторизація:** **Bearer**.
+- **Body:** `EnableEmailTwoFactorRequest`.
+- **Успіх (200):** **порожнє тіло**; наступні логіни можуть вимагати `twoFactorCode`.
 
-### `POST /account/2fa/email/enable`
+#### `POST /account/2fa/email/disable`
 
-Вмикає 2FA для акаунта після перевірки коду.
+- **Що робить:** вимикає сценарій 2FA через email (логіка в `IdentityAuthService`).
+- **Авторизація:** **Bearer**.
+- **Body:** немає.
+- **Успіх (200):** **порожнє тіло**.
 
-- **Auth:** потрібна
-- **Request body:** `EnableEmailTwoFactorRequest`
-- **200 OK body:** порожній
+#### `POST /account/2fa/telegram/link-code`
 
-### `POST /account/2fa/email/disable`
+- **Що робить:** видає короткоживучий `linkCode` для прив’язки чату Telegram до акаунта (далі користувач пише боту `/start <linkCode>`).
+- **Авторизація:** **Bearer**.
+- **Body:** немає.
+- **Успіх (200):** `TelegramLinkCodeResponse`.
 
-Вимикає email 2FA для поточного користувача.
+#### `POST /account/2fa/telegram/send-code`
 
-- **Auth:** потрібна
-- **Request body:** немає
-- **200 OK body:** порожній
+- **Що робить:** надсилає код 2FA у прив’язаний Telegram.
+- **Авторизація:** **Bearer**; Telegram має бути вже прив’язаний.
+- **Body:** немає.
+- **Успіх (200):** **порожнє тіло**.
 
-### `POST /account/2fa/telegram/link-code`
+#### `POST /account/2fa/telegram/enable`
 
-Генерує одноразовий код для привʼязки Telegram бота до поточного акаунта.
+- **Що робить:** перевіряє код і вмикає 2FA через Telegram.
+- **Авторизація:** **Bearer**.
+- **Body:** `EnableTelegramTwoFactorRequest`.
+- **Успіх (200):** **порожнє тіло**.
 
-- **Auth:** потрібна
-- **Request body:** немає
-- **200 OK body:** `TelegramLinkCodeResponse`
+#### `POST /account/2fa/telegram/disable`
 
-### `POST /account/2fa/telegram/send-code`
+- **Що робить:** вимикає Telegram 2FA (і за потреби коригує загальний прапор 2FA — див. сервіс).
+- **Авторизація:** **Bearer**.
+- **Body:** немає.
+- **Успіх (200):** **порожнє тіло**.
 
-Надсилає одноразовий код 2FA у Telegram поточного користувача.
+---
 
-- **Auth:** потрібна
-- **Request body:** немає
-- **200 OK body:** порожній
+### `TelegramIntegrationsController` — префікс `/integrations/telegram`
 
-### `POST /account/2fa/telegram/enable`
+#### `POST /integrations/telegram/webhook`
 
-Вмикає Telegram 2FA для акаунта після перевірки коду.
+- **Що робить:** приймає update від Telegram; якщо текст повідомлення має вигляд `/start <linkCode>`, викликає прив’язку акаунта до чату. Інші update тихо ігноруються з **200**.
+- **Коли використовувати:** лише як URL webhook у налаштуваннях Bot API (не з фронту магазину).
+- **Авторизація:** якщо задано `Telegram:WebhookSecret`, заголовок **`X-Telegram-Bot-Api-Secret-Token`** має збігатися; інакше **401**.
+- **Body:** `TelegramUpdate` (підмножина полів реального Telegram JSON достатня для `message.chat.id` та `message.text`).
+- **Успіх (200):** **порожнє тіло** — означає «update прийнято» або «не підходить під `/start` — ігнор». При невдалій прив’язці код зараз повертає **400** без `ProblemDetails` (лише статус).
 
-- **Auth:** потрібна
-- **Request body:** `EnableTelegramTwoFactorRequest`
-- **200 OK body:** порожній
+---
 
-### `POST /account/2fa/telegram/disable`
+### `UsersController` — префікс `/users`
 
-Вимикає Telegram 2FA для поточного користувача.
+Усі маршрути вимагають **Bearer**.
 
-- **Auth:** потрібна
-- **Request body:** немає
-- **200 OK body:** порожній
+#### `GET /users/me`
 
-## TelegramIntegrationsController (`/integrations/telegram`)
+- **Що робить:** повертає профіль маркетплейсу для поточного Identity id.
+- **Коли використовувати:** сторінка «мій профіль», ініціалізація стану після логіну.
+- **Успіх (200):** один об’єкт `UserDto`.
 
-### `POST /integrations/telegram/webhook`
+#### `GET /users`
 
-Webhook endpoint для Telegram bot updates. Для привʼязки акаунта бот очікує команду `/start <link_code>`.
+- **Що робить:** список користувачів (адміністративний/сервісний сценарій — уточнюйте політику доступу на рівні продукту).
+- **Успіх (200):** масив `UserDto` (може бути порожнім).
 
-- **Auth:** не потрібна
-- **Header (optional):** `X-Telegram-Bot-Api-Secret-Token` (якщо задано `Telegram:WebhookSecret`)
-- **200 OK:** update прийнято/проігноровано
-- **400 Bad Request:** link-code невалідний або прострочений
+#### `GET /users/search?userName=...`
 
-## UsersController (`/users`)
+- **Що робить:** пошук за іменем (частковий матч у репозиторії).
+- **Query:** `userName` (рядок).
+- **Успіх (200):** масив `UserDto`.
 
-> Усі ендпоінти цього контролера вимагають `Bearer` токен.
+#### `DELETE /users/{id}`
 
-### `GET /users/me`
+- **Що робить:** м’яке видалення акаунта **лише якщо `id` збігається** з поточним користувачем; інакше **403**.
+- **Коли використовувати:** «видалити мій акаунт».
+- **Path:** `id` — guid.
+- **Успіх (200):** **порожнє тіло**; обліковий запис позначається видаленим за логікою сервісу.
 
-Повертає профіль поточного користувача.
+---
 
-- **Auth:** потрібна
-- **200 OK body:** `UserDto`
+## Мінімальні API з `Program.cs` (не контролери)
 
-### `GET /users`
+#### `GET /health`
 
-Повертає список користувачів.
+- **Що робить:** liveness перевірка.
+- **Коли:** балансувальник, Docker healthcheck.
+- **Успіх (200):** `{ "status": "ok" }`.
 
-- **Auth:** потрібна
-- **200 OK body:** `UserDto[]`
+#### `GET /health/sendgrid`
 
-### `GET /users/search?userName=<value>`
+- **Що робить:** перевіряє доступність SendGrid API (ключ).
+- **Успіх (200):** об’єкт статусу з `IEmailHealthProbe`.  
+- **Помилка (503):** `ProblemDetails`, якщо провайдер «нездоровий».
 
-Пошук користувачів за username.
+#### `GET /health/sendgrid/key-trace`
 
-- **Auth:** потрібна
-- **Query:** `userName`
-- **200 OK body:** `UserDto[]`
+- **Що робить:** діагностика джерел API-ключа SendGrid (env / конфіг / options): масковані довжини, fingerprint, чи збігаються значення.
+- **Коли:** лише налагодження (не для публічного інтернету без захисту).
+- **Успіх (200):** JSON з вкладеними snapshot-об’єктами для `env`, `config`, `options`.
 
-### `DELETE /users/{id}`
+---
 
-Видалення акаунта (тільки власний id).
+## Документація OpenAPI / Swagger
 
-- **Auth:** потрібна
-- **Path:** `id` (guid)
-- **200 OK body:** порожній
-- **403 Forbidden:** якщо `id` не збігається з поточним користувачем
+- Swagger UI: зазвичай `/swagger`
+- OpenAPI JSON (Scalar): `/openapi/v1.json` (за поточним мапінгом `MapOpenApi`)
 
-## Сервісні ендпоінти
+У Swagger для Bearer вводьте **лише JWT** (префікс `Bearer` додає UI).
 
-### `GET /health`
+---
 
-- **Auth:** не потрібна
-- **200 OK body:** `{ status: "ok" }`
+## Короткий приклад логіну
 
-## Швидкі приклади
-
-`POST /auth/login`
+**Запит:** `POST /auth/login`
 
 ```json
 {
@@ -318,23 +377,6 @@ Webhook endpoint для Telegram bot updates. Для привʼязки акау
 }
 ```
 
-Успішна відповідь:
+**Відповідь 200:** тіло у форматі `AuthTokensDto` + Set-Cookie для refresh.
 
-```json
-{
-  "accessToken": "eyJ...",
-  "refreshToken": "r_...",
-  "accessTokenExpiresAt": "2026-03-29T18:40:00Z",
-  "refreshTokenExpiresAt": "2026-04-28T18:30:00Z"
-}
-```
-
-Помилка (`ProblemDetails`):
-
-```json
-{
-  "title": "Неавторизовано",
-  "detail": "Invalid email or password",
-  "status": 401
-}
-```
+**Помилка:** `ProblemDetails`, наприклад статус **401** для невірого пароля або **403**, якщо email ще не підтверджено.

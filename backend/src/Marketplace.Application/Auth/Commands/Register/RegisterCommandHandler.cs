@@ -45,7 +45,7 @@ namespace Marketplace.Application.Auth.Commands.Register
                     ct
                 );
 
-                if (authResult is not { IsSuccess: true, Value: not null })
+                if (!authResult.IsSuccess)
                     return Result<AuthTokensDto>.Failure(authResult.Error ?? "Registration failed");
 
                 var nameParts = request.UserName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -55,9 +55,15 @@ namespace Marketplace.Application.Auth.Commands.Register
                 await _userRepository.AddAsync(user, ct);
 
                 var confirmToken = _tokenPort.GenerateEmailConfirmationToken(identityId, email.Value);
+                if (_authenticationPort.RequireConfirmedEmail)
+                {
+                    await _emailPort.SendConfirmationEmailAsync(email.Value, confirmToken, ct);
+                    return Result<AuthTokensDto>.Failure("Registration successful. Please confirm your email before login.");
+                }
+
                 _ = _emailPort.SendConfirmationEmailAsync(email.Value, confirmToken, ct);
 
-                return Result<AuthTokensDto>.Success(AuthMapper.ToAuthTokensDto(authResult.Value));
+                return Result<AuthTokensDto>.Success(AuthMapper.ToAuthTokensDto(authResult.Value!));
             }
             catch (Exception ex)
             {

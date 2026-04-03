@@ -31,17 +31,22 @@ public static class ServiceCollectionExtensions
                 Version = "v1"
             });
 
+            // HTTP Bearer: Swagger UI сам додає префікс "Bearer " — в поле вводу лише JWT (access token).
             var bearerScheme = new OpenApiSecurityScheme
             {
-                Name = "Authorization",
-                Description = "Вставте тільки access token (без префікса Bearer).",
-                In = ParameterLocation.Header,
                 Type = SecuritySchemeType.Http,
                 Scheme = "bearer",
-                BearerFormat = "JWT"
+                BearerFormat = "JWT",
+                Description = "Вставте лише access token (JWT). Префікс Bearer не потрібен — його додасть Swagger UI."
             };
 
             options.AddSecurityDefinition("Bearer", bearerScheme);
+
+            options.AddSecurityRequirement(document =>
+            {
+                var schemeRef = new OpenApiSecuritySchemeReference("Bearer", document, externalResource: null);
+                return new OpenApiSecurityRequirement { [schemeRef] = [] };
+            });
         });
 
         services.AddOpenApi("v1", options =>

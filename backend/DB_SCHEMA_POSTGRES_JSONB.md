@@ -142,7 +142,6 @@ Redis залишається для кешу/епемерних станів, S3
 - `status` smallint/enum (`pending|approved|rejected`)
 - `moderated_by_id` uuid nullable FK -> `AspNetUsers.id`
 - `moderated_at` timestamptz nullable
-- `extra_raw` json nullable                 // повний сирий документ для сумісності міграції
 - `created_at`, `updated_at` timestamptz
 
 Індекси:
@@ -455,7 +454,6 @@ Redis залишається для кешу/епемерних станів, S3
 - `status` smallint/enum (`pending|approved|rejected`)
 - `moderated_by_id` uuid nullable FK -> `AspNetUsers.id`
 - `moderated_at` timestamptz nullable
-- `extra_raw` json nullable                 // сирий payload для сумісності імпорту
 - `created_at`, `updated_at` timestamptz
 
 Індекси:
@@ -748,14 +746,7 @@ Retention: 365 днів (рекомендовано партиціювання).
 - `replaced_by_token_hash` varchar(64) nullable
 - `created_at` timestamptz
 
-### 🟦 `login_attempts`
-- Soft delete: `deleted_at` timestamptz nullable, `is_deleted` bool default `false`
-- `id` bigserial PK
-- `user_id` text nullable FK
-- `ip_address` text
-- `user_agent` text
-- `success` bool
-- `created_at` timestamptz
+Облік невдалих спроб входу та блокування — через **ASP.NET Identity** (`AccessFailedCount`, `LockoutEnd`, `LockoutEnabled` на `AspNetUsers` тощо); окрема таблиця `login_attempts` не використовується.
 
 ### 🟥 Redis
 - `rate:limit:{userId}:{action}` -> counter, TTL 60 сек
