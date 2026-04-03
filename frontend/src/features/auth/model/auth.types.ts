@@ -41,6 +41,15 @@ export interface GoogleCallbackResponse {
   accessTokenExpiresAt: string;
 }
 
+export interface AuthActionResult {
+  success: boolean;
+  message: string;
+}
+
+export interface LoginActionResult extends AuthActionResult {
+  requiresTwoFactor?: boolean;
+}
+
 export interface AuthState {
   user: CurrentUser | null;
   isAuthenticated: boolean;
@@ -49,13 +58,13 @@ export interface AuthState {
 }
 
 export interface AuthActions {
-  register: (payload: RegisterPayload) => Promise<{ success: boolean; message: string }>;
-  login: (payload: LoginPayload) => Promise<{ success: boolean; message: string }>;
+  register: (payload: RegisterPayload) => Promise<AuthActionResult>;
+  login: (payload: LoginPayload) => Promise<LoginActionResult>;
   startGoogleLogin: () => void;
-  completeGoogleLogin: (code: string) => Promise<{ success: boolean; message: string }>;
-  forgotPassword: (payload: ForgotPasswordPayload) => Promise<{ success: boolean; message: string }>;
-  resetPassword: (payload: ResetPasswordPayload) => Promise<{ success: boolean; message: string }>;
-  logout: () => Promise<{ success: boolean; message: string }>;
+  completeGoogleLogin: (code: string) => Promise<AuthActionResult>;
+  forgotPassword: (payload: ForgotPasswordPayload) => Promise<AuthActionResult>;
+  resetPassword: (payload: ResetPasswordPayload) => Promise<AuthActionResult>;
+  logout: () => Promise<AuthActionResult>;
   loadMe: () => Promise<void>;
 }
 

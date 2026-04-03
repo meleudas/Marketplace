@@ -23,6 +23,13 @@
   gap: 0.25rem;
 }
 
+.helperText {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #52525b;
+}
+
 .label {
   font-size: 0.875rem;
   font-weight: 500;
@@ -86,6 +93,41 @@
 .submitButton:disabled {
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+.secondaryButton {
+  width: 100%;
+  border: 1px solid #d4d4d8;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  color: #18181b;
+  cursor: pointer;
+}
+
+.secondaryButton:hover {
+  background: #f4f4f5;
+}
+
+.secondaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #3f3f46;
+}
+
+.checkbox {
+  width: 1rem;
+  height: 1rem;
 }
 
 .googleButton {
