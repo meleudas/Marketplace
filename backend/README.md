@@ -1,6 +1,6 @@
 # Marketplace API
 
-Backend for a marketplace platform built on .NET 10 with ASP.NET Core Web API, DDD/Hexagonal architecture, PostgreSQL, Redis, MongoDB, JWT, refresh tokens, Google OAuth2 for SPA flows, SendGrid email delivery, and email-based 2FA.
+Backend for a marketplace platform built on .NET 10 with ASP.NET Core Web API, DDD/Hexagonal architecture, PostgreSQL, Redis, JWT, refresh tokens, Google OAuth2 for SPA flows, SendGrid email delivery, and email-based 2FA.
 
 ## Tech stack
 
@@ -9,7 +9,6 @@ Backend for a marketplace platform built on .NET 10 with ASP.NET Core Web API, D
 - EF Core + PostgreSQL (`Npgsql`)
 - ASP.NET Identity
 - Redis (cache/state)
-- MongoDB (optional storage extensions)
 - Docker / Docker Compose
 - Scalar + Swagger UI (OpenAPI documentation)
 - SendGrid (transactional email)
@@ -65,7 +64,6 @@ Services:
 - API: `http://localhost:8080`
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
-- MongoDB: `localhost:27017`
 
 Stop services:
 
@@ -84,7 +82,7 @@ docker compose down -v
 1. Start infrastructure containers only:
 
 ```bash
-docker compose up -d postgres redis mongo
+docker compose up -d postgres redis
 ```
 
 2. Run API:

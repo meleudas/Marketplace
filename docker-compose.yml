@@ -12,13 +12,10 @@ services:
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
       ConnectionStrings__Database: "Host=postgres;Port=5432;Database=marketplace;Username=postgres;Password=postgres"
       ConnectionStrings__Redis: "redis:6379"
-      ConnectionStrings__MongoDb: "mongodb://mongo:27017"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
-      mongo:
         condition: service_started
     networks:
       - marketplace
@@ -83,25 +80,9 @@ services:
       timeout: 5s
       retries: 5
 
-  mongo:
-    image: mongo:7
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - marketplace
-    healthcheck:  
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-      start_period: 15s
-
 volumes:
   postgres_data:
   redis_data:
-  mongo_data:
   frontend_node_modules:
   frontend_next_cache:
 

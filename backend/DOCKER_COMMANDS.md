@@ -10,7 +10,7 @@
 - `api`
 - `postgres`
 - `redis`
-- `mongo`
+- `frontend` (лише з профілем `frontend`, див. корінь репозиторію `docker-compose.yml`)
 
 ---
 
@@ -25,7 +25,7 @@ docker compose up -d --build
 ### Підняти тільки інфраструктуру (без API)
 
 ```powershell
-docker compose up -d postgres redis mongo
+docker compose up -d postgres redis
 ```
 
 ### Зупинити та прибрати контейнери
@@ -58,7 +58,6 @@ docker compose logs -f
 docker compose logs -f postgres
 docker compose logs -f api
 docker compose logs -f redis
-docker compose logs -f mongo
 ```
 
 ### Рестарт конкретного сервісу
@@ -131,29 +130,6 @@ docker compose exec redis redis-cli FLUSHALL
 
 ---
 
-## MongoDB: базові команди (поки сервіс ще в compose)
-
-### Перевірка підключення
-
-```powershell
-docker compose exec mongo mongosh --eval "db.adminCommand('ping')"
-```
-
-### Видалити базу `marketplace`
-
-```powershell
-docker compose exec mongo mongosh --eval "db.getSiblingDB('marketplace').dropDatabase()"
-```
-
-### Повний reset Mongo через volume
-
-```powershell
-docker compose down -v
-docker compose up -d mongo
-```
-
----
-
 ## Прибирання Docker ресурсів (обережно)
 
 ### Прибрати зупинені контейнери
@@ -197,7 +173,7 @@ docker compose down -v
 docker compose up -d --build
 ```
 
-### 3) Reset тільки PostgreSQL (без Redis/Mongo)
+### 3) Reset тільки PostgreSQL (без Redis)
 
 ```powershell
 docker compose stop postgres
