@@ -1,13 +1,20 @@
 using Marketplace.Application.Auth.Ports;
+using Marketplace.Infrastructure;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Marketplace.Infrastructure.External.Email;
 
 public sealed class LoggingEmailSender : IEmailPort, IEmailSender, IEmailHealthProbe
 {
     private readonly ILogger<LoggingEmailSender> _logger;
+    private readonly FrontendOptions _frontend;
 
-    public LoggingEmailSender(ILogger<LoggingEmailSender> logger) => _logger = logger;
+    public LoggingEmailSender(ILogger<LoggingEmailSender> logger, IOptions<FrontendOptions> frontend)
+    {
+        _logger = logger;
+        _frontend = frontend.Value;
+    }
 
     public Task SendAsync(string to, string subject, string body, CancellationToken ct = default)
     {
@@ -20,7 +27,11 @@ public sealed class LoggingEmailSender : IEmailPort, IEmailSender, IEmailHealthP
 
     public Task SendConfirmationEmailAsync(string to, string token, CancellationToken ct = default)
     {
-        _logger.LogInformation("Confirmation email to {To}, token length {Len}", to, token.Length);
+        var link = EmailConfirmationLinkBuilder.Build(_frontend.BaseUrl, to, token);
+        _logger.LogInformation(
+            "Confirmation email to {To}, link {Link}",
+            to,
+            link);
         return Task.CompletedTask;
     }
 

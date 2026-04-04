@@ -1,4 +1,5 @@
 using Marketplace.Application.Auth.Ports;
+using Marketplace.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SendGrid;
@@ -11,13 +12,18 @@ public sealed class SendGridEmailSender : IEmailPort, IEmailSender, IEmailHealth
     private readonly ILogger<SendGridEmailSender> _logger;
     private readonly SendGridClient _client;
     private readonly EmailAddress _from;
+    private readonly FrontendOptions _frontend;
 
-    public SendGridEmailSender(ILogger<SendGridEmailSender> logger, IOptions<SendGridOptions> options)
+    public SendGridEmailSender(
+        ILogger<SendGridEmailSender> logger,
+        IOptions<SendGridOptions> options,
+        IOptions<FrontendOptions> frontend)
     {
         _logger = logger;
         var cfg = options.Value;
         _client = new SendGridClient(cfg.ApiKey);
         _from = new EmailAddress(cfg.FromEmail, cfg.FromName);
+        _frontend = frontend.Value;
     }
 
     public async Task SendEmailAsync(string to, string subject, string body, CancellationToken ct = default)
@@ -39,9 +45,10 @@ public sealed class SendGridEmailSender : IEmailPort, IEmailSender, IEmailHealth
 
     public Task SendConfirmationEmailAsync(string to, string token, CancellationToken ct = default)
     {
+        var link = EmailConfirmationLinkBuilder.Build(_frontend.BaseUrl, to, token);
         var body =
-            $"Ваш код підтвердження email: {token}\n\n" +
-            "Якщо ви не запитували цей код, просто проігноруйте лист.";
+            "Підтвердіть email, перейшовши за посиланням:\n" + link + "\n\n" +
+            "Якщо ви не реєструвались, проігноруйте цей лист.";
         return SendEmailAsync(to, "Підтвердження email", body, ct);
     }
 
