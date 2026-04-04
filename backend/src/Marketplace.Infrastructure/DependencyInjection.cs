@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<SendGridOptions>(configuration.GetSection(SendGridOptions.SectionName));
         services.Configure<TelegramOptions>(configuration.GetSection(TelegramOptions.SectionName));
+        services.Configure<FrontendOptions>(configuration.GetSection(FrontendOptions.SectionName));
 
         var connectionString = configuration.GetConnectionString("Database")
             ?? throw new InvalidOperationException("Connection string 'Database' is not configured.");
@@ -53,7 +54,7 @@ public static class DependencyInjection
                 options.Password.RequireDigit = true;
                 options.Password.RequireUppercase = false;
                 options.User.RequireUniqueEmail = true;
-                options.SignIn.RequireConfirmedEmail = false;
+                options.SignIn.RequireConfirmedEmail = true;
             })
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders()
