@@ -44,6 +44,10 @@ export interface ResetPasswordRequest {
   newPassword: string;
 }
 
+export interface EnableEmailTwoFactorRequest {
+  code: string;
+}
+
 export interface GoogleCallbackExchangeRequest {
   code: string;
 }
@@ -52,4 +56,3 @@ export interface GoogleCallbackExchangeResponse {
   accessToken: string;
   accessTokenExpiresAt: string;
 }
-

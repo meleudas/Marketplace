@@ -1,5 +1,5 @@
 import { apiClient } from "@/shared/api/http.client";
-import type { ConfirmEmailRequest } from "@/shared/types/api.types";
+import type { ConfirmEmailRequest, EnableEmailTwoFactorRequest } from "@/shared/types/api.types";
 import type { UserDto } from "@/shared/types/user.types";
 import type {
   AuthTokensResponse,
@@ -49,6 +49,19 @@ export const resetPassword = async (payload: ResetPasswordPayload): Promise<void
   await apiClient.post("/account/reset-password", payload);
 };
 
+export const sendEmailTwoFactorCode = async (): Promise<void> => {
+  await apiClient.post("/account/2fa/email/send-code");
+};
+
+export const enableEmailTwoFactor = async (code: string): Promise<void> => {
+  const payload: EnableEmailTwoFactorRequest = { code };
+  await apiClient.post("/account/2fa/email/enable", payload);
+};
+
+export const disableEmailTwoFactor = async (): Promise<void> => {
+  await apiClient.post("/account/2fa/email/disable");
+};
+
 export const buildGoogleAuthUrl = (returnPath = "/auth/callback"): string => {
   const query = new URLSearchParams({ returnPath });
   return `${API_BASE_URL}/auth/google?${query.toString()}`;
@@ -60,5 +73,4 @@ export const exchangeGoogleCallback = async (
   const response = await apiClient.post<GoogleCallbackResponse>("/auth/google/callback", payload);
   return response.data;
 };
-
 

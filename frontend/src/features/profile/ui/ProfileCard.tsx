@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { UserDto } from "@/shared/types/user.types";
 import styles from "./ProfileCard.module.css";
 
@@ -30,6 +31,10 @@ export function ProfileCard({ user, onLogout, loading = false }: ProfileCardProp
         </p>
       </div>
 
+      <Link href="/settings" className={styles.settingsLink}>
+        Security settings
+      </Link>
+
       <button
         type="button"
         onClick={() => {
@@ -43,6 +48,3 @@ export function ProfileCard({ user, onLogout, loading = false }: ProfileCardProp
     </section>
   );
 }
-
-
-
