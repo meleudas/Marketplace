@@ -1,10 +1,10 @@
 "use client";
 
-import type { CurrentUser } from "@/shared/types/user.types";
+import type { UserDto } from "@/shared/types/user.types";
 import styles from "./ProfileCard.module.css";
 
 interface ProfileCardProps {
-  user: CurrentUser;
+  user: UserDto;
   onLogout: () => Promise<void> | void;
   loading?: boolean;
 }

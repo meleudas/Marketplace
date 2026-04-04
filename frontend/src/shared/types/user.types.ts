@@ -1,8 +1,10 @@
-export interface CurrentUser {
+export type UserRole = "buyer" | "seller" | "moderator" | "admin";
+
+export interface UserDto {
   id: string;
   firstName: string;
   lastName: string;
-  role: string;
+  role: UserRole;
   birthday: string | null;
   avatar: string | null;
   isVerified: boolean;
@@ -13,5 +15,6 @@ export interface CurrentUser {
   isDeleted: boolean;
   deletedAt: string | null;
 }
+
 
 

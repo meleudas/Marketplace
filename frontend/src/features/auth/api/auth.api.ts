@@ -1,5 +1,6 @@
 import { apiClient } from "@/shared/api/http.client";
-import type { CurrentUser } from "@/shared/types/user.types";
+import type { ConfirmEmailRequest } from "@/shared/types/api.types";
+import type { UserDto } from "@/shared/types/user.types";
 import type {
   AuthTokensResponse,
   ForgotPasswordPayload,
@@ -17,6 +18,10 @@ export const registerUser = async (payload: RegisterPayload): Promise<AuthTokens
   return response.data;
 };
 
+export const confirmEmail = async (payload: ConfirmEmailRequest): Promise<void> => {
+  await apiClient.post("/account/confirm-email", payload);
+};
+
 export const loginUser = async (payload: LoginPayload): Promise<AuthTokensResponse> => {
   const response = await apiClient.post<AuthTokensResponse>("/auth/login", payload);
   return response.data;
@@ -31,8 +36,8 @@ export const logoutUser = async (): Promise<void> => {
   await apiClient.post("/auth/logout");
 };
 
-export const getCurrentUser = async (): Promise<CurrentUser> => {
-  const response = await apiClient.get<CurrentUser>("/users/me");
+export const getCurrentUser = async (): Promise<UserDto> => {
+  const response = await apiClient.get<UserDto>("/users/me");
   return response.data;
 };
 

@@ -4,6 +4,7 @@ import { AxiosError } from "axios";
 import { create } from "zustand";
 import {
   buildGoogleAuthUrl,
+  confirmEmail as confirmEmailRequest,
   exchangeGoogleCallback,
   forgotPassword,
   getCurrentUser,
@@ -15,8 +16,10 @@ import {
 } from "@/features/auth/api/auth.api";
 import { isTwoFactorRequiredError } from "@/features/auth/api/is-two-factor-required-error";
 import { clearAccessToken, getAccessToken, setAccessToken } from "@/shared/lib/token.storage";
+import type { ProblemDetails } from "@/shared/types/api.types";
 import type {
   AuthStore,
+  ConfirmEmailPayload,
   ForgotPasswordPayload,
   LoginPayload,
   RegisterPayload,
@@ -25,7 +28,7 @@ import type {
 
 const getErrorMessage = (error: unknown): string => {
   const axiosError = error as AxiosError;
-  const data = axiosError.response?.data;
+  const data = axiosError.response?.data as ProblemDetails | string | undefined;
 
   if (!axiosError.response) {
     return "Network error: backend is unavailable or blocked by CORS/proxy settings.";
@@ -36,18 +39,23 @@ const getErrorMessage = (error: unknown): string => {
   }
 
   if (data && typeof data === "object") {
-    const problemDetail = (data as Record<string, unknown>).detail;
-    if (typeof problemDetail === "string") {
-      return problemDetail;
+    if (typeof data.detail === "string") {
+      return data.detail;
     }
 
-    const legacyMessage = (data as Record<string, unknown>).message;
-    if (typeof legacyMessage === "string") {
-      return legacyMessage;
+    if (typeof data.title === "string") {
+      return data.title;
     }
   }
 
   return axiosError.message || "Unknown error";
+};
+
+const isRegistrationConfirmationRequired = (error: unknown): boolean => {
+  const axiosError = error as AxiosError;
+  const message = getErrorMessage(error).toLowerCase();
+
+  return axiosError.response?.status === 403 && message.includes("confirm your email");
 };
 
 export const useAuth = create<AuthStore>((set, get) => ({
@@ -59,20 +67,42 @@ export const useAuth = create<AuthStore>((set, get) => ({
   register: async (payload: RegisterPayload) => {
     set({ loading: true });
     try {
-      const registerResult = await registerUser(payload);
-      setAccessToken(registerResult.accessToken);
-
-      const user = await getCurrentUser();
-      set({
-        user,
-        isAuthenticated: true,
-      });
-
-      return { success: true, message: "Registration successful." };
+      await registerUser(payload);
+      clearAccessToken();
+      set({ user: null, isAuthenticated: false });
+      return {
+        success: true,
+        message: "Підтвердіть пошту, щоб завершити створення акаунта.",
+      };
     } catch (error) {
+      if (isRegistrationConfirmationRequired(error)) {
+        clearAccessToken();
+        set({ user: null, isAuthenticated: false });
+        return {
+          success: true,
+          message: "Підтвердіть пошту, щоб завершити створення акаунта.",
+        };
+      }
+
       const message = getErrorMessage(error);
       clearAccessToken();
       set({ user: null, isAuthenticated: false });
+      return { success: false, message };
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  confirmEmail: async (payload: ConfirmEmailPayload) => {
+    set({ loading: true });
+    try {
+      await confirmEmailRequest(payload);
+      return {
+        success: true,
+        message: "Email confirmed. Now you can login.",
+      };
+    } catch (error) {
+      const message = getErrorMessage(error);
       return { success: false, message };
     } finally {
       set({ loading: false });
