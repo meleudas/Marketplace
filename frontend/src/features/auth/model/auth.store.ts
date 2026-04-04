@@ -71,7 +71,6 @@ export const useAuth = create<AuthStore>((set, get) => ({
       return { success: true, message: "Registration successful." };
     } catch (error) {
       const message = getErrorMessage(error);
-      console.error("[AUTH] register() action failed.", { message, error });
       clearAccessToken();
       set({ user: null, isAuthenticated: false });
       return { success: false, message };
@@ -104,7 +103,6 @@ export const useAuth = create<AuthStore>((set, get) => ({
         };
       }
 
-      console.error("[AUTH] login() action failed.", { message, error });
       clearAccessToken();
       set({ user: null, isAuthenticated: false });
       return { success: false, message };
@@ -137,7 +135,6 @@ export const useAuth = create<AuthStore>((set, get) => ({
       return { success: true, message: "Google login successful." };
     } catch (error) {
       const message = getErrorMessage(error);
-      console.error("[AUTH] completeGoogleLogin() action failed.", { message, error });
       clearAccessToken();
       set({ user: null, isAuthenticated: false });
       return { success: false, message };
@@ -156,7 +153,6 @@ export const useAuth = create<AuthStore>((set, get) => ({
       };
     } catch (error) {
       const message = getErrorMessage(error);
-      console.error("[AUTH] forgotPassword() action failed.", { message, error });
       return { success: false, message };
     } finally {
       set({ loading: false });
@@ -173,7 +169,6 @@ export const useAuth = create<AuthStore>((set, get) => ({
       };
     } catch (error) {
       const message = getErrorMessage(error);
-      console.error("[AUTH] resetPassword() action failed.", { message, error });
       return { success: false, message };
     } finally {
       set({ loading: false });
@@ -184,12 +179,8 @@ export const useAuth = create<AuthStore>((set, get) => ({
     set({ loading: true });
     try {
       await logoutUser();
-    } catch (error) {
-      const message = getErrorMessage(error);
-      console.warn("[AUTH] logout() backend call failed, still clearing local auth state.", {
-        message,
-        error,
-      });
+    } catch {
+      // Keep logout behavior unchanged even if backend request fails.
     } finally {
       clearAccessToken();
       set({
@@ -237,17 +228,11 @@ export const useAuth = create<AuthStore>((set, get) => ({
             initialized: true,
           });
           return;
-        } catch (refreshError) {
-          const refreshMessage = getErrorMessage(refreshError);
-          console.error("[AUTH] loadMe() refresh retry failed.", {
-            message: refreshMessage,
-            error: refreshError,
-          });
+        } catch {
+          // Refresh failure is already logged by API client interceptor.
         }
       }
 
-      const message = getErrorMessage(error);
-      console.error("[AUTH] loadMe() failed.", { message, error });
       clearAccessToken();
       set({ user: null, isAuthenticated: false, initialized: true });
     } finally {
