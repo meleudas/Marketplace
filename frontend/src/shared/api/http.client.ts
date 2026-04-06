@@ -1,14 +1,8 @@
 import axios, { AxiosError, AxiosHeaders, InternalAxiosRequestConfig } from "axios";
 import { clearAccessToken, getAccessToken, setAccessToken } from "@/shared/lib/token.storage";
+import type { AuthTokensDto } from "@/shared/types/api.types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-
-interface RefreshTokensResponse {
-  accessToken: string;
-  refreshToken: string;
-  accessTokenExpiresAt: string;
-  refreshTokenExpiresAt: string;
-}
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
@@ -25,7 +19,7 @@ const shouldSkipAutoRefresh = (config: InternalAxiosRequestConfig): boolean => {
 };
 
 const refreshAccessTokenWithCookie = async (): Promise<string> => {
-  const response = await axios.post<RefreshTokensResponse>(`${BASE_URL}/auth/refresh`, null, {
+  const response = await axios.post<AuthTokensDto>(`${BASE_URL}/auth/refresh`, null, {
     withCredentials: true,
     timeout: 15000,
     headers: {
