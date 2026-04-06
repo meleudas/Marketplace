@@ -117,6 +117,112 @@
 | `isDeleted` | boolean | |
 | `deletedAt` | string \| null | |
 
+### Каталог (компанії/категорії)
+
+**`CompanyAddressRequest`** — вкладений об’єкт у `POST /admin/companies`, `PUT /admin/companies/{id}`
+
+| Поле | Тип | Опис |
+|------|-----|------|
+| `street` | string | Вулиця/будинок. |
+| `city` | string | Місто. |
+| `state` | string | Область/регіон. |
+| `postalCode` | string | Поштовий індекс. |
+| `country` | string | Країна. |
+
+**`CreateCompanyRequest`** — `POST /admin/companies`
+
+| Поле | Тип | Опис |
+|------|-----|------|
+| `name` | string | Назва компанії. |
+| `slug` | string | URL-ідентифікатор (унікальний). |
+| `description` | string | Опис компанії. |
+| `imageUrl` | string \| null | URL логотипа/банера. |
+| `contactEmail` | string | Контактний email. |
+| `contactPhone` | string | Контактний телефон. |
+| `address` | `CompanyAddressRequest` | Адреса компанії. |
+| `metaRaw` | string \| null | Додаткові JSON-дані (raw). |
+
+**`UpdateCompanyRequest`** — `PUT /admin/companies/{id}`
+
+| Поле | Тип | Опис |
+|------|-----|------|
+| `name` | string | Назва компанії. |
+| `slug` | string | URL-ідентифікатор. |
+| `description` | string | Опис компанії. |
+| `imageUrl` | string \| null | URL зображення. |
+| `contactEmail` | string | Контактний email. |
+| `contactPhone` | string | Контактний телефон. |
+| `address` | `CompanyAddressRequest` | Адреса компанії. |
+| `metaRaw` | string \| null | Додаткові JSON-дані (raw). |
+
+**`CompanyDto`** — елемент списків `GET /catalog/companies`, `GET /admin/companies`, `GET /admin/companies/pending`; також відповідь create/update компанії
+
+| Поле | Тип | Опис |
+|------|-----|------|
+| `id` | guid | Id компанії. Генерується автоматично на бекенді під час створення. |
+| `name` | string | Назва. |
+| `slug` | string | URL-ідентифікатор. |
+| `description` | string | Опис. |
+| `imageUrl` | string \| null | URL зображення. |
+| `contactEmail` | string | Контактний email. |
+| `contactPhone` | string | Контактний телефон. |
+| `address` | `CompanyAddressDto` | Адреса компанії. |
+| `isApproved` | boolean | Чи підтверджена адміном. |
+| `approvedAt` | string \| null | Коли підтверджено. |
+| `approvedByUserId` | string \| null | Хто підтвердив. |
+| `rating` | number \| null | Середній рейтинг. |
+| `reviewCount` | int | К-сть відгуків. |
+| `followerCount` | int | К-сть підписників. |
+| `metaRaw` | string \| null | Додаткові JSON-дані (raw). |
+| `createdAt` | string | Час створення. |
+| `updatedAt` | string | Час оновлення. |
+| `isDeleted` | boolean | Soft-delete прапор. |
+| `deletedAt` | string \| null | Час soft-delete. |
+
+**`CreateCategoryRequest`** — `POST /admin/categories`
+
+| Поле | Тип | Опис |
+|------|-----|------|
+| `name` | string | Назва категорії. |
+| `slug` | string | URL-ідентифікатор (унікальний). |
+| `imageUrl` | string \| null | URL іконки/банера. |
+| `parentCategoryId` | long \| null | Батьківська категорія. |
+| `description` | string \| null | Опис категорії. |
+| `metaRaw` | string \| null | Додаткові JSON-дані (raw). |
+| `sortOrder` | int | Порядок сортування. |
+| `isActive` | boolean | Активність категорії. |
+
+**`UpdateCategoryRequest`** — `PUT /admin/categories/{id}`
+
+| Поле | Тип | Опис |
+|------|-----|------|
+| `name` | string | Назва категорії. |
+| `slug` | string | URL-ідентифікатор. |
+| `imageUrl` | string \| null | URL іконки/банера. |
+| `parentCategoryId` | long \| null | Батьківська категорія. |
+| `description` | string \| null | Опис категорії. |
+| `metaRaw` | string \| null | Додаткові JSON-дані (raw). |
+| `sortOrder` | int | Порядок сортування. |
+
+**`CategoryDto`** — елемент списків `GET /catalog/categories`, `GET /admin/categories`, `GET /admin/categories/active`; також відповідь create/update категорії
+
+| Поле | Тип | Опис |
+|------|-----|------|
+| `id` | long | Id категорії. Генерується БД (auto-increment). |
+| `name` | string | Назва. |
+| `slug` | string | URL-ідентифікатор. |
+| `imageUrl` | string \| null | URL зображення. |
+| `parentId` | long \| null | Батьківська категорія. |
+| `description` | string \| null | Опис. |
+| `metaRaw` | string \| null | Додаткові JSON-дані (raw). |
+| `sortOrder` | int | Порядок сортування. |
+| `isActive` | boolean | Активність. |
+| `productCount` | int | К-сть товарів у категорії. |
+| `createdAt` | string | Час створення. |
+| `updatedAt` | string | Час оновлення. |
+| `isDeleted` | boolean | Soft-delete прапор. |
+| `deletedAt` | string \| null | Час soft-delete. |
+
 ### Google OAuth
 
 **`GoogleCallbackExchangeRequest`** — `POST /auth/google/callback`
@@ -332,6 +438,112 @@
 - **Коли використовувати:** «видалити мій акаунт».
 - **Path:** `id` — guid.
 - **Успіх (200):** **порожнє тіло**; обліковий запис позначається видаленим за логікою сервісу.
+
+---
+
+### `CatalogController` — префікс `/catalog` (публічний)
+
+#### `GET /catalog/companies`
+
+- **Що робить:** повертає лише **підтверджені** компанії для публічного каталогу.
+- **Авторизація:** не потрібна (`AllowAnonymous`).
+- **Body:** немає.
+- **Що повертає:** масив `CompanyDto` (може бути порожнім).
+
+#### `GET /catalog/categories`
+
+- **Що робить:** повертає лише **активні** категорії для публічного каталогу.
+- **Авторизація:** не потрібна (`AllowAnonymous`).
+- **Body:** немає.
+- **Що повертає:** масив `CategoryDto` (може бути порожнім).
+
+---
+
+### `AdminCatalogController` — префікс `/admin` (адмін)
+
+Усі маршрути вимагають **Bearer** + роль **`Admin`**.
+
+#### `GET /admin/companies`
+
+- **Що робить:** повертає повний список компаній (у т.ч. непідтверджені).
+- **Що повертає:** масив `CompanyDto`.
+
+#### `GET /admin/companies/pending`
+
+- **Що робить:** повертає лише компанії, які очікують модерації (`isApproved = false`).
+- **Що повертає:** масив `CompanyDto`.
+
+#### `POST /admin/companies`
+
+- **Що робить:** створює компанію (id генерується автоматично як `Guid`).
+- **Body:** `CreateCompanyRequest`.
+- **Що повертає:** один `CompanyDto` створеної компанії.
+
+#### `PUT /admin/companies/{id}`
+
+- **Що робить:** оновлює компанію за id.
+- **Path:** `id` — guid.
+- **Body:** `UpdateCompanyRequest`.
+- **Що повертає:** оновлений `CompanyDto`.
+
+#### `POST /admin/companies/{id}/approve`
+
+- **Що робить:** підтверджує компанію від імені поточного адміна.
+- **Path:** `id` — guid.
+- **Що повертає:** **порожнє тіло** (`200 OK`) при успіху.
+
+#### `POST /admin/companies/{id}/revoke-approval`
+
+- **Що робить:** скасовує підтвердження компанії.
+- **Path:** `id` — guid.
+- **Що повертає:** **порожнє тіло** (`200 OK`) при успіху.
+
+#### `DELETE /admin/companies/{id}`
+
+- **Що робить:** soft-delete компанії.
+- **Path:** `id` — guid.
+- **Що повертає:** **порожнє тіло** (`200 OK`) при успіху.
+
+#### `GET /admin/categories`
+
+- **Що робить:** повертає всі категорії.
+- **Що повертає:** масив `CategoryDto`.
+
+#### `GET /admin/categories/active`
+
+- **Що робить:** повертає лише активні категорії.
+- **Що повертає:** масив `CategoryDto`.
+
+#### `POST /admin/categories`
+
+- **Що робить:** створює категорію (id генерується БД auto-increment).
+- **Body:** `CreateCategoryRequest`.
+- **Що повертає:** один `CategoryDto` створеної категорії.
+
+#### `PUT /admin/categories/{id}`
+
+- **Що робить:** оновлює категорію за id.
+- **Path:** `id` — long.
+- **Body:** `UpdateCategoryRequest`.
+- **Що повертає:** оновлений `CategoryDto`.
+
+#### `POST /admin/categories/{id}/activate`
+
+- **Що робить:** активує категорію.
+- **Path:** `id` — long.
+- **Що повертає:** **порожнє тіло** (`200 OK`) при успіху.
+
+#### `POST /admin/categories/{id}/deactivate`
+
+- **Що робить:** деактивує категорію.
+- **Path:** `id` — long.
+- **Що повертає:** **порожнє тіло** (`200 OK`) при успіху.
+
+#### `DELETE /admin/categories/{id}`
+
+- **Що робить:** soft-delete категорії.
+- **Path:** `id` — long.
+- **Що повертає:** **порожнє тіло** (`200 OK`) при успіху.
 
 ---
 

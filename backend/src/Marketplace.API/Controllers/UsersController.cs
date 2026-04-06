@@ -1,5 +1,8 @@
 using Marketplace.API.Extensions;
+using Marketplace.Application.Users.Commands.AssignUserRole;
 using Marketplace.Application.Users.Services;
+using Marketplace.Domain.Users.Enums;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,13 +15,16 @@ public class UsersController : ControllerBase
 {
     private readonly IUserReadService _userReadService;
     private readonly IUserManagementService _userManagementService;
+    private readonly ISender _sender;
 
     public UsersController(
         IUserReadService userReadService,
-        IUserManagementService userManagementService)
+        IUserManagementService userManagementService,
+        ISender sender)
     {
         _userReadService = userReadService;
         _userManagementService = userManagementService;
+        _sender = sender;
     }
 
     [HttpGet("me")]
@@ -57,4 +63,22 @@ public class UsersController : ControllerBase
         var result = await _userManagementService.DeleteAccountAsync(id, ct);
         return result.ToActionResult();
     }
+
+    [HttpPatch("{id:guid}/role")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AssignRole(Guid id, [FromBody] AssignUserRoleRequest request, CancellationToken ct)
+    {
+        if (!Enum.TryParse<UserRole>(request.Role, true, out var role))
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Помилка запиту",
+                Detail = "Role is invalid",
+                Status = StatusCodes.Status400BadRequest
+            });
+
+        var result = await _sender.Send(new AssignUserRoleCommand(id, role), ct);
+        return result.ToActionResult();
+    }
 }
+
+public sealed record AssignUserRoleRequest(string Role);

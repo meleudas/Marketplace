@@ -7,9 +7,9 @@ namespace Marketplace.Domain.Common.ValueObjects;
 
 public sealed record CompanyId : ValueObject
 {
-    public long Value { get; }
-    private CompanyId(long value) => Value = value;
-    public static CompanyId From(long value) => new(value);
+    public Guid Value { get; }
+    private CompanyId(Guid value) => Value = value;
+    public static CompanyId From(Guid value) => new(value);
     protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
 }
 

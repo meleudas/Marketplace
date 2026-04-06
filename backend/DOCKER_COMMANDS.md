@@ -189,3 +189,25 @@ docker compose up -d postgres
 docker volume ls
 ```
 
+---
+
+## Seed тестових даних (окрема команда)
+
+Скрипт: `backend/scripts/seed-test-data.sql`  
+Запуск (з кореня репозиторію, де `docker-compose.yml`):
+
+```powershell
+docker compose --profile tools run --rm db-seed
+```
+
+Скрипт очищає і наповнює узгоджені дані для:
+- `AspNetUsers`
+- `marketplace_users`
+- `categories`
+- `companies`
+
+Тестові креденшли після seed:
+- `admin@marketplace.test` / `Admin123!`
+- `seller@marketplace.test` / `Admin123!`
+- `buyer@marketplace.test` / `Admin123!`
+

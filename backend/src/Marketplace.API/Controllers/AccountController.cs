@@ -6,6 +6,7 @@ using Marketplace.Application.Auth.Commands.TwoFactor.EnableTelegramTwoFactor;
 using Marketplace.Application.Auth.Commands.TwoFactor.GenerateTelegramLinkCode;
 using Marketplace.Application.Auth.Commands.TwoFactor.SendEmailTwoFactorCode;
 using Marketplace.Application.Auth.Commands.TwoFactor.SendTelegramTwoFactorCode;
+using Marketplace.Application.Auth.Queries.GetTwoFactorStatus;
 using Marketplace.Application.Users.Commands.RequestPasswordReset;
 using Marketplace.Application.Users.Commands.ResetPassword;
 using Marketplace.Application.Users.Commands.VerifyEmail;
@@ -46,6 +47,17 @@ public class AccountController : ControllerBase
         var result = await _sender.Send(
             new ResetPasswordCommand(request.Email, request.Token, request.NewPassword),
             ct);
+        return result.ToActionResult();
+    }
+
+    [HttpGet("2fa/status")]
+    [Authorize]
+    public async Task<IActionResult> GetTwoFactorStatus(CancellationToken ct)
+    {
+        if (!User.TryGetUserId(out var identityUserId))
+            return Unauthorized();
+
+        var result = await _sender.Send(new GetTwoFactorStatusQuery(identityUserId), ct);
         return result.ToActionResult();
     }
 

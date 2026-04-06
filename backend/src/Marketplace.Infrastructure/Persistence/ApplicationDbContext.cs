@@ -16,6 +16,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 
     public DbSet<MarketplaceUserRecord> MarketplaceUsers => Set<MarketplaceUserRecord>();
     public DbSet<RefreshTokenRecord> RefreshTokens => Set<RefreshTokenRecord>();
+    public DbSet<CompanyRecord> Companies => Set<CompanyRecord>();
+    public DbSet<CategoryRecord> Categories => Set<CategoryRecord>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

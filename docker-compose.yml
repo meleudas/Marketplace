@@ -80,6 +80,22 @@ services:
       timeout: 5s
       retries: 5
 
+  db-seed:
+    profiles: ["tools"]
+    image: postgres:17-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/scripts:/seed:ro
+    command: >
+      sh -c "psql
+      postgresql://postgres:postgres@postgres:5432/marketplace
+      -v ON_ERROR_STOP=1
+      -f /seed/seed-test-data.sql"
+    networks:
+      - marketplace
+
 volumes:
   postgres_data:
   redis_data:

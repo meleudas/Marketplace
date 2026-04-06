@@ -1,6 +1,8 @@
+using Marketplace.Application.Auth.DTOs;
 using Marketplace.Application.Auth.Ports;
 using Marketplace.Domain.Auth.ValueObjects;
 using Marketplace.Domain.Shared.Kernel;
+using Marketplace.Domain.Users.Enums;
 using Marketplace.Domain.Users.Repositories;
 using Marketplace.Domain.Users.ValueObjects;
 using Marketplace.Infrastructure.Identity.Entities;
@@ -367,6 +369,51 @@ public class IdentityAuthService : IAuthenticationPort
         var update = await _userManager.UpdateAsync(appUser);
         if (!update.Succeeded)
             return Result.Failure(string.Join(" ", update.Errors.Select(e => e.Description)));
+
+        return Result.Success();
+    }
+
+    public async Task<Result<TwoFactorStatusDto>> GetTwoFactorStatusAsync(IdentityUserId userId, CancellationToken ct = default)
+    {
+        var appUser = await _userManager.FindByIdAsync(userId.Value.ToString());
+        if (appUser is null || appUser.IsDeleted)
+            return Result<TwoFactorStatusDto>.Failure("User no longer exists.");
+
+        var dto = new TwoFactorStatusDto(
+            appUser.TwoFactorEnabled,
+            appUser.TelegramTwoFactorEnabled,
+            !string.IsNullOrWhiteSpace(appUser.TelegramChatId));
+
+        return Result<TwoFactorStatusDto>.Success(dto);
+    }
+
+    public async Task<Result> AssignUserRoleAsync(IdentityUserId userId, UserRole role, CancellationToken ct = default)
+    {
+        var appUser = await _userManager.FindByIdAsync(userId.Value.ToString());
+        if (appUser is null || appUser.IsDeleted)
+            return Result.Failure("User no longer exists.");
+
+        var managedRoles = new[] { nameof(UserRole.Buyer), nameof(UserRole.Seller), nameof(UserRole.Moderator), nameof(UserRole.Admin) };
+        var currentRoles = await _userManager.GetRolesAsync(appUser);
+        var rolesToRemove = currentRoles.Where(r => managedRoles.Contains(r, StringComparer.OrdinalIgnoreCase)).ToList();
+        if (rolesToRemove.Count > 0)
+        {
+            var remove = await _userManager.RemoveFromRolesAsync(appUser, rolesToRemove);
+            if (!remove.Succeeded)
+                return Result.Failure(string.Join(" ", remove.Errors.Select(e => e.Description)));
+        }
+
+        var targetRoleName = role.ToString();
+        var add = await _userManager.AddToRoleAsync(appUser, targetRoleName);
+        if (!add.Succeeded)
+            return Result.Failure(string.Join(" ", add.Errors.Select(e => e.Description)));
+
+        var domainUser = await _userRepository.GetByIdentityIdAsync(userId, ct);
+        if (domainUser is not null)
+        {
+            domainUser.SetRole(role);
+            await _userRepository.UpdateAsync(domainUser, ct);
+        }
 
         return Result.Success();
     }

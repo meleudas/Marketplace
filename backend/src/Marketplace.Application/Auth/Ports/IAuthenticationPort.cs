@@ -1,5 +1,7 @@
+using Marketplace.Application.Auth.DTOs;
 using Marketplace.Domain.Auth.ValueObjects;
 using Marketplace.Domain.Shared.Kernel;
+using Marketplace.Domain.Users.Enums;
 using Marketplace.Domain.Users.ValueObjects;
 
 namespace Marketplace.Application.Auth.Ports
@@ -55,5 +57,9 @@ namespace Marketplace.Application.Auth.Ports
         Task<Result> EnableTelegramTwoFactorAsync(IdentityUserId userId, string code, CancellationToken ct = default);
 
         Task<Result> DisableTelegramTwoFactorAsync(IdentityUserId userId, CancellationToken ct = default);
+
+        Task<Result<TwoFactorStatusDto>> GetTwoFactorStatusAsync(IdentityUserId userId, CancellationToken ct = default);
+
+        Task<Result> AssignUserRoleAsync(IdentityUserId userId, UserRole role, CancellationToken ct = default);
     }
 }

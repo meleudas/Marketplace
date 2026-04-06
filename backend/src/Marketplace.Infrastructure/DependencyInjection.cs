@@ -1,4 +1,6 @@
 using Marketplace.Application.Auth.Ports;
+using Marketplace.Domain.Categories.Repositories;
+using Marketplace.Domain.Companies.Repositories;
 using Marketplace.Domain.Users.Repositories;
 using Marketplace.Infrastructure.Caching;
 using Marketplace.Infrastructure.External.Email;
@@ -50,11 +52,11 @@ public static class DependencyInjection
         services
             .AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
             {
-                options.Password.RequiredLength = 8;
-                options.Password.RequireDigit = true;
+                options.Password.RequiredLength = 4;
+                options.Password.RequireDigit = false;
                 options.Password.RequireUppercase = false;
                 options.User.RequireUniqueEmail = true;
-                options.SignIn.RequireConfirmedEmail = true;
+                options.SignIn.RequireConfirmedEmail = false;
             })
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders()
@@ -115,6 +117,8 @@ public static class DependencyInjection
         services.AddScoped<ITokenPort, TokenService>();
         services.AddScoped<IAuthenticationPort, IdentityAuthService>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<ICompanyRepository, CompanyRepository>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<GoogleOAuthService>();
         services.AddScoped<ITelegramLinkCodeStore, TelegramLinkCodeStore>();
         services.AddHttpClient<TelegramBotSender>();
@@ -165,9 +169,12 @@ public static class DependencyInjection
         await db.Database.MigrateAsync(ct);
 
         var roleManager = sp.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
-        const string roleName = "User";
-        if (!await roleManager.RoleExistsAsync(roleName))
+        var requiredRoles = new[] { "User", "Buyer", "Seller", "Moderator", "Admin" };
+        foreach (var roleName in requiredRoles)
         {
+            if (await roleManager.RoleExistsAsync(roleName))
+                continue;
+
             var r = await roleManager.CreateAsync(new IdentityRole<Guid>(roleName));
             if (!r.Succeeded)
                 throw new InvalidOperationException(string.Join(" ", r.Errors.Select(e => e.Description)));
