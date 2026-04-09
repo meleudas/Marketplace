@@ -35,6 +35,12 @@ export function ProfileCard({ user, onLogout, loading = false }: ProfileCardProp
         Security settings
       </Link>
 
+      {user.role === "admin" ? (
+        <Link href="/admin" className={styles.adminLink}>
+          Open admin panel
+        </Link>
+      ) : null}
+
       <button
         type="button"
         onClick={() => {
