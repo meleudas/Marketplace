@@ -1,6 +1,13 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import {
+  forgotPasswordFormSchema,
+  forgotPasswordResetSchema,
+  type ForgotPasswordFormValues,
+} from "@/features/auth/model/auth.form-schemas";
 import { useAuth } from "@/features/auth/model/auth.store";
 import styles from "./ForgotPasswordForm.module.css";
 
@@ -16,12 +23,26 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
   const loading = useAuth((state) => state.loading);
 
   const [step, setStep] = useState<1 | 2>(1);
-  const [email, setEmail] = useState("");
-  const [token, setToken] = useState("");
-  const [newPassword, setNewPassword] = useState("");
   const [resendSecondsLeft, setResendSecondsLeft] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const {
+    register: registerField,
+    handleSubmit,
+    getValues,
+    setError: setFieldError,
+    clearErrors,
+    resetField,
+    formState: { errors },
+  } = useForm<ForgotPasswordFormValues>({
+    resolver: zodResolver(forgotPasswordFormSchema),
+    defaultValues: {
+      email: "",
+      token: "",
+      newPassword: "",
+    },
+  });
 
   useEffect(() => {
     if (resendSecondsLeft <= 0) {
@@ -37,12 +58,11 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
     };
   }, [resendSecondsLeft]);
 
-  const handleSendCode = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSendCode = async (values: ForgotPasswordFormValues) => {
     setError(null);
     setSuccess(null);
 
-    const result = await forgotPassword({ email: email.trim() });
+    const result = await forgotPassword({ email: values.email.trim() });
 
     if (!result.success) {
       setError(result.message);
@@ -62,7 +82,8 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
     setError(null);
     setSuccess(null);
 
-    const result = await forgotPassword({ email: email.trim() });
+    const email = getValues("email").trim();
+    const result = await forgotPassword({ email });
     if (!result.success) {
       setError(result.message);
       return;
@@ -72,15 +93,31 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
     setResendSecondsLeft(RESEND_COOLDOWN_SECONDS);
   };
 
-  const handleResetPassword = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleResetPassword = async (values: ForgotPasswordFormValues) => {
+    const parsed = forgotPasswordResetSchema.safeParse(values);
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues) {
+        const fieldName = issue.path[0];
+        if (fieldName === "email") {
+          setFieldError("email", { type: "manual", message: issue.message });
+        }
+        if (fieldName === "token") {
+          setFieldError("token", { type: "manual", message: issue.message });
+        }
+        if (fieldName === "newPassword") {
+          setFieldError("newPassword", { type: "manual", message: issue.message });
+        }
+      }
+      return;
+    }
+
     setError(null);
     setSuccess(null);
 
     const result = await resetPassword({
-      email: email.trim(),
-      token: token.trim(),
-      newPassword,
+      email: parsed.data.email,
+      token: parsed.data.token,
+      newPassword: parsed.data.newPassword,
     });
 
     if (!result.success) {
@@ -89,12 +126,22 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
     }
 
     setSuccess(result.message);
-    setToken("");
-    setNewPassword("");
+    resetField("token");
+    resetField("newPassword");
+  };
+
+  const onSubmit = async (values: ForgotPasswordFormValues) => {
+    if (step === 1) {
+      clearErrors(["token", "newPassword"]);
+      await handleSendCode(values);
+      return;
+    }
+
+    await handleResetPassword(values);
   };
 
   return (
-    <form onSubmit={step === 1 ? handleSendCode : handleResetPassword} className={styles.form}>
+    <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
       <h2 className={styles.title}>Reset password</h2>
       <p className={styles.description}>
         {step === 1
@@ -109,13 +156,12 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
         <input
           id="forgot-email"
           type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
+          {...registerField("email")}
           readOnly={step === 2}
           className={styles.input}
           placeholder="you@example.com"
         />
+        {errors.email ? <p className={styles.fieldError}>{errors.email.message}</p> : null}
       </div>
 
       {step === 2 ? (
@@ -127,12 +173,11 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
             <input
               id="forgot-token"
               type="text"
-              value={token}
-              onChange={(event) => setToken(event.target.value)}
-              required
+              {...registerField("token")}
               className={styles.input}
               placeholder="Paste token from email"
             />
+            {errors.token ? <p className={styles.fieldError}>{errors.token.message}</p> : null}
           </div>
 
           <div className={styles.field}>
@@ -142,12 +187,13 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
             <input
               id="forgot-new-password"
               type="password"
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-              required
+              {...registerField("newPassword")}
               className={styles.input}
               placeholder="********"
             />
+            {errors.newPassword ? (
+              <p className={styles.fieldError}>{errors.newPassword.message}</p>
+            ) : null}
           </div>
         </>
       ) : null}

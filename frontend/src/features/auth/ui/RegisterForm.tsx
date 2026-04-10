@@ -1,6 +1,9 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { registerFormSchema, type RegisterFormValues } from "@/features/auth/model/auth.form-schemas";
 import { useAuth } from "@/features/auth/model/auth.store";
 import styles from "./RegisterForm.module.css";
 
@@ -12,23 +15,35 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   const register = useAuth((state) => state.register);
   const loading = useAuth((state) => state.loading);
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [userName, setUserName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const {
+    register: registerField,
+    handleSubmit,
+    formState: { errors },
+    resetField,
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerFormSchema),
+    defaultValues: {
+      userName: "",
+      email: "",
+      phoneNumber: "",
+      password: "",
+    },
+  });
+
+  const onSubmit = async (values: RegisterFormValues) => {
     setError(null);
     setSuccess(null);
 
+    const phoneNumber = values.phoneNumber?.trim() ?? "";
+
     const result = await register({
-      email: email.trim(),
-      password,
-      userName: userName.trim(),
-      phoneNumber: phoneNumber.trim().length > 0 ? phoneNumber.trim() : null,
+      email: values.email.trim(),
+      password: values.password,
+      userName: values.userName.trim(),
+      phoneNumber: phoneNumber.length > 0 ? phoneNumber : null,
     });
 
     if (!result.success) {
@@ -37,11 +52,11 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
     }
 
     setSuccess(result.message);
-    setPassword("");
+    resetField("password");
   };
 
   return (
-    <form onSubmit={handleSubmit} className={styles.form}>
+    <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
       <h2 className={styles.title}>Register</h2>
 
       <div className={styles.field}>
@@ -51,12 +66,11 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
         <input
           id="register-userName"
           type="text"
-          value={userName}
-          onChange={(event) => setUserName(event.target.value)}
-          required
+          {...registerField("userName")}
           className={styles.input}
           placeholder="john"
         />
+        {errors.userName ? <p className={styles.fieldError}>{errors.userName.message}</p> : null}
       </div>
 
       <div className={styles.field}>
@@ -66,12 +80,11 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
         <input
           id="register-email"
           type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
+          {...registerField("email")}
           className={styles.input}
           placeholder="you@example.com"
         />
+        {errors.email ? <p className={styles.fieldError}>{errors.email.message}</p> : null}
       </div>
 
       <div className={styles.field}>
@@ -81,8 +94,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
         <input
           id="register-phoneNumber"
           type="tel"
-          value={phoneNumber}
-          onChange={(event) => setPhoneNumber(event.target.value)}
+          {...registerField("phoneNumber")}
           className={styles.input}
           placeholder="+380..."
         />
@@ -95,12 +107,11 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
         <input
           id="register-password"
           type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
+          {...registerField("password")}
           className={styles.input}
           placeholder="********"
         />
+        {errors.password ? <p className={styles.fieldError}>{errors.password.message}</p> : null}
       </div>
 
       {error ? <p className={styles.errorMessage}>{error}</p> : null}

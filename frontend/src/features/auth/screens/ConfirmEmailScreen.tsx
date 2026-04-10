@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { confirmEmailQuerySchema } from "@/features/auth/model/auth.form-schemas";
 import { useAuth } from "@/features/auth/model/auth.store";
 import styles from "./ConfirmEmailScreen.module.css";
 
@@ -25,9 +26,13 @@ export function ConfirmEmailScreen() {
 
   const emailParam = searchParams.get("email") ?? "";
   const tokenParam = searchParams.get("token") ?? "";
-  const email = emailParam.trim();
-  const token = normalizeQueryValue(tokenParam);
-  const hasRequiredParams = Boolean(email && token);
+  const parsedQuery = confirmEmailQuerySchema.safeParse({
+    email: emailParam.trim(),
+    token: normalizeQueryValue(tokenParam),
+  });
+  const hasRequiredParams = parsedQuery.success;
+  const email = parsedQuery.success ? parsedQuery.data.email : "";
+  const token = parsedQuery.success ? parsedQuery.data.token : "";
 
   useEffect(() => {
     if (!hasRequiredParams) {

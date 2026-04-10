@@ -1,6 +1,9 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { loginFormSchema, type LoginFormValues } from "@/features/auth/model/auth.form-schemas";
 import { useAuth } from "@/features/auth/model/auth.store";
 import styles from "./LoginForm.module.css";
 
@@ -14,27 +17,49 @@ export function LoginForm({ onSwitchToRegister, onForgotPassword }: LoginFormPro
   const startGoogleLogin = useAuth((state) => state.startGoogleLogin);
   const loading = useAuth((state) => state.loading);
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [twoFactorCode, setTwoFactorCode] = useState("");
   const [isTwoFactorStep, setIsTwoFactorStep] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const {
+    register: registerField,
+    handleSubmit,
+    formState: { errors },
+    setError: setFieldError,
+    clearErrors,
+    resetField,
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginFormSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      twoFactorCode: "",
+    },
+  });
+
+  const onSubmit = async (values: LoginFormValues) => {
     setError(null);
     setSuccess(null);
 
+    const twoFactorCode = values.twoFactorCode?.trim() ?? "";
+    if (isTwoFactorStep && !twoFactorCode) {
+      setFieldError("twoFactorCode", {
+        type: "manual",
+        message: "2FA code is required",
+      });
+      return;
+    }
+
     const result = await login({
-      email: email.trim(),
-      password,
-      twoFactorCode: isTwoFactorStep ? twoFactorCode.trim() : null,
+      email: values.email.trim(),
+      password: values.password,
+      twoFactorCode: isTwoFactorStep ? twoFactorCode : null,
     });
 
     if (!result.success) {
       if (result.requiresTwoFactor) {
         setIsTwoFactorStep(true);
+        clearErrors("twoFactorCode");
         setSuccess(result.message);
         return;
       }
@@ -45,19 +70,20 @@ export function LoginForm({ onSwitchToRegister, onForgotPassword }: LoginFormPro
 
     setSuccess(result.message);
     setIsTwoFactorStep(false);
-    setTwoFactorCode("");
-    setPassword("");
+    resetField("twoFactorCode");
+    resetField("password");
   };
 
   const handleBackToCredentials = () => {
     setIsTwoFactorStep(false);
-    setTwoFactorCode("");
+    resetField("twoFactorCode");
+    clearErrors("twoFactorCode");
     setError(null);
     setSuccess(null);
   };
 
   return (
-    <form onSubmit={handleSubmit} className={styles.form}>
+    <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
       <h2 className={styles.title}>Login</h2>
 
       {!isTwoFactorStep ? (
@@ -69,12 +95,11 @@ export function LoginForm({ onSwitchToRegister, onForgotPassword }: LoginFormPro
             <input
               id="login-email"
               type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
+              {...registerField("email")}
               className={styles.input}
               placeholder="you@example.com"
             />
+            {errors.email ? <p className={styles.fieldError}>{errors.email.message}</p> : null}
           </div>
 
           <div className={styles.field}>
@@ -84,12 +109,11 @@ export function LoginForm({ onSwitchToRegister, onForgotPassword }: LoginFormPro
             <input
               id="login-password"
               type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
+              {...registerField("password")}
               className={styles.input}
               placeholder="********"
             />
+            {errors.password ? <p className={styles.fieldError}>{errors.password.message}</p> : null}
           </div>
         </>
       ) : (
@@ -104,12 +128,13 @@ export function LoginForm({ onSwitchToRegister, onForgotPassword }: LoginFormPro
             <input
               id="login-two-factor-code"
               type="text"
-              value={twoFactorCode}
-              onChange={(event) => setTwoFactorCode(event.target.value)}
-              required
+              {...registerField("twoFactorCode")}
               className={styles.input}
               placeholder="123456"
             />
+            {errors.twoFactorCode ? (
+              <p className={styles.fieldError}>{errors.twoFactorCode.message}</p>
+            ) : null}
           </div>
         </>
       )}
