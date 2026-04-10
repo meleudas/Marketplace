@@ -1,7 +1,12 @@
+import { Suspense } from "react";
 import { GoogleAuthCallbackScreen } from "@/features/auth/screens/GoogleAuthCallbackScreen";
 
 export default function Page() {
-  return <GoogleAuthCallbackScreen />;
+  return (
+    <Suspense fallback={null}>
+      <GoogleAuthCallbackScreen />
+    </Suspense>
+  );
 }
 
 

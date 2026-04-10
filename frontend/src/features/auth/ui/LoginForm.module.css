@@ -52,6 +52,13 @@
   box-shadow: 0 0 0 2px #3b82f6;
 }
 
+.fieldError {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: #b91c1c;
+}
+
 .errorMessage {
   margin: 0;
   border-radius: 0.375rem;
