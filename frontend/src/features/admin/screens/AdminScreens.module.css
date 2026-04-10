@@ -128,6 +128,16 @@
   font-size: 0.9rem;
 }
 
+.inputInvalid {
+  border-color: #f43f5e;
+}
+
+.fieldError {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #be123c;
+}
+
 .textarea {
   min-height: 92px;
   resize: vertical;

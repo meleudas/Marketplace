@@ -3,75 +3,51 @@ import type {
   CreateCategoryRequest,
   UpdateCategoryRequest,
 } from "@/features/admin/model/admin.types";
+import type { CategoryFormValues } from "@/features/admin/validation/category-form.schema";
 
-export interface CategoryFormState {
-  name: string;
-  slug: string;
-  imageUrl: string;
-  parentCategoryId: string;
-  description: string;
-  metaRaw: string;
-  sortOrder: string;
-  isActive: boolean;
-}
-
-export const defaultCategoryFormState: CategoryFormState = {
-  name: "",
-  slug: "",
-  imageUrl: "",
-  parentCategoryId: "",
-  description: "",
-  metaRaw: "",
-  sortOrder: "0",
-  isActive: true,
-};
-
-export const categoryDtoToFormState = (category: CategoryDto): CategoryFormState => {
+export const categoryDtoToFormValues = (category: CategoryDto): CategoryFormValues => {
   return {
     name: category.name,
     slug: category.slug,
     imageUrl: category.imageUrl ?? "",
-    parentCategoryId: category.parentId === null ? "" : String(category.parentId),
+    parentCategoryId: category.parentId,
     description: category.description ?? "",
     metaRaw: category.metaRaw ?? "",
-    sortOrder: String(category.sortOrder),
+    sortOrder: category.sortOrder,
     isActive: category.isActive,
   };
 };
 
-const parseOptionalNumber = (value: string): number | null => {
-  const trimmed = value.trim();
+export const buildCreateCategoryPayload = (form: CategoryFormValues): CreateCategoryRequest => {
+  const imageUrl = (form.imageUrl ?? "").trim();
+  const description = (form.description ?? "").trim();
+  const metaRaw = (form.metaRaw ?? "").trim();
 
-  if (!trimmed) {
-    return null;
-  }
-
-  const parsed = Number(trimmed);
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
-export const buildCreateCategoryPayload = (form: CategoryFormState): CreateCategoryRequest => {
   return {
     name: form.name.trim(),
     slug: form.slug.trim(),
-    imageUrl: form.imageUrl.trim() || null,
-    parentCategoryId: parseOptionalNumber(form.parentCategoryId),
-    description: form.description.trim() || null,
-    metaRaw: form.metaRaw.trim() || null,
-    sortOrder: Number(form.sortOrder) || 0,
+    imageUrl: imageUrl || null,
+    parentCategoryId: form.parentCategoryId,
+    description: description || null,
+    metaRaw: metaRaw || null,
+    sortOrder: form.sortOrder,
     isActive: form.isActive,
   };
 };
 
-export const buildUpdateCategoryPayload = (form: CategoryFormState): UpdateCategoryRequest => {
+export const buildUpdateCategoryPayload = (form: CategoryFormValues): UpdateCategoryRequest => {
+  const imageUrl = (form.imageUrl ?? "").trim();
+  const description = (form.description ?? "").trim();
+  const metaRaw = (form.metaRaw ?? "").trim();
+
   return {
     name: form.name.trim(),
     slug: form.slug.trim(),
-    imageUrl: form.imageUrl.trim() || null,
-    parentCategoryId: parseOptionalNumber(form.parentCategoryId),
-    description: form.description.trim() || null,
-    metaRaw: form.metaRaw.trim() || null,
-    sortOrder: Number(form.sortOrder) || 0,
+    imageUrl: imageUrl || null,
+    parentCategoryId: form.parentCategoryId,
+    description: description || null,
+    metaRaw: metaRaw || null,
+    sortOrder: form.sortOrder,
   };
 };
 

@@ -1,63 +1,54 @@
 "use client";
 
+import type { FieldErrors, UseFormRegister } from "react-hook-form";
 import styles from "@/features/admin/screens/AdminScreens.module.css";
-import type { CompanyFormState } from "@/features/admin/screens/companies.form";
+import type { CompanyFormValues } from "@/features/admin/validation/company-form.schema";
 
 interface CompanyFormProps {
-  value: CompanyFormState;
+  register: UseFormRegister<CompanyFormValues>;
+  errors: FieldErrors<CompanyFormValues>;
   disabled?: boolean;
-  onChange: (next: CompanyFormState) => void;
 }
 
-export function CompanyForm({ value, disabled = false, onChange }: CompanyFormProps) {
-  const update = (key: keyof CompanyFormState, nextValue: string) => {
-    onChange({
-      ...value,
-      [key]: nextValue,
-    });
-  };
+export function CompanyForm({ register, errors, disabled = false }: CompanyFormProps) {
 
   return (
     <div className={styles.formGrid}>
       <label className={styles.field}>
         Name
         <input
-          className={styles.input}
-          value={value.name}
-          onChange={(event) => update("name", event.target.value)}
+          className={`${styles.input} ${errors.name ? styles.inputInvalid : ""}`}
+          {...register("name")}
           disabled={disabled}
-          required
         />
+        {errors.name ? <span className={styles.fieldError}>{errors.name.message}</span> : null}
       </label>
 
       <label className={styles.field}>
         Slug
         <input
-          className={styles.input}
-          value={value.slug}
-          onChange={(event) => update("slug", event.target.value)}
+          className={`${styles.input} ${errors.slug ? styles.inputInvalid : ""}`}
+          {...register("slug")}
           disabled={disabled}
-          required
         />
+        {errors.slug ? <span className={styles.fieldError}>{errors.slug.message}</span> : null}
       </label>
 
       <label className={`${styles.field} ${styles.fieldFull}`}>
         Description
         <textarea
-          className={styles.textarea}
-          value={value.description}
-          onChange={(event) => update("description", event.target.value)}
+          className={`${styles.textarea} ${errors.description ? styles.inputInvalid : ""}`}
+          {...register("description")}
           disabled={disabled}
-          required
         />
+        {errors.description ? <span className={styles.fieldError}>{errors.description.message}</span> : null}
       </label>
 
       <label className={styles.field}>
         Image URL
         <input
           className={styles.input}
-          value={value.imageUrl}
-          onChange={(event) => update("imageUrl", event.target.value)}
+          {...register("imageUrl")}
           disabled={disabled}
         />
       </label>
@@ -65,86 +56,78 @@ export function CompanyForm({ value, disabled = false, onChange }: CompanyFormPr
       <label className={styles.field}>
         Contact email
         <input
-          className={styles.input}
-          value={value.contactEmail}
-          onChange={(event) => update("contactEmail", event.target.value)}
+          className={`${styles.input} ${errors.contactEmail ? styles.inputInvalid : ""}`}
+          {...register("contactEmail")}
           disabled={disabled}
-          required
         />
+        {errors.contactEmail ? <span className={styles.fieldError}>{errors.contactEmail.message}</span> : null}
       </label>
 
       <label className={styles.field}>
         Contact phone
         <input
-          className={styles.input}
-          value={value.contactPhone}
-          onChange={(event) => update("contactPhone", event.target.value)}
+          className={`${styles.input} ${errors.contactPhone ? styles.inputInvalid : ""}`}
+          {...register("contactPhone")}
           disabled={disabled}
-          required
         />
+        {errors.contactPhone ? <span className={styles.fieldError}>{errors.contactPhone.message}</span> : null}
       </label>
 
       <label className={styles.field}>
         Street
         <input
-          className={styles.input}
-          value={value.street}
-          onChange={(event) => update("street", event.target.value)}
+          className={`${styles.input} ${errors.address?.street ? styles.inputInvalid : ""}`}
+          {...register("address.street")}
           disabled={disabled}
-          required
         />
+        {errors.address?.street ? <span className={styles.fieldError}>{errors.address.street.message}</span> : null}
       </label>
 
       <label className={styles.field}>
         City
         <input
-          className={styles.input}
-          value={value.city}
-          onChange={(event) => update("city", event.target.value)}
+          className={`${styles.input} ${errors.address?.city ? styles.inputInvalid : ""}`}
+          {...register("address.city")}
           disabled={disabled}
-          required
         />
+        {errors.address?.city ? <span className={styles.fieldError}>{errors.address.city.message}</span> : null}
       </label>
 
       <label className={styles.field}>
         State
         <input
-          className={styles.input}
-          value={value.state}
-          onChange={(event) => update("state", event.target.value)}
+          className={`${styles.input} ${errors.address?.state ? styles.inputInvalid : ""}`}
+          {...register("address.state")}
           disabled={disabled}
-          required
         />
+        {errors.address?.state ? <span className={styles.fieldError}>{errors.address.state.message}</span> : null}
       </label>
 
       <label className={styles.field}>
         Postal code
         <input
-          className={styles.input}
-          value={value.postalCode}
-          onChange={(event) => update("postalCode", event.target.value)}
+          className={`${styles.input} ${errors.address?.postalCode ? styles.inputInvalid : ""}`}
+          {...register("address.postalCode")}
           disabled={disabled}
-          required
         />
+        {errors.address?.postalCode ? <span className={styles.fieldError}>{errors.address.postalCode.message}</span> : null}
       </label>
 
       <label className={styles.field}>
         Country
         <input
-          className={styles.input}
-          value={value.country}
-          onChange={(event) => update("country", event.target.value)}
+          className={`${styles.input} ${errors.address?.country ? styles.inputInvalid : ""}`}
+          {...register("address.country")}
           disabled={disabled}
-          required
         />
+        {errors.address?.country ? <span className={styles.fieldError}>{errors.address.country.message}</span> : null}
       </label>
 
       <label className={`${styles.field} ${styles.fieldFull}`}>
         Meta raw
         <textarea
           className={styles.textarea}
-          value={value.metaRaw}
-          onChange={(event) => update("metaRaw", event.target.value)}
+          {...register("metaRaw")}
           disabled={disabled}
         />
       </label>

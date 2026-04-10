@@ -3,38 +3,9 @@ import type {
   CreateCompanyRequest,
   UpdateCompanyRequest,
 } from "@/features/admin/model/admin.types";
+import type { CompanyFormValues } from "@/features/admin/validation/company-form.schema";
 
-export interface CompanyFormState {
-  name: string;
-  slug: string;
-  description: string;
-  imageUrl: string;
-  contactEmail: string;
-  contactPhone: string;
-  street: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-  metaRaw: string;
-}
-
-export const defaultCompanyFormState: CompanyFormState = {
-  name: "",
-  slug: "",
-  description: "",
-  imageUrl: "",
-  contactEmail: "",
-  contactPhone: "",
-  street: "",
-  city: "",
-  state: "",
-  postalCode: "",
-  country: "",
-  metaRaw: "",
-};
-
-export const companyDtoToFormState = (company: CompanyDto): CompanyFormState => {
+export const companyDtoToFormValues = (company: CompanyDto): CompanyFormValues => {
   return {
     name: company.name,
     slug: company.slug,
@@ -42,33 +13,38 @@ export const companyDtoToFormState = (company: CompanyDto): CompanyFormState => 
     imageUrl: company.imageUrl ?? "",
     contactEmail: company.contactEmail,
     contactPhone: company.contactPhone,
-    street: company.address.street,
-    city: company.address.city,
-    state: company.address.state,
-    postalCode: company.address.postalCode,
-    country: company.address.country,
+    address: {
+      street: company.address.street,
+      city: company.address.city,
+      state: company.address.state,
+      postalCode: company.address.postalCode,
+      country: company.address.country,
+    },
     metaRaw: company.metaRaw ?? "",
   };
 };
 
 export const buildCompanyPayload = (
-  form: CompanyFormState,
+  form: CompanyFormValues,
 ): CreateCompanyRequest | UpdateCompanyRequest => {
+  const imageUrl = (form.imageUrl ?? "").trim();
+  const metaRaw = (form.metaRaw ?? "").trim();
+
   return {
     name: form.name.trim(),
     slug: form.slug.trim(),
     description: form.description.trim(),
-    imageUrl: form.imageUrl.trim() || null,
+    imageUrl: imageUrl || null,
     contactEmail: form.contactEmail.trim(),
     contactPhone: form.contactPhone.trim(),
     address: {
-      street: form.street.trim(),
-      city: form.city.trim(),
-      state: form.state.trim(),
-      postalCode: form.postalCode.trim(),
-      country: form.country.trim(),
+      street: form.address.street.trim(),
+      city: form.address.city.trim(),
+      state: form.address.state.trim(),
+      postalCode: form.address.postalCode.trim(),
+      country: form.address.country.trim(),
     },
-    metaRaw: form.metaRaw.trim() || null,
+    metaRaw: metaRaw || null,
   };
 };
 

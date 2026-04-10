@@ -1,16 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useOne, useUpdate } from "@refinedev/core";
+import { type BaseRecord, type HttpError, useOne, useUpdate } from "@refinedev/core";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "@refinedev/react-hook-form";
 import type { CategoryDto } from "@/features/admin/model/admin.types";
 import { CategoryForm } from "@/features/admin/screens/CategoryForm";
 import {
   buildUpdateCategoryPayload,
-  categoryDtoToFormState,
-  defaultCategoryFormState,
-  type CategoryFormState,
+  categoryDtoToFormValues,
 } from "@/features/admin/screens/categories.form";
+import {
+  categoryFormSchema,
+  defaultCategoryFormValues,
+  type CategoryFormValues,
+} from "@/features/admin/validation/category-form.schema";
+import {
+  applyServerFieldErrors,
+  parseAdminFormError,
+} from "@/features/admin/validation/admin-form-errors";
 import styles from "@/features/admin/screens/AdminScreens.module.css";
 
 interface CategoriesEditScreenProps {
@@ -26,27 +35,42 @@ export function CategoriesEditScreen({ id }: CategoriesEditScreenProps) {
     id,
   });
 
-  const [editedForm, setEditedForm] = useState<CategoryFormState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    setError: setFormError,
+    formState: { errors, isSubmitting },
+  } = useForm<BaseRecord, HttpError, CategoryFormValues>({
+    resolver: zodResolver(categoryFormSchema),
+    defaultValues: defaultCategoryFormValues,
+  });
 
-  const form =
-    editedForm ??
-    (query.data?.data ? categoryDtoToFormState(query.data.data) : defaultCategoryFormState);
+  useEffect(() => {
+    if (!query.data?.data) {
+      return;
+    }
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+    reset(categoryDtoToFormValues(query.data.data));
+  }, [query.data?.data, reset]);
+
+  const onSubmit = async (values: CategoryFormValues) => {
     setError(null);
 
     try {
       await mutateAsync({
         resource: "categories",
         id,
-        values: buildUpdateCategoryPayload(form),
+        values: buildUpdateCategoryPayload(values),
       });
 
       router.push("/admin/categories");
-    } catch {
-      setError("Failed to update category.");
+    } catch (requestError) {
+      const parsed = parseAdminFormError(requestError, "Failed to update category.");
+      applyServerFieldErrors(setFormError, parsed.fieldErrors);
+      setError(parsed.message);
     }
   };
 
@@ -59,17 +83,23 @@ export function CategoriesEditScreen({ id }: CategoriesEditScreenProps) {
       {query.isError ? <p className={styles.error}>Failed to load category.</p> : null}
 
       {!query.isLoading && !query.isError ? (
-        <form onSubmit={handleSubmit}>
-          <CategoryForm value={form} onChange={setEditedForm} disabled={isPending} />
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <CategoryForm
+            register={register}
+            control={control}
+            errors={errors}
+            includeIsActive={false}
+            disabled={isPending || isSubmitting}
+          />
 
           <div className={styles.formActions}>
-            <button type="submit" className={styles.button} disabled={isPending}>
-              {isPending ? "Saving..." : "Save"}
+            <button type="submit" className={styles.button} disabled={isPending || isSubmitting}>
+              {isPending || isSubmitting ? "Saving..." : "Save"}
             </button>
             <button
               type="button"
               className={styles.ghostButton}
-              disabled={isPending}
+              disabled={isPending || isSubmitting}
               onClick={() => router.push("/admin/categories")}
             >
               Cancel

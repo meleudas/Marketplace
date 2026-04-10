@@ -9,12 +9,16 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@refinedev/core": "^5.0.0",
+    "@refinedev/react-hook-form": "^5.0.0",
     "@tanstack/react-query": "^5.90.2",
     "axios": "^1.14.0",
     "next": "16.2.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-hook-form": "^7.62.0",
+    "zod": "^4.1.11",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

@@ -2,35 +2,52 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useCreate } from "@refinedev/core";
+import { type BaseRecord, type HttpError, useCreate } from "@refinedev/core";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "@refinedev/react-hook-form";
 import { CategoryForm } from "@/features/admin/screens/CategoryForm";
+import { buildCreateCategoryPayload } from "@/features/admin/screens/categories.form";
 import {
-  buildCreateCategoryPayload,
-  defaultCategoryFormState,
-  type CategoryFormState,
-} from "@/features/admin/screens/categories.form";
+  categoryFormSchema,
+  defaultCategoryFormValues,
+  type CategoryFormValues,
+} from "@/features/admin/validation/category-form.schema";
+import {
+  applyServerFieldErrors,
+  parseAdminFormError,
+} from "@/features/admin/validation/admin-form-errors";
 import styles from "@/features/admin/screens/AdminScreens.module.css";
 
 export function CategoriesCreateScreen() {
   const router = useRouter();
   const { mutateAsync, mutation } = useCreate();
   const isPending = mutation.isPending;
-  const [form, setForm] = useState<CategoryFormState>(defaultCategoryFormState);
   const [error, setError] = useState<string | null>(null);
+  const {
+    register,
+    control,
+    handleSubmit,
+    setError: setFormError,
+    formState: { errors, isSubmitting },
+  } = useForm<BaseRecord, HttpError, CategoryFormValues>({
+    resolver: zodResolver(categoryFormSchema),
+    defaultValues: defaultCategoryFormValues,
+  });
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const onSubmit = async (values: CategoryFormValues) => {
     setError(null);
 
     try {
       await mutateAsync({
         resource: "categories",
-        values: buildCreateCategoryPayload(form),
+        values: buildCreateCategoryPayload(values),
       });
 
       router.push("/admin/categories");
-    } catch {
-      setError("Failed to create category.");
+    } catch (requestError) {
+      const parsed = parseAdminFormError(requestError, "Failed to create category.");
+      applyServerFieldErrors(setFormError, parsed.fieldErrors);
+      setError(parsed.message);
     }
   };
 
@@ -39,17 +56,23 @@ export function CategoriesCreateScreen() {
       <h2 className={styles.title}>Create category</h2>
       <p className={styles.subtitle}>Create a category using admin API.</p>
 
-      <form onSubmit={handleSubmit}>
-        <CategoryForm value={form} onChange={setForm} disabled={isPending} />
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <CategoryForm
+          register={register}
+          control={control}
+          errors={errors}
+          includeIsActive
+          disabled={isPending || isSubmitting}
+        />
 
         <div className={styles.formActions}>
-          <button type="submit" className={styles.button} disabled={isPending}>
-            {isPending ? "Creating..." : "Create"}
+          <button type="submit" className={styles.button} disabled={isPending || isSubmitting}>
+            {isPending || isSubmitting ? "Creating..." : "Create"}
           </button>
           <button
             type="button"
             className={styles.ghostButton}
-            disabled={isPending}
+            disabled={isPending || isSubmitting}
             onClick={() => router.push("/admin/categories")}
           >
             Cancel
