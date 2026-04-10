@@ -201,13 +201,27 @@ docker compose --profile tools run --rm db-seed
 ```
 
 Скрипт очищає і наповнює узгоджені дані для:
-- `AspNetUsers`
+- `AspNetUsers` / `AspNetRoles` / `AspNetUserRoles`
 - `marketplace_users`
 - `categories`
 - `companies`
+- `company_members` (ролі в **Tech Store** та власник **Home Comfort**)
+- `products`, `product_details`, `product_images`
+- `warehouses`, `warehouse_stocks`, `stock_movements`, `inventory_reservations` (демо стоку та резерву)
 
-Тестові креденшли після seed:
-- `admin@marketplace.test` / `Admin123!`
-- `seller@marketplace.test` / `Admin123!`
-- `buyer@marketplace.test` / `Admin123!`
+Пароль для **всіх** тестових акаунтів: **`Admin123!`**
+
+| Email | Глобальна роль (JWT) | Компанія / коментар |
+|-------|----------------------|---------------------|
+| `admin@marketplace.test` | Admin | — |
+| `seller@marketplace.test` | Seller | Tech Store — **Owner** |
+| `buyer@marketplace.test` | Buyer | Home Comfort — **Owner** |
+| `moderator@marketplace.test` | Moderator | — |
+| `user@marketplace.test` | User (Identity) | Логін: `plainuser`; профіль маркетплейсу як Buyer |
+| `manager@marketplace.test` | Seller | Tech Store — **Manager** |
+| `seller2@marketplace.test` | Seller | Tech Store — **Seller** |
+| `support@marketplace.test` | Buyer | Tech Store — **Support** |
+| `logistics@marketplace.test` | Buyer | Tech Store — **Logistics** (інвентар write) |
+
+Після seed для **Docker** (uuid-компанії): **Tech Store** `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa`, **Home Comfort** `bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb`. Публічні товари: `seed-phone-alpha`, `seed-laptop-beta`, `seed-earbuds-gamma`, `seed-kettle-home`.
 

@@ -13,18 +13,19 @@ namespace Marketplace.Application.Auth.Commands.Register
     {
         private readonly IAuthenticationPort _authenticationPort;
         private readonly IUserRepository _userRepository;
-        private readonly IEmailPort _emailPort;
+        private readonly INotificationDispatcher _notificationDispatcher;
         private readonly ITokenPort _tokenPort;
 
         public RegisterCommandHandler(
             IAuthenticationPort authenticationPort,
             IUserRepository userRepository,
             IEmailPort emailPort,
+            INotificationDispatcher? notificationDispatcher,
             ITokenPort tokenPort)
         {
             _authenticationPort = authenticationPort;
             _userRepository = userRepository;
-            _emailPort = emailPort;
+            _notificationDispatcher = notificationDispatcher ?? new InlineNotificationDispatcher(emailPort);
             _tokenPort = tokenPort;
         }
 
@@ -57,11 +58,11 @@ namespace Marketplace.Application.Auth.Commands.Register
                 var confirmToken = _tokenPort.GenerateEmailConfirmationToken(identityId, email.Value);
                 if (_authenticationPort.RequireConfirmedEmail)
                 {
-                    await _emailPort.SendConfirmationEmailAsync(email.Value, confirmToken, ct);
+                    await _notificationDispatcher.EnqueueConfirmationEmailAsync(email.Value, confirmToken, ct);
                     return Result<AuthTokensDto>.Failure("Registration successful. Please confirm your email before login.");
                 }
 
-                _ = _emailPort.SendConfirmationEmailAsync(email.Value, confirmToken, ct);
+                _ = _notificationDispatcher.EnqueueConfirmationEmailAsync(email.Value, confirmToken, ct);
 
                 return Result<AuthTokensDto>.Success(AuthMapper.ToAuthTokensDto(authResult.Value!));
             }
@@ -70,5 +71,30 @@ namespace Marketplace.Application.Auth.Commands.Register
                 return Result<AuthTokensDto>.Failure($"Registration failed: {ex.Message}");
             }
         }
+    }
+
+    internal sealed class InlineNotificationDispatcher : INotificationDispatcher
+    {
+        private readonly IEmailPort _emailPort;
+
+        public InlineNotificationDispatcher(IEmailPort emailPort)
+        {
+            _emailPort = emailPort;
+        }
+
+        public Task EnqueueConfirmationEmailAsync(string to, string token, CancellationToken ct = default)
+            => _emailPort.SendConfirmationEmailAsync(to, token, ct);
+
+        public Task EnqueuePasswordResetEmailAsync(string to, string token, CancellationToken ct = default)
+            => _emailPort.SendPasswordResetEmailAsync(to, token, ct);
+
+        public Task EnqueueTwoFactorEmailAsync(string to, string code, CancellationToken ct = default)
+            => _emailPort.SendTwoFactorCodeEmailAsync(to, code, ct);
+
+        public Task EnqueueTelegramMessageAsync(string chatId, string message, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task EnqueueSmsAsync(string phoneNumber, string message, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 }

@@ -17,6 +17,37 @@ public sealed class ProductImage : AuditableSoftDeleteAggregateRoot<ProductImage
     public int? Height { get; private set; }
     public long? FileSize { get; private set; }
 
+    public static ProductImage Create(
+        ProductImageId id,
+        ProductId productId,
+        string imageUrl,
+        string thumbnailUrl,
+        string altText,
+        int sortOrder,
+        bool isMain,
+        int? width,
+        int? height,
+        long? fileSize)
+    {
+        var now = DateTime.UtcNow;
+        return new ProductImage
+        {
+            Id = id,
+            ProductId = productId,
+            ImageUrl = imageUrl,
+            ThumbnailUrl = thumbnailUrl,
+            AltText = altText,
+            SortOrder = sortOrder,
+            IsMain = isMain,
+            Width = width,
+            Height = height,
+            FileSize = fileSize,
+            CreatedAt = now,
+            UpdatedAt = now,
+            IsDeleted = false
+        };
+    }
+
     public static ProductImage Reconstitute(
         ProductImageId id,
         ProductId productId,
@@ -49,4 +80,28 @@ public sealed class ProductImage : AuditableSoftDeleteAggregateRoot<ProductImage
             IsDeleted = isDeleted,
             DeletedAt = deletedAt
         };
+
+    public void Update(
+        string imageUrl,
+        string thumbnailUrl,
+        string altText,
+        int sortOrder,
+        bool isMain,
+        int? width,
+        int? height,
+        long? fileSize)
+    {
+        if (IsDeleted)
+            throw new InvalidOperationException("Cannot modify deleted product image.");
+
+        ImageUrl = imageUrl;
+        ThumbnailUrl = thumbnailUrl;
+        AltText = altText;
+        SortOrder = sortOrder;
+        IsMain = isMain;
+        Width = width;
+        Height = height;
+        FileSize = fileSize;
+        Touch();
+    }
 }

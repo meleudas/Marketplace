@@ -1,3 +1,5 @@
+using Marketplace.Application.Catalog.Cache;
+using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Companies.DTOs;
 using Marketplace.Application.Companies.Mappings;
 using Marketplace.Domain.Common.ValueObjects;
@@ -11,10 +13,12 @@ namespace Marketplace.Application.Companies.Commands.CreateCompany;
 public sealed class CreateCompanyCommandHandler : IRequestHandler<CreateCompanyCommand, Result<CompanyDto>>
 {
     private readonly ICompanyRepository _companyRepository;
+    private readonly IAppCachePort _cache;
 
-    public CreateCompanyCommandHandler(ICompanyRepository companyRepository)
+    public CreateCompanyCommandHandler(ICompanyRepository companyRepository, IAppCachePort cache)
     {
         _companyRepository = companyRepository;
+        _cache = cache;
     }
 
     public async Task<Result<CompanyDto>> Handle(CreateCompanyCommand request, CancellationToken ct)
@@ -35,6 +39,7 @@ public sealed class CreateCompanyCommandHandler : IRequestHandler<CreateCompanyC
                 new JsonBlob(request.MetaRaw));
 
             await _companyRepository.AddAsync(company, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.ApprovedCompanies, ct);
             return Result<CompanyDto>.Success(CompanyMapper.ToDto(company));
         }
         catch (Exception ex)

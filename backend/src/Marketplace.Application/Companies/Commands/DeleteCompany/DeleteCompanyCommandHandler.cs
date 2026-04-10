@@ -1,3 +1,5 @@
+using Marketplace.Application.Catalog.Cache;
+using Marketplace.Application.Common.Ports;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Companies.Repositories;
 using Marketplace.Domain.Shared.Kernel;
@@ -8,10 +10,12 @@ namespace Marketplace.Application.Companies.Commands.DeleteCompany;
 public sealed class DeleteCompanyCommandHandler : IRequestHandler<DeleteCompanyCommand, Result>
 {
     private readonly ICompanyRepository _companyRepository;
+    private readonly IAppCachePort _cache;
 
-    public DeleteCompanyCommandHandler(ICompanyRepository companyRepository)
+    public DeleteCompanyCommandHandler(ICompanyRepository companyRepository, IAppCachePort cache)
     {
         _companyRepository = companyRepository;
+        _cache = cache;
     }
 
     public async Task<Result> Handle(DeleteCompanyCommand request, CancellationToken ct)
@@ -24,6 +28,7 @@ public sealed class DeleteCompanyCommandHandler : IRequestHandler<DeleteCompanyC
 
             company.SoftDelete();
             await _companyRepository.UpdateAsync(company, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.ApprovedCompanies, ct);
             return Result.Success();
         }
         catch (Exception ex)

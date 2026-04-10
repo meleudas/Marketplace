@@ -1,5 +1,6 @@
 using Marketplace.Application.Categories.Commands.CreateCategory;
 using Marketplace.Application.Categories.Commands.DeactivateCategory;
+using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Companies.Commands.ApproveCompany;
 using Marketplace.Application.Companies.Commands.CreateCompany;
 using Marketplace.Application.Companies.DTOs;
@@ -17,7 +18,7 @@ public class ApplicationAdminCatalogHandlersTests
     public async Task CreateCompanyHandler_Creates_Company()
     {
         var repo = new InMemoryCompanyRepository();
-        var handler = new CreateCompanyCommandHandler(repo);
+        var handler = new CreateCompanyCommandHandler(repo, new NoOpCachePort());
         var command = new CreateCompanyCommand(
             "Company",
             "company",
@@ -38,7 +39,7 @@ public class ApplicationAdminCatalogHandlersTests
     public async Task ApproveCompanyHandler_Returns_Failure_When_Not_Found()
     {
         var repo = new InMemoryCompanyRepository();
-        var handler = new ApproveCompanyCommandHandler(repo);
+        var handler = new ApproveCompanyCommandHandler(repo, new NoOpCachePort());
 
         var result = await handler.Handle(new ApproveCompanyCommand(Guid.NewGuid(), Guid.NewGuid()), CancellationToken.None);
 
@@ -50,7 +51,7 @@ public class ApplicationAdminCatalogHandlersTests
     public async Task CreateCategoryHandler_Creates_Category()
     {
         var repo = new InMemoryCategoryRepository();
-        var handler = new CreateCategoryCommandHandler(repo);
+        var handler = new CreateCategoryCommandHandler(repo, new NoOpCachePort());
 
         var result = await handler.Handle(
             new CreateCategoryCommand("Cat", "cat", null, null, null, null, 0, true),
@@ -66,7 +67,7 @@ public class ApplicationAdminCatalogHandlersTests
         var repo = new InMemoryCategoryRepository();
         var category = Category.Create(CategoryId.From(7), "Cat", "cat", null, null, null, JsonBlob.Empty, 0, true);
         repo.Items[category.Id.Value] = category;
-        var handler = new DeactivateCategoryCommandHandler(repo);
+        var handler = new DeactivateCategoryCommandHandler(repo, new NoOpCachePort());
 
         var result = await handler.Handle(new DeactivateCategoryCommand(7), CancellationToken.None);
 
@@ -147,5 +148,17 @@ public class ApplicationAdminCatalogHandlersTests
             Items[category.Id.Value] = category;
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class NoOpCachePort : IAppCachePort
+    {
+        public Task<T?> GetAsync<T>(string key, CancellationToken ct = default) where T : class
+            => Task.FromResult<T?>(null);
+
+        public Task SetAsync<T>(string key, T value, TimeSpan ttl, CancellationToken ct = default) where T : class
+            => Task.CompletedTask;
+
+        public Task RemoveAsync(string key, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 }

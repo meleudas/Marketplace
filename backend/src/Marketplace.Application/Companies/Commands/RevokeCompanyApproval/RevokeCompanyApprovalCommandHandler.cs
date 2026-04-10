@@ -1,3 +1,5 @@
+using Marketplace.Application.Catalog.Cache;
+using Marketplace.Application.Common.Ports;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Companies.Repositories;
 using Marketplace.Domain.Shared.Kernel;
@@ -8,10 +10,12 @@ namespace Marketplace.Application.Companies.Commands.RevokeCompanyApproval;
 public sealed class RevokeCompanyApprovalCommandHandler : IRequestHandler<RevokeCompanyApprovalCommand, Result>
 {
     private readonly ICompanyRepository _companyRepository;
+    private readonly IAppCachePort _cache;
 
-    public RevokeCompanyApprovalCommandHandler(ICompanyRepository companyRepository)
+    public RevokeCompanyApprovalCommandHandler(ICompanyRepository companyRepository, IAppCachePort cache)
     {
         _companyRepository = companyRepository;
+        _cache = cache;
     }
 
     public async Task<Result> Handle(RevokeCompanyApprovalCommand request, CancellationToken ct)
@@ -24,6 +28,7 @@ public sealed class RevokeCompanyApprovalCommandHandler : IRequestHandler<Revoke
 
             company.RevokeApproval();
             await _companyRepository.UpdateAsync(company, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.ApprovedCompanies, ct);
             return Result.Success();
         }
         catch (Exception ex)

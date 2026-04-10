@@ -11,7 +11,6 @@ public class CategoryRecord
     public string? MetaRaw { get; set; }
     public int SortOrder { get; set; }
     public bool IsActive { get; set; }
-    public int ProductCount { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public bool IsDeleted { get; set; }

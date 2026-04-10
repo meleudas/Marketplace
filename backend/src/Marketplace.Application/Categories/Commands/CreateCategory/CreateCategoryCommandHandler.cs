@@ -1,3 +1,5 @@
+using Marketplace.Application.Catalog.Cache;
+using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Categories.DTOs;
 using Marketplace.Application.Categories.Mappings;
 using Marketplace.Domain.Categories.Entities;
@@ -11,10 +13,12 @@ namespace Marketplace.Application.Categories.Commands.CreateCategory;
 public sealed class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryCommand, Result<CategoryDto>>
 {
     private readonly ICategoryRepository _categoryRepository;
+    private readonly IAppCachePort _cache;
 
-    public CreateCategoryCommandHandler(ICategoryRepository categoryRepository)
+    public CreateCategoryCommandHandler(ICategoryRepository categoryRepository, IAppCachePort cache)
     {
         _categoryRepository = categoryRepository;
+        _cache = cache;
     }
 
     public async Task<Result<CategoryDto>> Handle(CreateCategoryCommand request, CancellationToken ct)
@@ -35,6 +39,7 @@ public sealed class CreateCategoryCommandHandler : IRequestHandler<CreateCategor
                 request.IsActive);
 
             var createdCategory = await _categoryRepository.AddAsync(category, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.ActiveCategories, ct);
             return Result<CategoryDto>.Success(CategoryMapper.ToDto(createdCategory));
         }
         catch (Exception ex)

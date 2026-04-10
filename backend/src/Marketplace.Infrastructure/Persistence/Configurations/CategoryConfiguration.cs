@@ -20,7 +20,6 @@ public class CategoryConfiguration : IEntityTypeConfiguration<CategoryRecord>
 
         builder.Property(x => x.SortOrder).HasDefaultValue(0);
         builder.Property(x => x.IsActive).HasDefaultValue(true);
-        builder.Property(x => x.ProductCount).HasDefaultValue(0);
         builder.Property(x => x.IsDeleted).HasDefaultValue(false);
 
         builder.HasIndex(x => x.Slug).IsUnique();

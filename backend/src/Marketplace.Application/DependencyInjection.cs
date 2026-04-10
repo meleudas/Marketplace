@@ -1,5 +1,7 @@
 using FluentValidation;
 using Marketplace.Application.Common.Behaviors;
+using Marketplace.Application.Inventory.Authorization;
+using Marketplace.Application.Products.Authorization;
 using Marketplace.Application.Users.Services;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +24,8 @@ public static class DependencyInjection
         // 4. Application services (explicit controller -> service binding)
         services.AddScoped<IUserReadService, UserReadService>();
         services.AddScoped<IUserManagementService, UserManagementService>();
+        services.AddScoped<IInventoryAccessService, InventoryAccessService>();
+        services.AddScoped<IProductAccessService, ProductAccessService>();
 
         return services;
     }

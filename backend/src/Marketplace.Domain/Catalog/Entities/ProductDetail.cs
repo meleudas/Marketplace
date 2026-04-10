@@ -17,6 +17,37 @@ public sealed class ProductDetail : AuditableSoftDeleteAggregateRoot<ProductDeta
     public IReadOnlyList<string> Tags { get; private set; } = Array.Empty<string>();
     public IReadOnlyList<string> Brands { get; private set; } = Array.Empty<string>();
 
+    public static ProductDetail Create(
+        ProductDetailId id,
+        ProductId productId,
+        string slug,
+        JsonBlob attributes,
+        JsonBlob variants,
+        JsonBlob specifications,
+        JsonBlob seo,
+        JsonBlob contentBlocks,
+        IReadOnlyList<string>? tags,
+        IReadOnlyList<string>? brands)
+    {
+        var now = DateTime.UtcNow;
+        return new ProductDetail
+        {
+            Id = id,
+            ProductId = productId,
+            Slug = slug,
+            Attributes = attributes,
+            Variants = variants,
+            Specifications = specifications,
+            Seo = seo,
+            ContentBlocks = contentBlocks,
+            Tags = tags ?? Array.Empty<string>(),
+            Brands = brands ?? Array.Empty<string>(),
+            CreatedAt = now,
+            UpdatedAt = now,
+            IsDeleted = false
+        };
+    }
+
     public static ProductDetail Reconstitute(
         ProductDetailId id,
         ProductId productId,
@@ -49,4 +80,28 @@ public sealed class ProductDetail : AuditableSoftDeleteAggregateRoot<ProductDeta
             IsDeleted = isDeleted,
             DeletedAt = deletedAt
         };
+
+    public void Update(
+        string slug,
+        JsonBlob attributes,
+        JsonBlob variants,
+        JsonBlob specifications,
+        JsonBlob seo,
+        JsonBlob contentBlocks,
+        IReadOnlyList<string>? tags,
+        IReadOnlyList<string>? brands)
+    {
+        if (IsDeleted)
+            throw new InvalidOperationException("Cannot modify deleted product detail.");
+
+        Slug = slug;
+        Attributes = attributes;
+        Variants = variants;
+        Specifications = specifications;
+        Seo = seo;
+        ContentBlocks = contentBlocks;
+        Tags = tags ?? Array.Empty<string>();
+        Brands = brands ?? Array.Empty<string>();
+        Touch();
+    }
 }

@@ -19,6 +19,27 @@ public sealed class CompanyMember : Entity
     public bool IsDeleted { get; private set; }
     public DateTime? DeletedAt { get; private set; }
 
+    public static CompanyMember Create(
+        CompanyId companyId,
+        Guid userId,
+        CompanyMembershipRole role,
+        JsonBlob? permissions = null)
+    {
+        var now = DateTime.UtcNow;
+        return new CompanyMember
+        {
+            CompanyId = companyId,
+            UserId = userId,
+            IsOwner = role == CompanyMembershipRole.Owner,
+            Role = role,
+            Permissions = permissions ?? JsonBlob.Empty,
+            CreatedAt = now,
+            UpdatedAt = now,
+            IsDeleted = false,
+            DeletedAt = null
+        };
+    }
+
     public static CompanyMember Reconstitute(
         CompanyId companyId,
         Guid userId,
@@ -41,4 +62,24 @@ public sealed class CompanyMember : Entity
             IsDeleted = isDeleted,
             DeletedAt = deletedAt
         };
+
+    public void ChangeRole(CompanyMembershipRole role)
+    {
+        if (IsDeleted)
+            throw new InvalidOperationException("Cannot change role for deleted company member.");
+
+        Role = role;
+        IsOwner = role == CompanyMembershipRole.Owner;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SoftDelete()
+    {
+        if (IsDeleted)
+            return;
+
+        IsDeleted = true;
+        DeletedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

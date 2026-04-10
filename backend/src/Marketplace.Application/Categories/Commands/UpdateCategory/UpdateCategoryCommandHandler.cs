@@ -1,3 +1,5 @@
+using Marketplace.Application.Catalog.Cache;
+using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Categories.DTOs;
 using Marketplace.Application.Categories.Mappings;
 using Marketplace.Domain.Categories.Repositories;
@@ -10,10 +12,12 @@ namespace Marketplace.Application.Categories.Commands.UpdateCategory;
 public sealed class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategoryCommand, Result<CategoryDto>>
 {
     private readonly ICategoryRepository _categoryRepository;
+    private readonly IAppCachePort _cache;
 
-    public UpdateCategoryCommandHandler(ICategoryRepository categoryRepository)
+    public UpdateCategoryCommandHandler(ICategoryRepository categoryRepository, IAppCachePort cache)
     {
         _categoryRepository = categoryRepository;
+        _cache = cache;
     }
 
     public async Task<Result<CategoryDto>> Handle(UpdateCategoryCommand request, CancellationToken ct)
@@ -35,6 +39,7 @@ public sealed class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategor
                 request.SortOrder);
 
             await _categoryRepository.UpdateAsync(category, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.ActiveCategories, ct);
             return Result<CategoryDto>.Success(CategoryMapper.ToDto(category));
         }
         catch (Exception ex)

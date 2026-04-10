@@ -197,6 +197,38 @@ public sealed record CompanyScheduleId : ValueObject
     protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
 }
 
+public sealed record WarehouseId : ValueObject
+{
+    public long Value { get; }
+    private WarehouseId(long value) => Value = value;
+    public static WarehouseId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
+public sealed record WarehouseStockId : ValueObject
+{
+    public long Value { get; }
+    private WarehouseStockId(long value) => Value = value;
+    public static WarehouseStockId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
+public sealed record StockMovementId : ValueObject
+{
+    public long Value { get; }
+    private StockMovementId(long value) => Value = value;
+    public static StockMovementId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
+public sealed record InventoryReservationId : ValueObject
+{
+    public long Value { get; }
+    private InventoryReservationId(long value) => Value = value;
+    public static InventoryReservationId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
 public sealed record CompanyFollowerId : ValueObject
 {
     public long Value { get; }

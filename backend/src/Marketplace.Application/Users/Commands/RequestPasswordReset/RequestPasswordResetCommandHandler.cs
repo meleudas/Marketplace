@@ -8,14 +8,14 @@ namespace Marketplace.Application.Users.Commands.RequestPasswordReset
     public class RequestPasswordResetCommandHandler : IRequestHandler<RequestPasswordResetCommand, Result>
     {
         private readonly IAuthenticationPort _authenticationPort;
-        private readonly IEmailPort _emailPort;
+        private readonly INotificationDispatcher _notificationDispatcher;
 
         public RequestPasswordResetCommandHandler(
             IAuthenticationPort authenticationPort,
-            IEmailPort emailPort)
+            INotificationDispatcher notificationDispatcher)
         {
             _authenticationPort = authenticationPort;
-            _emailPort = emailPort;
+            _notificationDispatcher = notificationDispatcher;
         }
 
         public async Task<Result> Handle(RequestPasswordResetCommand request, CancellationToken ct)
@@ -28,7 +28,7 @@ namespace Marketplace.Application.Users.Commands.RequestPasswordReset
                 if (tokenResult.IsFailure)
                     return Result.Success();
 
-                await _emailPort.SendPasswordResetEmailAsync(email.Value, tokenResult.Value!, ct);
+                await _notificationDispatcher.EnqueuePasswordResetEmailAsync(email.Value, tokenResult.Value!, ct);
                 return Result.Success();
             }
             catch (Exception ex)

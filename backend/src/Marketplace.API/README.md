@@ -2,6 +2,17 @@
 
 Документ описує всі публічні маршрути з `Marketplace.API` та `Program.cs`: призначення, коли викликати, формат вхідних даних, успішні відповіді та що відбувається, якщо тіло відповіді порожнє.
 
+## Канонічна структура документації (оновлено)
+
+| Що потрібно | Де лежить |
+|-------------|-----------|
+| **Повний довідник endpoint-ів** (приймає / повертає / авторизація / side effects / помилки) | [Docs/README.md](Docs/README.md) → [Docs/Endpoints/README.md](Docs/Endpoints/README.md) |
+| **Матриця ролей і DDD-логіка** | [Docs/DDD/README.md](Docs/DDD/README.md), [Docs/DDD/RoleAccessMatrix.md](Docs/DDD/RoleAccessMatrix.md), [Docs/DDD/BusinessFlows.md](Docs/DDD/BusinessFlows.md) |
+| **Тестові сутності та сценарії** | [Docs/DDD/TestEntitiesAndScenarios.md](Docs/DDD/TestEntitiesAndScenarios.md) |
+| **Приклади JSON body** (швидке копіювання) | [Docs/ControllerModels/README.md](Docs/ControllerModels/README.md) |
+
+Нижче збережено **довідник полів DTO** та узагальнений опис маршрутів; деталі по кожному методу підтримуйте в `Docs/Endpoints` (щоб не дублювати тричі).
+
 **Базовий URL (приклад, Docker):** `http://localhost:8080`  
 **Формат:** `application/json`, крім редіректів OAuth.
 
@@ -217,7 +228,7 @@
 | `metaRaw` | string \| null | Додаткові JSON-дані (raw). |
 | `sortOrder` | int | Порядок сортування. |
 | `isActive` | boolean | Активність. |
-| `productCount` | int | К-сть товарів у категорії. |
+| `productCount` | int | Агрегований лічильник (не зберігається в операційній таблиці категорій). |
 | `createdAt` | string | Час створення. |
 | `updatedAt` | string | Час оновлення. |
 | `isDeleted` | boolean | Soft-delete прапор. |
@@ -347,6 +358,12 @@
 - **Body:** `ResetPasswordRequest`.
 - **Успіх (200):** **порожнє тіло**; далі користувач може логінитись з `newPassword`.
 
+#### `GET /account/2fa/status`
+
+- **Що робить:** повертає поточний стан 2FA для акаунта (через `IAuthenticationPort`).
+- **Авторизація:** **Bearer**.
+- **Успіх (200):** `TwoFactorStatusDto`.
+
 #### `POST /account/2fa/email/send-code`
 
 - **Що робить:** генерує одноразовий код 2FA (Identity, email-провайдер) і надсилає на email акаунта.
@@ -439,6 +456,114 @@
 - **Path:** `id` — guid.
 - **Успіх (200):** **порожнє тіло**; обліковий запис позначається видаленим за логікою сервісу.
 
+#### `PATCH /users/{id}/role`
+
+- **Що робить:** змінює **глобальну** роль маркетплейсу (`UserRole`: buyer/seller/moderator/admin).
+- **Авторизація:** **Bearer** + роль **`Admin`** (`[Authorize(Roles = "Admin")]`).
+- **Path:** `id` — guid користувача.
+- **Body:** `{ "role": "buyer" | "seller" | "moderator" | "admin" }` (без урахування регістру).
+- **Успіх (200):** **порожнє тіло** при успіху.
+- **Помилки:** **400** якщо `role` не парситься в enum.
+
+> **Примітка:** `GET /users` та `GET /users/search` у коді доступні **будь-якому** автентифікованому користувачу (немає `Admin`-політики на контролері) — варто враховувати з точки зору безпеки продукту.
+
+---
+
+### `CompanyMembersController` — префікс `/companies/{companyId}/members`
+
+Усі маршрути вимагають **Bearer**.  
+Керування ролями доступне `owner`/`manager` у межах компанії або глобальному `Admin`.
+
+#### `GET /companies/{companyId}/members`
+
+- **Що робить:** повертає список членів компанії з ролями.
+- **Path:** `companyId` — guid.
+- **Успіх (200):** масив `CompanyMemberDto`.
+
+#### `GET /companies/{companyId}/members/me`
+
+- **Що робить:** повертає роль поточного користувача в конкретній компанії.
+- **Path:** `companyId` — guid.
+- **Успіх (200):** `CompanyMemberDto`.
+- **Помилка:** якщо користувач не член компанії — повідомлення на кшталт `Membership not found` → зазвичай **404** (`ResultExtensions`: текст містить `not found`).
+
+#### `POST /companies/{companyId}/members/{userId}/role`
+
+- **Що робить:** призначає роль у компанії (upsert членства).
+- **Path:** `companyId`, `userId` — guid.
+- **Body:** `{ \"role\": \"owner|manager|seller|support|logistics\" }`.
+- **Успіх (200):** `CompanyMemberDto`.
+
+#### `PATCH /companies/{companyId}/members/{userId}/role`
+
+- **Що робить:** змінює роль існуючого члена компанії.
+- **Path:** `companyId`, `userId` — guid.
+- **Body:** `{ \"role\": \"owner|manager|seller|support|logistics\" }`.
+- **Успіх (200):** `CompanyMemberDto`.
+
+#### `DELETE /companies/{companyId}/members/{userId}`
+
+- **Що робить:** видаляє членство (soft-delete).
+- **Path:** `companyId`, `userId` — guid.
+- **Обмеження:** не можна видалити або понизити останнього `owner`.
+- **Успіх (200):** **порожнє тіло**.
+
+#### Future-proof до multi-role
+
+- Поточний API працює у режимі **single-role per company-user**.
+- Щоб перейти на multi-role без лому API, `POST/PATCH` можна інтерпретувати як `grant primary role`, а додаткові ролі винести в окремі маршрути `grant/revoke`.
+- DB-шлях міграції: винести `role` у окрему M:N таблицю `company_member_roles` і залишити `company_members` як базовий зв'язок користувача з компанією.
+
+---
+
+### `InventoryController` — префікс `/companies/{companyId}` (внутрішній inventory)
+
+Усі маршрути вимагають **Bearer**.  
+Запис у склад (`receive/ship/adjust/transfer/reserve/release`, create/update/deactivate warehouse) дозволено ролям `owner|manager|logistics` у межах компанії або глобальному `Admin`.
+
+#### `GET /companies/{companyId}/warehouses`
+- Повертає склади компанії.
+
+#### `POST /companies/{companyId}/warehouses`
+- Створює склад.
+- Body: `CreateWarehouseRequest`.
+
+#### `PUT /companies/{companyId}/warehouses/{warehouseId}`
+- Оновлює склад.
+- Body: `CreateWarehouseRequest`.
+
+#### `POST /companies/{companyId}/warehouses/{warehouseId}/deactivate`
+- Деактивує склад.
+
+#### `GET /companies/{companyId}/inventory/stocks?warehouseId=&productId=`
+- Повертає залишки по складах з фільтрами.
+
+#### `GET /companies/{companyId}/inventory/movements?productId=`
+- Повертає журнал рухів стоку.
+
+#### `POST /companies/{companyId}/inventory/receive`
+- Оприбуткування.
+- Body: `StockOperationRequest`.
+
+#### `POST /companies/{companyId}/inventory/ship`
+- Списання/відвантаження.
+- Body: `StockOperationRequest`.
+
+#### `POST /companies/{companyId}/inventory/adjust`
+- Ручна корекція залишку.
+- Body: `AdjustStockRequest`.
+
+#### `POST /companies/{companyId}/inventory/transfer`
+- Переміщення між складами.
+- Body: `TransferStockRequest`.
+
+#### `POST /companies/{companyId}/inventory/reservations`
+- Створює резерв.
+- Body: `ReserveStockRequest`.
+
+#### `DELETE /companies/{companyId}/inventory/reservations/{reservationCode}`
+- Знімає резерв.
+
 ---
 
 ### `CatalogController` — префікс `/catalog` (публічний)
@@ -456,6 +581,46 @@
 - **Авторизація:** не потрібна (`AllowAnonymous`).
 - **Body:** немає.
 - **Що повертає:** масив `CategoryDto` (може бути порожнім).
+
+#### `GET /catalog/companies/{companyId}/products/{productId}/availability`
+
+- **Що робить:** повертає агреговану наявність товару для storefront.
+- **Що повертає:** `ProductAvailabilityDto` з `availableQty` та `availabilityStatus` (`in_stock`, `low_stock`, `out_of_stock`).
+
+#### `GET /catalog/products`
+
+- **Що робить:** повертає публічний список активних товарів без адмін-апруву товару.
+- **Авторизація:** не потрібна (`AllowAnonymous`).
+- **Що повертає:** масив `ProductListItemDto` з `availableQty` та `availabilityStatus`, де наявність агрегується із складів.
+
+#### `GET /catalog/products/{slug}`
+
+- **Що робить:** повертає деталку товару за `slug` без флоу `approve/revoke`.
+- **Авторизація:** не потрібна (`AllowAnonymous`).
+- **Що повертає:** `ProductDto` (`product`, `detail`, `images`) + наявність зі складської підсистеми.
+
+---
+
+### `ProductsController` — префікс `/companies/{companyId}/products` (внутрішній)
+
+Усі маршрути вимагають **Bearer**.  
+Матриця доступу:
+- `Owner|Manager|Seller|Admin` — create/update/delete.
+- `Support|Logistics` — read-only для внутрішнього списку.
+
+#### `GET /companies/{companyId}/products`
+- Повертає внутрішній список товарів компанії з availability.
+
+#### `POST /companies/{companyId}/products`
+- Створює товар без адмін-підтвердження.
+- Body: `UpsertProductRequest`.
+
+#### `PUT /companies/{companyId}/products/{id}`
+- Оновлює товар.
+- Body: `UpsertProductRequest`.
+
+#### `DELETE /companies/{companyId}/products/{id}`
+- Soft-delete товару.
 
 ---
 
@@ -575,6 +740,8 @@
 - OpenAPI JSON (Scalar): `/openapi/v1.json` (за поточним мапінгом `MapOpenApi`)
 
 У Swagger для Bearer вводьте **лише JWT** (префікс `Bearer` додає UI).
+
+Деталізований опис кожного маршруту (side effects, кеш, ідемпотентність) див. у **[Docs/Endpoints/README.md](Docs/Endpoints/README.md)**.
 
 ---
 

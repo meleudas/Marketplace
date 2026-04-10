@@ -29,8 +29,6 @@ public class CompanyConfiguration : IEntityTypeConfiguration<CompanyRecord>
 
         builder.Property(x => x.IsApproved).HasDefaultValue(false);
         builder.Property(x => x.IsDeleted).HasDefaultValue(false);
-        builder.Property(x => x.ReviewCount).HasDefaultValue(0);
-        builder.Property(x => x.FollowerCount).HasDefaultValue(0);
 
         builder.HasIndex(x => x.Slug).IsUnique();
         builder.HasIndex(x => x.IsApproved);

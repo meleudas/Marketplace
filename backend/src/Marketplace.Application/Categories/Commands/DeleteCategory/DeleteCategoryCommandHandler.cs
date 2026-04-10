@@ -1,3 +1,5 @@
+using Marketplace.Application.Catalog.Cache;
+using Marketplace.Application.Common.Ports;
 using Marketplace.Domain.Categories.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Shared.Kernel;
@@ -8,10 +10,12 @@ namespace Marketplace.Application.Categories.Commands.DeleteCategory;
 public sealed class DeleteCategoryCommandHandler : IRequestHandler<DeleteCategoryCommand, Result>
 {
     private readonly ICategoryRepository _categoryRepository;
+    private readonly IAppCachePort _cache;
 
-    public DeleteCategoryCommandHandler(ICategoryRepository categoryRepository)
+    public DeleteCategoryCommandHandler(ICategoryRepository categoryRepository, IAppCachePort cache)
     {
         _categoryRepository = categoryRepository;
+        _cache = cache;
     }
 
     public async Task<Result> Handle(DeleteCategoryCommand request, CancellationToken ct)
@@ -24,6 +28,7 @@ public sealed class DeleteCategoryCommandHandler : IRequestHandler<DeleteCategor
 
             category.SoftDelete();
             await _categoryRepository.UpdateAsync(category, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.ActiveCategories, ct);
             return Result.Success();
         }
         catch (Exception ex)

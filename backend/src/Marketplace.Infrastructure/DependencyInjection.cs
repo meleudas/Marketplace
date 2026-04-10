@@ -1,7 +1,12 @@
+using Hangfire;
+using Hangfire.MemoryStorage;
 using Marketplace.Application.Auth.Ports;
+using Marketplace.Application.Common.Ports;
 using Marketplace.Domain.Categories.Repositories;
+using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Companies.Repositories;
 using Marketplace.Domain.Users.Repositories;
+using Marketplace.Domain.Inventory.Repositories;
 using Marketplace.Infrastructure.Caching;
 using Marketplace.Infrastructure.External.Email;
 using Marketplace.Infrastructure.External.OAuth;
@@ -11,6 +16,7 @@ using Marketplace.Infrastructure.Identity;
 using Marketplace.Infrastructure.Identity.Entities;
 using Marketplace.Infrastructure.Identity.Managers;
 using Marketplace.Infrastructure.Identity.Services;
+using Marketplace.Infrastructure.Jobs;
 using Marketplace.Infrastructure.Persistence;
 using Marketplace.Infrastructure.Persistence.Interceptors;
 using Marketplace.Infrastructure.Persistence.Repositories;
@@ -113,12 +119,30 @@ public static class DependencyInjection
             services.AddSingleton<ICacheService>(sp => sp.GetRequiredService<MemoryCacheService>());
         }
 
+        services.AddHangfire(config =>
+            config.UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UseMemoryStorage());
+        services.AddHangfireServer();
+
         services.AddScoped<IdentityUserService>();
         services.AddScoped<ITokenPort, TokenService>();
         services.AddScoped<IAuthenticationPort, IdentityAuthService>();
+        services.AddScoped<INotificationDispatcher, HangfireNotificationDispatcher>();
+        services.AddScoped<NotificationJobs>();
+        services.AddScoped<InventoryJobs>();
+        services.AddScoped<IAppCachePort, AppCachePort>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ICompanyRepository, CompanyRepository>();
+        services.AddScoped<ICompanyMemberRepository, CompanyMemberRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<IProductDetailRepository, ProductDetailRepository>();
+        services.AddScoped<IProductImageRepository, ProductImageRepository>();
+        services.AddScoped<IWarehouseRepository, WarehouseRepository>();
+        services.AddScoped<IWarehouseStockRepository, WarehouseStockRepository>();
+        services.AddScoped<IStockMovementRepository, StockMovementRepository>();
+        services.AddScoped<IInventoryReservationRepository, InventoryReservationRepository>();
         services.AddScoped<GoogleOAuthService>();
         services.AddScoped<ITelegramLinkCodeStore, TelegramLinkCodeStore>();
         services.AddHttpClient<TelegramBotSender>();

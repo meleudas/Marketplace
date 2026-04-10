@@ -27,8 +27,7 @@ public class IdentityAuthService : IAuthenticationPort
     private readonly ITokenPort _tokenPort;
     private readonly IdentityUserService _identityUserService;
     private readonly IUserRepository _userRepository;
-    private readonly IEmailPort _emailPort;
-    private readonly ITelegramPort _telegramPort;
+    private readonly INotificationDispatcher _notificationDispatcher;
     private readonly ITelegramLinkCodeStore _telegramLinkCodeStore;
     private readonly TelegramOptions _telegramOptions;
 
@@ -38,8 +37,7 @@ public class IdentityAuthService : IAuthenticationPort
         ITokenPort tokenPort,
         IdentityUserService identityUserService,
         IUserRepository userRepository,
-        IEmailPort emailPort,
-        ITelegramPort telegramPort,
+        INotificationDispatcher notificationDispatcher,
         ITelegramLinkCodeStore telegramLinkCodeStore,
         IOptions<TelegramOptions> telegramOptions)
     {
@@ -48,8 +46,7 @@ public class IdentityAuthService : IAuthenticationPort
         _tokenPort = tokenPort;
         _identityUserService = identityUserService;
         _userRepository = userRepository;
-        _emailPort = emailPort;
-        _telegramPort = telegramPort;
+        _notificationDispatcher = notificationDispatcher;
         _telegramLinkCodeStore = telegramLinkCodeStore;
         _telegramOptions = telegramOptions.Value;
     }
@@ -445,7 +442,7 @@ public class IdentityAuthService : IAuthenticationPort
             return Result.Failure("User email is not configured.");
 
         var code = await _userManager.GenerateTwoFactorTokenAsync(appUser, TokenOptions.DefaultEmailProvider);
-        await _emailPort.SendTwoFactorCodeEmailAsync(appUser.Email, code, ct);
+        await _notificationDispatcher.EnqueueTwoFactorEmailAsync(appUser.Email, code, ct);
         return Result.Success();
     }
 
@@ -455,7 +452,7 @@ public class IdentityAuthService : IAuthenticationPort
             return Result.Failure("Telegram account is not linked.");
 
         var code = await _userManager.GenerateTwoFactorTokenAsync(appUser, TokenOptions.DefaultPhoneProvider);
-        await _telegramPort.SendMessageAsync(appUser.TelegramChatId, $"Your Marketplace verification code: {code}", ct);
+        await _notificationDispatcher.EnqueueTelegramMessageAsync(appUser.TelegramChatId, $"Your Marketplace verification code: {code}", ct);
         return Result.Success();
     }
 

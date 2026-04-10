@@ -52,6 +52,10 @@ public static class ResultExtensions
             return StatusCodes.Status401Unauthorized;
         if (e.Contains("confirm your email"))
             return StatusCodes.Status403Forbidden;
+        if (e.Contains("forbidden"))
+            return StatusCodes.Status403Forbidden;
+        if (e.Contains("not found"))
+            return StatusCodes.Status404NotFound;
         return StatusCodes.Status400BadRequest;
     }
 }

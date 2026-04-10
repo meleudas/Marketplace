@@ -1,5 +1,7 @@
+using Hangfire;
 using Marketplace.API.Extensions;
 using Marketplace.Infrastructure.External.Email;
+using Marketplace.Infrastructure.Jobs;
 using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
 using System.Security.Cryptography;
@@ -31,6 +33,11 @@ app.UseSwaggerUI(options =>
 });
 
 app.UseMarketplaceMiddleware();
+app.UseHangfireDashboard("/hangfire");
+RecurringJob.AddOrUpdate<InventoryJobs>(
+    "inventory-expire-reservations",
+    job => job.ExpireReservationsAsync(default),
+    Cron.Minutely);
 
 app.MapControllers();
 

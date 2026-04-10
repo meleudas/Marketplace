@@ -71,7 +71,7 @@ public class CategoryRepository : ICategoryRepository
             new JsonBlob(r.MetaRaw),
             r.SortOrder,
             r.IsActive,
-            r.ProductCount,
+            0,
             r.CreatedAt,
             r.UpdatedAt,
             r.IsDeleted,
@@ -90,7 +90,6 @@ public class CategoryRepository : ICategoryRepository
             MetaRaw = category.Meta.Raw,
             SortOrder = category.SortOrder,
             IsActive = category.IsActive,
-            ProductCount = category.ProductCount,
             CreatedAt = category.CreatedAt,
             UpdatedAt = category.UpdatedAt,
             IsDeleted = category.IsDeleted,
@@ -107,7 +106,6 @@ public class CategoryRepository : ICategoryRepository
         row.MetaRaw = category.Meta.Raw;
         row.SortOrder = category.SortOrder;
         row.IsActive = category.IsActive;
-        row.ProductCount = category.ProductCount;
         row.UpdatedAt = category.UpdatedAt;
         row.IsDeleted = category.IsDeleted;
         row.DeletedAt = category.DeletedAt;
