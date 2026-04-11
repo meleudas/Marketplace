@@ -34,12 +34,18 @@ export const getWorkspaceProducts = async (companyId: string): Promise<CompanyPr
   return extractList<CompanyProductDto>(response.data);
 };
 
+interface ProductDtoResponse {
+  product: CompanyProductDto;
+  detail: unknown;
+  images: unknown[];
+}
+
 export const createWorkspaceProduct = async (
   companyId: string,
   payload: UpsertProductRequest,
 ): Promise<CompanyProductDto> => {
-  const response = await apiClient.post<CompanyProductDto>(`/companies/${companyId}/products`, payload);
-  return response.data;
+  const response = await apiClient.post<ProductDtoResponse>(`/companies/${companyId}/products`, payload);
+  return response.data.product;
 };
 
 export const updateWorkspaceProduct = async (
@@ -47,8 +53,8 @@ export const updateWorkspaceProduct = async (
   id: number,
   payload: UpsertProductRequest,
 ): Promise<CompanyProductDto> => {
-  const response = await apiClient.put<CompanyProductDto>(`/companies/${companyId}/products/${id}`, payload);
-  return response.data;
+  const response = await apiClient.put<ProductDtoResponse>(`/companies/${companyId}/products/${id}`, payload);
+  return response.data.product;
 };
 
 export const deleteWorkspaceProduct = async (companyId: string, id: number): Promise<void> => {

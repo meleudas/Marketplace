@@ -1,8 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { useAuth } from "@/features/auth/model/auth.store";
 import {
@@ -19,6 +19,7 @@ import {
   transferInventory,
   updateWarehouse,
 } from "@/features/workspace/api/inventory.api";
+import { getWorkspaceProducts } from "@/features/workspace/api/products.api";
 import { getMyCompanyMembership } from "@/features/workspace/api/workspace.api";
 import { WORKSPACE_COMPANY_ID } from "@/features/workspace/config/workspace.constants";
 import { getWorkspaceErrorMessage } from "@/features/workspace/lib/workspace.error";
@@ -38,6 +39,7 @@ import {
 } from "@/features/workspace/model/inventory-forms.schema";
 import { canWriteInventory } from "@/features/workspace/model/workspace.permissions";
 import type {
+  CompanyProductDto,
   CompanyMembershipDto,
   InventoryMovementDto,
   InventoryStockDto,
@@ -49,6 +51,84 @@ import styles from "./WorkspaceScreen.module.css";
 
 const createOperationId = (): string => crypto.randomUUID();
 
+interface TypeaheadOption {
+  id: number;
+  label: string;
+}
+
+interface TypeaheadFieldProps {
+  value?: number;
+  options: TypeaheadOption[];
+  placeholder: string;
+  disabled?: boolean;
+  onChange: (value?: number) => void;
+}
+
+function TypeaheadField({ value, options, placeholder, disabled, onChange }: TypeaheadFieldProps) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const selectedOption = useMemo(
+    () => options.find((option) => option.id === value),
+    [options, value],
+  );
+
+  const filtered = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) {
+      return options.slice(0, 20);
+    }
+
+    return options
+      .filter((option) => option.label.toLowerCase().includes(normalized) || String(option.id).includes(normalized))
+      .slice(0, 20);
+  }, [options, query]);
+
+  return (
+    <div className={styles.typeahead}>
+      <input
+        className={styles.input}
+        value={open ? query : (selectedOption?.label ?? query)}
+        disabled={disabled}
+        placeholder={placeholder}
+        onFocus={() => {
+          setOpen(true);
+          setQuery(selectedOption?.label ?? "");
+        }}
+        onChange={(event) => {
+          const nextQuery = event.target.value;
+          setQuery(nextQuery);
+
+          if (!nextQuery.trim()) {
+            onChange(undefined);
+          }
+        }}
+        onBlur={() => {
+          window.setTimeout(() => setOpen(false), 120);
+        }}
+      />
+      {open && filtered.length > 0 ? (
+        <div className={styles.typeaheadList}>
+          {filtered.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={styles.typeaheadOption}
+              onClick={() => {
+                onChange(option.id);
+                setQuery(option.label);
+                setOpen(false);
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function WorkspaceInventoryScreen() {
   const user = useAuth((state) => state.user);
   const isGlobalAdmin = user?.role === "admin";
@@ -59,11 +139,28 @@ export function WorkspaceInventoryScreen() {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [membership, setMembership] = useState<CompanyMembershipDto | null>(null);
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
+  const [products, setProducts] = useState<CompanyProductDto[]>([]);
   const [stocks, setStocks] = useState<InventoryStockDto[]>([]);
   const [movements, setMovements] = useState<InventoryMovementDto[]>([]);
   const [editingWarehouse, setEditingWarehouse] = useState<WarehouseDto | null>(null);
 
   const canWrite = useMemo(() => isGlobalAdmin || canWriteInventory(membership), [isGlobalAdmin, membership]);
+  const warehouseLabelById = useMemo(
+    () => new Map(warehouses.map((warehouse) => [warehouse.id, `${warehouse.name} (${warehouse.code})`])),
+    [warehouses],
+  );
+  const productLabelById = useMemo(
+    () => new Map(products.map((product) => [product.id, product.name])),
+    [products],
+  );
+  const warehouseOptions = useMemo<TypeaheadOption[]>(
+    () => warehouses.map((warehouse) => ({ id: warehouse.id, label: `${warehouse.name} (${warehouse.code})` })),
+    [warehouses],
+  );
+  const productOptions = useMemo<TypeaheadOption[]>(
+    () => products.map((product) => ({ id: product.id, label: `${product.name} (#${product.id})` })),
+    [products],
+  );
 
     const receiveForm = useForm<z.input<typeof receiveFormSchema>, unknown, ReceiveFormValues>({
         resolver: zodResolver(receiveFormSchema),
@@ -95,7 +192,7 @@ export function WorkspaceInventoryScreen() {
         defaultValues: { reservationCode: "" },
     });
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -117,14 +214,16 @@ export function WorkspaceInventoryScreen() {
         }
       }
 
-      const [warehousesData, stocksData, movementsData] = await Promise.all([
+      const [warehousesData, productsData, stocksData, movementsData] = await Promise.all([
         getWorkspaceWarehouses(WORKSPACE_COMPANY_ID),
+        getWorkspaceProducts(WORKSPACE_COMPANY_ID),
         getInventoryStocks(WORKSPACE_COMPANY_ID),
         getInventoryMovements(WORKSPACE_COMPANY_ID),
       ]);
 
       setMembership(membershipData);
       setWarehouses(warehousesData);
+      setProducts(productsData);
       setStocks(stocksData);
       setMovements(movementsData);
     } catch (loadError) {
@@ -140,11 +239,11 @@ export function WorkspaceInventoryScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isGlobalAdmin]);
 
   useEffect(() => {
     void load();
-  }, [isGlobalAdmin]);
+  }, [load]);
 
   const runWrite = async (action: () => Promise<unknown>, successMessage: string) => {
     try {
@@ -158,6 +257,20 @@ export function WorkspaceInventoryScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const pickStockForActions = (warehouseId: number, productId: number) => {
+    receiveForm.setValue("warehouseId", warehouseId);
+    receiveForm.setValue("productId", productId);
+    shipForm.setValue("warehouseId", warehouseId);
+    shipForm.setValue("productId", productId);
+    adjustForm.setValue("warehouseId", warehouseId);
+    adjustForm.setValue("productId", productId);
+    reserveForm.setValue("warehouseId", warehouseId);
+    reserveForm.setValue("productId", productId);
+    transferForm.setValue("fromWarehouseId", warehouseId);
+    transferForm.setValue("productId", productId);
+    setFeedback("Selected stock values were copied into inventory forms.");
   };
 
   if (loading) {
@@ -299,17 +412,30 @@ export function WorkspaceInventoryScreen() {
                   <th>Reserved</th>
                   <th>On hand</th>
                   <th>Updated</th>
+                  {canWrite ? <th>Quick action</th> : null}
                 </tr>
               </thead>
               <tbody>
                 {stocks.map((stock) => (
                   <tr key={`${stock.productId}-${stock.warehouseId}`}>
-                    <td>{stock.productId}</td>
-                    <td>{stock.warehouseId}</td>
-                    <td>{stock.availableQty}</td>
-                    <td>{stock.reservedQty ?? "-"}</td>
-                    <td>{stock.onHandQty ?? "-"}</td>
+                    <td>{`${stock.productId} - ${productLabelById.get(stock.productId) ?? "Unknown product"}`}</td>
+                    <td>{`${stock.warehouseId} - ${warehouseLabelById.get(stock.warehouseId) ?? "Unknown warehouse"}`}</td>
+                    <td>{stock.available}</td>
+                    <td>{stock.reserved}</td>
+                    <td>{stock.onHand}</td>
                     <td>{stock.updatedAt ?? "-"}</td>
+                    {canWrite ? (
+                      <td>
+                        <button
+                          type="button"
+                          className={styles.ghostButton}
+                          disabled={saving}
+                          onClick={() => pickStockForActions(stock.warehouseId, stock.productId)}
+                        >
+                          Use in forms
+                        </button>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -330,23 +456,23 @@ export function WorkspaceInventoryScreen() {
                 <tr>
                   <th>Operation</th>
                   <th>Type</th>
+                  <th>Warehouse</th>
                   <th>Product ID</th>
                   <th>Qty</th>
-                  <th>From</th>
-                  <th>To</th>
-                  <th>Created</th>
+                  <th>Reference</th>
+                  <th>Occurred</th>
                 </tr>
               </thead>
               <tbody>
                 {movements.map((movement) => (
-                  <tr key={movement.id ?? movement.operationId ?? `${movement.productId}-${movement.createdAt}`}>
-                    <td>{movement.operationId ?? "-"}</td>
-                    <td>{movement.movementType ?? "-"}</td>
+                  <tr key={movement.id}>
+                    <td>{movement.operationId}</td>
+                    <td>{movement.type}</td>
+                    <td>{movement.warehouseId}</td>
                     <td>{movement.productId}</td>
                     <td>{movement.quantity}</td>
-                    <td>{movement.fromWarehouseId ?? "-"}</td>
-                    <td>{movement.toWarehouseId ?? "-"}</td>
-                    <td>{movement.createdAt ?? "-"}</td>
+                    <td>{movement.reference ?? "-"}</td>
+                    <td>{movement.occurredAt}</td>
                   </tr>
                 ))}
               </tbody>
@@ -358,6 +484,9 @@ export function WorkspaceInventoryScreen() {
       {canWrite ? (
         <section className={styles.card}>
           <h3 className={styles.subTitle}>Inventory actions</h3>
+          <p className={styles.muted}>
+            Choose warehouse and product from dropdowns. You can also click &quot;Use in forms&quot; in Stocks table.
+          </p>
 
           <div className={styles.formColumns}>
             <form
@@ -377,21 +506,38 @@ export function WorkspaceInventoryScreen() {
               })}
             >
               <h4 className={styles.miniTitle}>Receive</h4>
-              <input
-                type="number"
-                className={styles.input}
-                placeholder="Warehouse ID"
-                {...receiveForm.register("warehouseId", { valueAsNumber: true })}
+              <Controller
+                control={receiveForm.control}
+                name="warehouseId"
+                render={({ field }) => (
+                  <TypeaheadField
+                    value={field.value}
+                    options={warehouseOptions}
+                    placeholder="Type warehouse name or ID"
+                    disabled={saving}
+                    onChange={(nextValue) => field.onChange(nextValue ?? Number.NaN)}
+                  />
+                )}
               />
               {receiveForm.formState.errors.warehouseId ? (
                 <span className={styles.error}>{receiveForm.formState.errors.warehouseId.message}</span>
               ) : null}
-              <input
-                type="number"
-                className={styles.input}
-                placeholder="Product ID"
-                {...receiveForm.register("productId", { valueAsNumber: true })}
+              <Controller
+                control={receiveForm.control}
+                name="productId"
+                render={({ field }) => (
+                  <TypeaheadField
+                    value={field.value}
+                    options={productOptions}
+                    placeholder="Type product name or ID"
+                    disabled={saving}
+                    onChange={(nextValue) => field.onChange(nextValue ?? Number.NaN)}
+                  />
+                )}
               />
+              {receiveForm.formState.errors.productId ? (
+                <span className={styles.error}>{receiveForm.formState.errors.productId.message}</span>
+              ) : null}
               <input
                 type="number"
                 className={styles.input}
@@ -421,18 +567,38 @@ export function WorkspaceInventoryScreen() {
               })}
             >
               <h4 className={styles.miniTitle}>Ship</h4>
-              <input
-                type="number"
-                className={styles.input}
-                placeholder="Warehouse ID"
-                {...shipForm.register("warehouseId", { valueAsNumber: true })}
+              <Controller
+                control={shipForm.control}
+                name="warehouseId"
+                render={({ field }) => (
+                  <TypeaheadField
+                    value={field.value}
+                    options={warehouseOptions}
+                    placeholder="Type warehouse name or ID"
+                    disabled={saving}
+                    onChange={(nextValue) => field.onChange(nextValue ?? Number.NaN)}
+                  />
+                )}
               />
-              <input
-                type="number"
-                className={styles.input}
-                placeholder="Product ID"
-                {...shipForm.register("productId", { valueAsNumber: true })}
+              {shipForm.formState.errors.warehouseId ? (
+                <span className={styles.error}>{shipForm.formState.errors.warehouseId.message}</span>
+              ) : null}
+              <Controller
+                control={shipForm.control}
+                name="productId"
+                render={({ field }) => (
+                  <TypeaheadField
+                    value={field.value}
+                    options={productOptions}
+                    placeholder="Type product name or ID"
+                    disabled={saving}
+                    onChange={(nextValue) => field.onChange(nextValue ?? Number.NaN)}
+                  />
+                )}
               />
+              {shipForm.formState.errors.productId ? (
+                <span className={styles.error}>{shipForm.formState.errors.productId.message}</span>
+              ) : null}
               <input
                 type="number"
                 className={styles.input}
@@ -464,18 +630,38 @@ export function WorkspaceInventoryScreen() {
               })}
             >
               <h4 className={styles.miniTitle}>Adjust</h4>
-              <input
-                type="number"
-                className={styles.input}
-                placeholder="Warehouse ID"
-                {...adjustForm.register("warehouseId", { valueAsNumber: true })}
+              <Controller
+                control={adjustForm.control}
+                name="warehouseId"
+                render={({ field }) => (
+                  <TypeaheadField
+                    value={field.value}
+                    options={warehouseOptions}
+                    placeholder="Type warehouse name or ID"
+                    disabled={saving}
+                    onChange={(nextValue) => field.onChange(nextValue ?? Number.NaN)}
+                  />
+                )}
               />
-              <input
-                type="number"
-                className={styles.input}
-                placeholder="Product ID"
-                {...adjustForm.register("productId", { valueAsNumber: true })}
+              {adjustForm.formState.errors.warehouseId ? (
+                <span className={styles.error}>{adjustForm.formState.errors.warehouseId.message}</span>
+              ) : null}
+              <Controller
+                control={adjustForm.control}
+                name="productId"
+                render={({ field }) => (
+                  <TypeaheadField
+                    value={field.value}
+                    options={productOptions}
+                    placeholder="Type product name or ID"
+                    disabled={saving}
+                    onChange={(nextValue) => field.onChange(nextValue ?? Number.NaN)}
+                  />
+                )}
               />
+              {adjustForm.formState.errors.productId ? (
+                <span className={styles.error}>{adjustForm.formState.errors.productId.message}</span>
+              ) : null}
               <input
                 type="number"
                 className={styles.input}
@@ -517,24 +703,54 @@ export function WorkspaceInventoryScreen() {
               })}
             >
               <h4 className={styles.miniTitle}>Transfer</h4>
-              <input
-                type="number"
-                className={styles.input}
-                placeholder="From warehouse ID"
-                {...transferForm.register("fromWarehouseId", { valueAsNumber: true })}
+              <Controller
+                control={transferForm.control}
+                name="fromWarehouseId"
+                render={({ field }) => (
+                  <TypeaheadField
+                    value={field.value}
+                    options={warehouseOptions}
+                    placeholder="Type source warehouse"
+                    disabled={saving}
+                    onChange={(nextValue) => field.onChange(nextValue ?? Number.NaN)}
+                  />
+                )}
               />
-              <input
-                type="number"
-                className={styles.input}
-                placeholder="To warehouse ID"
-                {...transferForm.register("toWarehouseId", { valueAsNumber: true })}
+              {transferForm.formState.errors.fromWarehouseId ? (
+                <span className={styles.error}>{transferForm.formState.errors.fromWarehouseId.message}</span>
+              ) : null}
+              <Controller
+                control={transferForm.control}
+                name="toWarehouseId"
+                render={({ field }) => (
+                  <TypeaheadField
+                    value={field.value}
+                    options={warehouseOptions}
+                    placeholder="Type destination warehouse"
+                    disabled={saving}
+                    onChange={(nextValue) => field.onChange(nextValue ?? Number.NaN)}
+                  />
+                )}
               />
-              <input
-                type="number"
-                className={styles.input}
-                placeholder="Product ID"
-                {...transferForm.register("productId", { valueAsNumber: true })}
+              {transferForm.formState.errors.toWarehouseId ? (
+                <span className={styles.error}>{transferForm.formState.errors.toWarehouseId.message}</span>
+              ) : null}
+              <Controller
+                control={transferForm.control}
+                name="productId"
+                render={({ field }) => (
+                  <TypeaheadField
+                    value={field.value}
+                    options={productOptions}
+                    placeholder="Type product name or ID"
+                    disabled={saving}
+                    onChange={(nextValue) => field.onChange(nextValue ?? Number.NaN)}
+                  />
+                )}
               />
+              {transferForm.formState.errors.productId ? (
+                <span className={styles.error}>{transferForm.formState.errors.productId.message}</span>
+              ) : null}
               <input
                 type="number"
                 className={styles.input}
@@ -564,18 +780,38 @@ export function WorkspaceInventoryScreen() {
               })}
             >
               <h4 className={styles.miniTitle}>Reserve</h4>
-              <input
-                type="number"
-                className={styles.input}
-                placeholder="Warehouse ID"
-                {...reserveForm.register("warehouseId", { valueAsNumber: true })}
+              <Controller
+                control={reserveForm.control}
+                name="warehouseId"
+                render={({ field }) => (
+                  <TypeaheadField
+                    value={field.value}
+                    options={warehouseOptions}
+                    placeholder="Type warehouse name or ID"
+                    disabled={saving}
+                    onChange={(nextValue) => field.onChange(nextValue ?? Number.NaN)}
+                  />
+                )}
               />
-              <input
-                type="number"
-                className={styles.input}
-                placeholder="Product ID"
-                {...reserveForm.register("productId", { valueAsNumber: true })}
+              {reserveForm.formState.errors.warehouseId ? (
+                <span className={styles.error}>{reserveForm.formState.errors.warehouseId.message}</span>
+              ) : null}
+              <Controller
+                control={reserveForm.control}
+                name="productId"
+                render={({ field }) => (
+                  <TypeaheadField
+                    value={field.value}
+                    options={productOptions}
+                    placeholder="Type product name or ID"
+                    disabled={saving}
+                    onChange={(nextValue) => field.onChange(nextValue ?? Number.NaN)}
+                  />
+                )}
               />
+              {reserveForm.formState.errors.productId ? (
+                <span className={styles.error}>{reserveForm.formState.errors.productId.message}</span>
+              ) : null}
               <input
                 type="number"
                 className={styles.input}

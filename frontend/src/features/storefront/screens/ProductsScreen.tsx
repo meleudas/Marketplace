@@ -13,19 +13,7 @@ const productMatchesCategory = (
   product: CatalogProductListItemDto,
   category: CatalogCategoryDto,
 ): boolean => {
-  const normalizedSlug = product.categorySlug?.toLowerCase().trim();
-  const normalizedName = product.categoryName?.toLowerCase().trim();
-  const normalizedCategoryName = category.name.toLowerCase().trim();
-
-  if (normalizedSlug && normalizedSlug === category.slug.toLowerCase()) {
-    return true;
-  }
-
-  if (typeof product.categoryId === "number" && product.categoryId === category.id) {
-    return true;
-  }
-
-  return Boolean(normalizedName && normalizedName === normalizedCategoryName);
+  return product.categoryId === category.id;
 };
 
 export function ProductsScreen() {

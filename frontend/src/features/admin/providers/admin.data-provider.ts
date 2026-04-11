@@ -162,7 +162,11 @@ export const adminDataProvider: DataProvider = {
   deleteOne: async <TData extends BaseRecord = BaseRecord, TVariables = unknown>(
     params: DeleteOneParams<TVariables>,
   ): Promise<DeleteOneResponse<TData>> => {
-    await apiClient.delete(`/admin/${params.resource}/${params.id}`);
+    const baseResource =
+      params.resource === "companies" || params.resource === "companies-pending"
+        ? "companies"
+        : "categories";
+    await apiClient.delete(`/admin/${baseResource}/${params.id}`);
 
     return {
       data: {

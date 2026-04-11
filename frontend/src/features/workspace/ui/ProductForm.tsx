@@ -27,21 +27,98 @@ const toPrettyJson = (value: unknown, fallback: string): string => {
   }
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+};
+
+const asNullableString = (value: unknown): string | null => {
+  return typeof value === "string" ? value : null;
+};
+
+const asStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === "string");
+};
+
+const asNullableNumber = (value: unknown): number | null => {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+};
+
+const parseProductDetail = (detailJson: string, fallbackSlug: string): unknown | null => {
+  if (!detailJson.trim()) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(detailJson) as unknown;
+    if (!isRecord(parsed)) {
+      return null;
+    }
+
+    const slugValue =
+      typeof parsed.slug === "string" && parsed.slug.trim().length > 0 ? parsed.slug.trim() : fallbackSlug;
+
+    return {
+      slug: slugValue,
+      attributesRaw: asNullableString(parsed.attributesRaw),
+      variantsRaw: asNullableString(parsed.variantsRaw),
+      specificationsRaw: asNullableString(parsed.specificationsRaw),
+      seoRaw: asNullableString(parsed.seoRaw),
+      contentBlocksRaw: asNullableString(parsed.contentBlocksRaw),
+      tags: asStringArray(parsed.tags),
+      brands: asStringArray(parsed.brands),
+    };
+  } catch {
+    return null;
+  }
+};
+
+const parseProductImages = (imagesJson: string): unknown[] | null => {
+  if (!imagesJson.trim()) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(imagesJson) as unknown;
+    if (!Array.isArray(parsed)) {
+      return null;
+    }
+
+    const normalized = parsed
+      .map((item, index) => {
+        if (!isRecord(item) || typeof item.imageUrl !== "string" || !item.imageUrl.trim()) {
+          return null;
+        }
+
+        const imageUrl = item.imageUrl.trim();
+        const thumbnailUrl =
+          typeof item.thumbnailUrl === "string" && item.thumbnailUrl.trim() ? item.thumbnailUrl.trim() : imageUrl;
+
+        return {
+          imageUrl,
+          thumbnailUrl,
+          altText: typeof item.altText === "string" ? item.altText : "",
+          sortOrder: typeof item.sortOrder === "number" && Number.isFinite(item.sortOrder) ? item.sortOrder : index,
+          isMain: typeof item.isMain === "boolean" ? item.isMain : index === 0,
+          width: asNullableNumber(item.width),
+          height: asNullableNumber(item.height),
+          fileSize: asNullableNumber(item.fileSize),
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+
+    return normalized.length > 0 ? normalized : null;
+  } catch {
+    return null;
+  }
+};
+
 const toRequestPayload = (values: ProductFormValues): UpsertProductRequest => {
-  let detail: unknown;
-  let images: unknown;
-
-  try {
-    detail = values.detailJson ? JSON.parse(values.detailJson) : {};
-  } catch {
-    detail = {};
-  }
-
-  try {
-    images = values.imagesJson ? JSON.parse(values.imagesJson) : [];
-  } catch {
-    images = [];
-  }
+  const detail = parseProductDetail(values.detailJson ?? "", values.slug);
+  const images = parseProductImages(values.imagesJson ?? "");
 
   return {
     name: values.name,
@@ -69,8 +146,8 @@ export function ProductForm({ categories, initialProduct, submitLabel, busy, onS
       minStock: initialProduct?.minStock ?? 0,
       categoryId: initialProduct?.categoryId ?? 0,
       hasVariants: initialProduct?.hasVariants ?? false,
-      detailJson: toPrettyJson(initialProduct?.detail, "{}"),
-      imagesJson: toPrettyJson(initialProduct?.images, "[]"),
+      detailJson: toPrettyJson(null, ""),
+      imagesJson: toPrettyJson(null, ""),
     },
   });
 

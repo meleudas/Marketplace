@@ -36,7 +36,7 @@ export function WarehouseForm({ initialWarehouse, busy, submitLabel, onSubmit }:
       onSubmit={form.handleSubmit(async (values) => {
         await onSubmit({
           name: values.name,
-          code: values.code?.trim() ? values.code : null,
+          code: values.code?.trim() || "",
           street: values.street,
           city: values.city,
           state: values.state,

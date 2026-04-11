@@ -48,50 +48,52 @@ export interface CatalogCompanyDto {
 }
 
 export interface CatalogProductListItemDto {
-  id: string;
+  id: number;
   companyId: string;
-  categoryId: number | null;
   name: string;
   slug: string;
-  description?: string | null;
-  imageUrl?: string | null;
-  price?: number | null;
-  oldPrice?: number | null;
-  companyName?: string | null;
-  categoryName?: string | null;
-  categorySlug?: string | null;
+  description: string;
+  price: number;
+  oldPrice: number | null;
+  categoryId: number;
+  status: string;
+  hasVariants: boolean;
+  stock: number;
+  minStock: number;
   availableQty: number;
   availabilityStatus: AvailabilityStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CatalogProductImageDto {
+  imageUrl: string;
+  thumbnailUrl: string;
+  altText: string;
+  sortOrder: number;
+  isMain: boolean;
+  width: number | null;
+  height: number | null;
+  fileSize: number | null;
 }
 
 export interface CatalogProductDetailDto {
-  product: {
-    id: string;
-    companyId: string;
-    categoryId: number | null;
-    name: string;
-    slug: string;
-    description?: string | null;
-    imageUrl?: string | null;
-    price?: number | null;
-    oldPrice?: number | null;
-    availableQty?: number;
-    availabilityStatus?: AvailabilityStatus;
-  };
+  product: CatalogProductListItemDto;
   detail: {
-    description?: string | null;
+    slug: string;
+    attributesRaw: string | null;
+    variantsRaw: string | null;
+    specificationsRaw: string | null;
+    seoRaw: string | null;
+    contentBlocksRaw: string | null;
+    tags: string[];
+    brands: string[];
   } | null;
-  images: Array<{
-    id?: string;
-    url: string;
-    sortOrder?: number;
-    altText?: string | null;
-  }>;
-  availableQty?: number;
-  availabilityStatus?: AvailabilityStatus;
+  images: CatalogProductImageDto[];
 }
 
 export interface ProductAvailabilityDto {
+  productId: number;
   availableQty: number;
   availabilityStatus: AvailabilityStatus;
 }

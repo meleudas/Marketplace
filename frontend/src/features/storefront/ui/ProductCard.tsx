@@ -17,8 +17,6 @@ const formatPrice = (price: number | null | undefined): string => {
 export function ProductCard({ product }: ProductCardProps) {
   return (
     <article className={styles.card}>
-      {product.imageUrl ? <img src={product.imageUrl} alt={product.name} className={styles.image} /> : null}
-
       <div className={styles.body}>
         <h3 className={styles.title}>
           <Link href={`/products/${product.slug}`} className={styles.titleLink}>
@@ -37,9 +35,6 @@ export function ProductCard({ product }: ProductCardProps) {
 
         <p className={styles.meta}>Available: {product.availableQty}</p>
         <p className={styles.meta}>Status: {product.availabilityStatus}</p>
-
-        {product.categoryName ? <p className={styles.meta}>Category: {product.categoryName}</p> : null}
-        {product.companyName ? <p className={styles.meta}>Company: {product.companyName}</p> : null}
       </div>
     </article>
   );

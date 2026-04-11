@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/features/auth/model/auth.store";
 import {
   createWorkspaceProduct,
@@ -38,7 +38,7 @@ export function WorkspaceProductsScreen() {
 
   const canWrite = useMemo(() => isGlobalAdmin || canWriteProducts(membership), [isGlobalAdmin, membership]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -81,11 +81,11 @@ export function WorkspaceProductsScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isGlobalAdmin]);
 
   useEffect(() => {
     void load();
-  }, [isGlobalAdmin]);
+  }, [load]);
 
   const onCreate = async (payload: UpsertProductRequest) => {
     try {
@@ -222,9 +222,9 @@ export function WorkspaceProductsScreen() {
                     <td>{product.price}</td>
                     <td>{product.oldPrice ?? "-"}</td>
                     <td>{product.minStock}</td>
-                    <td>{product.availableQty ?? "-"}</td>
-                    <td>{product.availabilityStatus ?? "-"}</td>
-                    <td>{product.categoryName ?? product.categoryId ?? "-"}</td>
+                    <td>{product.availableQty}</td>
+                    <td>{product.availabilityStatus}</td>
+                    <td>{product.categoryId}</td>
                     {canWrite ? (
                       <td className={styles.actionsInline}>
                         <button

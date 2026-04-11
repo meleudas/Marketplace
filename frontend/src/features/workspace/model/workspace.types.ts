@@ -1,11 +1,12 @@
 export type CompanyWorkspaceRole = "owner" | "manager" | "seller" | "support" | "logistics";
 
 export interface CompanyMembershipDto {
-  userId?: string;
+  companyId: string;
+  userId: string;
   role: CompanyWorkspaceRole;
   isOwner: boolean;
-  createdAt?: string | null;
-  updatedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface WorkspaceCategoryDto {
@@ -16,19 +17,21 @@ export interface WorkspaceCategoryDto {
 
 export interface CompanyProductDto {
   id: number;
+  companyId: string;
   name: string;
   slug: string;
   description: string;
   price: number;
   oldPrice: number | null;
-  minStock: number;
-  availableQty?: number | null;
-  availabilityStatus?: string | null;
-  categoryId?: number | null;
-  categoryName?: string | null;
+  categoryId: number;
+  status: string;
   hasVariants: boolean;
-  detail?: unknown;
-  images?: unknown;
+  stock: number;
+  minStock: number;
+  availableQty: number;
+  availabilityStatus: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface UpsertProductRequest {
@@ -46,23 +49,24 @@ export interface UpsertProductRequest {
 
 export interface WarehouseDto {
   id: number;
+  companyId: string;
   name: string;
-  code?: string | null;
-  street?: string | null;
-  city?: string | null;
-  state?: string | null;
-  postalCode?: string | null;
-  country?: string | null;
-  timeZone?: string | null;
-  priority?: number | null;
-  isActive?: boolean;
-  createdAt?: string | null;
-  updatedAt?: string | null;
+  code: string;
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  timeZone: string;
+  priority: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateWarehouseRequest {
   name: string;
-  code?: string | null;
+  code: string;
   street: string;
   city: string;
   state: string;
@@ -74,7 +78,7 @@ export interface CreateWarehouseRequest {
 
 export interface UpdateWarehouseRequest {
   name: string;
-  code?: string | null;
+  code: string;
   street: string;
   city: string;
   state: string;
@@ -85,23 +89,30 @@ export interface UpdateWarehouseRequest {
 }
 
 export interface InventoryStockDto {
-  productId: number;
+  id: number;
+  companyId: string;
   warehouseId: number;
-  availableQty: number;
-  reservedQty?: number;
-  onHandQty?: number;
-  updatedAt?: string | null;
+  productId: number;
+  onHand: number;
+  reserved: number;
+  available: number;
+  reorderPoint: number;
+  version: number;
+  updatedAt: string;
 }
 
 export interface InventoryMovementDto {
-  id?: string;
-  operationId?: string;
+  id: number;
+  companyId: string;
+  warehouseId: number;
   productId: number;
-  movementType?: string;
+  type: string;
   quantity: number;
-  fromWarehouseId?: number | null;
-  toWarehouseId?: number | null;
-  createdAt?: string | null;
+  operationId: string;
+  reference: string | null;
+  reason: string | null;
+  actorUserId: string;
+  occurredAt: string;
 }
 
 export interface ReceiveStockRequest {
@@ -148,12 +159,12 @@ export interface CreateReservationRequest {
 }
 
 export interface CompanyMemberDto {
-  companyId?: string;
+  companyId: string;
   userId: string;
   role: CompanyWorkspaceRole;
   isOwner: boolean;
-  createdAt?: string | null;
-  updatedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CompanyMemberRoleRequest {
