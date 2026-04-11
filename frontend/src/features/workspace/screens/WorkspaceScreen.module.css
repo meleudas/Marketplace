@@ -1,0 +1,194 @@
+.stack {
+  display: grid;
+  gap: 12px;
+}
+
+.card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+}
+
+.sectionTitle {
+  margin: 0 0 10px;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+.subTitle {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.miniTitle {
+  margin: 0;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.row {
+  margin: 6px 0;
+  color: #334155;
+  word-break: break-word;
+}
+
+.rowBetween {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.label {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.state {
+  margin: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  color: #334155;
+  background: #fff;
+}
+
+.hint {
+  margin: 6px 0 0;
+  color: #64748b;
+}
+
+.feedback {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.formGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.formInline {
+  display: grid;
+  grid-template-columns: 1fr 220px auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+
+.formColumns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.field,
+.fieldCompact {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: #1f2937;
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.inlineField {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.error {
+  font-size: 12px;
+  color: #b91c1c;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.linkButton,
+.primaryButton,
+.ghostButton,
+.dangerButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  padding: 8px 12px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.linkButton,
+.ghostButton {
+  border-color: #cbd5e1;
+  color: #1e293b;
+  background: #fff;
+}
+
+.primaryButton {
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.dangerButton {
+  border-color: #dc2626;
+  background: #dc2626;
+  color: #fff;
+}
+
+.actionsInline {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  padding: 8px;
+  white-space: nowrap;
+}
+
+.table th {
+  color: #475569;
+  font-weight: 600;
+}

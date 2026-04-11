@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/features/auth/model/auth.store";
 import { getCatalogCategories, getCatalogProducts } from "@/features/storefront/api/catalog.api";
 import type { CatalogCategoryDto, CatalogProductListItemDto } from "@/features/storefront/model/catalog.types";
 import { CategoryList } from "@/features/storefront/ui/CategoryList";
@@ -17,6 +18,15 @@ export function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<CatalogCategoryDto[]>([]);
   const [products, setProducts] = useState<CatalogProductListItemDto[]>([]);
+
+  const user = useAuth((state) => state.user);
+  const isAuthenticated = useAuth((state) => state.isAuthenticated);
+  const initialized = useAuth((state) => state.initialized);
+  const canOpenWorkspace =
+    initialized &&
+    isAuthenticated &&
+    Boolean(user) &&
+    (user?.role === "seller" || user?.role === "moderator" || user?.role === "admin");
 
   useEffect(() => {
     const load = async () => {
@@ -62,6 +72,11 @@ export function HomeScreen() {
           <Link href="/settings" className={styles.actionLink}>
             Settings
           </Link>
+          {canOpenWorkspace ? (
+            <Link href="/workspace" className={styles.actionLink}>
+              Company workspace
+            </Link>
+          ) : null}
         </div>
       </section>
 

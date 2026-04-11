@@ -21,6 +21,9 @@ export function StorefrontLayout({ title, children }: StorefrontLayoutProps) {
   }, [loadMe]);
 
   const isSignedIn = initialized && isAuthenticated && Boolean(user);
+  const canOpenWorkspace =
+    isSignedIn &&
+    (user?.role === "seller" || user?.role === "moderator" || user?.role === "admin");
 
   return (
     <main className={styles.main}>
@@ -46,6 +49,12 @@ export function StorefrontLayout({ title, children }: StorefrontLayoutProps) {
               Sign in
             </Link>
           )}
+
+          {canOpenWorkspace ? (
+            <Link href="/workspace" className={styles.link}>
+              Company workspace
+            </Link>
+          ) : null}
 
           {isSignedIn && user?.role === "admin" ? (
             <Link href="/admin" className={styles.link}>
