@@ -177,10 +177,12 @@ export const adminDataProvider: DataProvider = {
 
   custom: async (params) => {
     const method = params.method ?? "get";
+    const payload = "payload" in params ? params.payload : undefined;
+    const values = "values" in params ? params.values : undefined;
     const response = await apiClient.request({
       url: params.url,
       method,
-      data: params.payload,
+      data: payload ?? values,
       params: params.query,
       headers: params.headers,
     });

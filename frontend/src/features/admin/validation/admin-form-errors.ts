@@ -63,8 +63,24 @@ export const applyServerFieldErrors = <TFieldValues extends FieldValues>(
   setError: UseFormSetError<TFieldValues>,
   fieldErrors: Record<string, string>,
 ) => {
+  const normalizeFieldPath = (rawKey: string): Path<TFieldValues> => {
+    const normalized = rawKey
+      .replace(/\[(\d+)]/g, ".$1")
+      .split(".")
+      .map((segment) => {
+        if (!segment) {
+          return segment;
+        }
+
+        return segment.charAt(0).toLowerCase() + segment.slice(1);
+      })
+      .join(".");
+
+    return normalized as Path<TFieldValues>;
+  };
+
   for (const [key, value] of Object.entries(fieldErrors)) {
-    setError(key as Path<TFieldValues>, {
+    setError(normalizeFieldPath(key), {
       type: "server",
       message: value,
     });

@@ -59,6 +59,24 @@
   font-size: 0.875rem;
 }
 
+.thButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+}
+
+.sortIndicator {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
 .actionRow {
   display: flex;
   flex-wrap: wrap;
