@@ -98,6 +98,7 @@ export function WorkspaceMembersScreen() {
         <p className={styles.row}>Is owner: {myMembership?.isOwner ? "Yes" : "No"}</p>
         {!canManage ? <p className={styles.hint}>Read-only mode for your role.</p> : null}
         {feedback ? <p className={styles.feedback}>{feedback}</p> : null}
+
       </section>
 
       {canManage ? (
