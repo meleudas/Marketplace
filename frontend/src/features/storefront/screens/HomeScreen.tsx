@@ -56,6 +56,12 @@ export function HomeScreen() {
           <Link href="/companies" className={styles.actionLink}>
             View companies
           </Link>
+          <Link href="/me" className={styles.actionLink}>
+            My profile
+          </Link>
+          <Link href="/settings" className={styles.actionLink}>
+            Settings
+          </Link>
         </div>
       </section>
 
@@ -83,4 +89,3 @@ export function HomeScreen() {
     </StorefrontLayout>
   );
 }
-

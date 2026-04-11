@@ -7,19 +7,43 @@ import type {
   ProductAvailabilityDto,
 } from "@/features/storefront/model/catalog.types";
 
+const extractList = <T>(payload: unknown): T[] => {
+  if (Array.isArray(payload)) {
+    return payload as T[];
+  }
+
+  if (payload && typeof payload === "object") {
+    const record = payload as Record<string, unknown>;
+
+    if (Array.isArray(record.value)) {
+      return record.value as T[];
+    }
+
+    if (Array.isArray(record.items)) {
+      return record.items as T[];
+    }
+
+    if (Array.isArray(record.data)) {
+      return record.data as T[];
+    }
+  }
+
+  return [];
+};
+
 export const getCatalogCompanies = async (): Promise<CatalogCompanyDto[]> => {
-  const response = await apiClient.get<CatalogCompanyDto[]>("/catalog/companies");
-  return response.data;
+  const response = await apiClient.get<unknown>("/catalog/companies");
+  return extractList<CatalogCompanyDto>(response.data);
 };
 
 export const getCatalogCategories = async (): Promise<CatalogCategoryDto[]> => {
-  const response = await apiClient.get<CatalogCategoryDto[]>("/catalog/categories");
-  return response.data;
+  const response = await apiClient.get<unknown>("/catalog/categories");
+  return extractList<CatalogCategoryDto>(response.data);
 };
 
 export const getCatalogProducts = async (): Promise<CatalogProductListItemDto[]> => {
-  const response = await apiClient.get<CatalogProductListItemDto[]>("/catalog/products");
-  return response.data;
+  const response = await apiClient.get<unknown>("/catalog/products");
+  return extractList<CatalogProductListItemDto>(response.data);
 };
 
 export const getCatalogProductBySlug = async (slug: string): Promise<CatalogProductDetailDto> => {
@@ -36,4 +60,3 @@ export const getProductAvailability = async (
   );
   return response.data;
 };
-
