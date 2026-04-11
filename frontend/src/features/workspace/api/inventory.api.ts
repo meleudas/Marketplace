@@ -61,7 +61,7 @@ export const createWarehouse = async (
 
 export const updateWarehouse = async (
   companyId: string,
-  warehouseId: string,
+  warehouseId: number,
   payload: UpdateWarehouseRequest,
 ): Promise<WarehouseDto> => {
   const response = await apiClient.put<WarehouseDto>(
@@ -71,7 +71,7 @@ export const updateWarehouse = async (
   return response.data;
 };
 
-export const deactivateWarehouse = async (companyId: string, warehouseId: string): Promise<void> => {
+export const deactivateWarehouse = async (companyId: string, warehouseId: number): Promise<void> => {
   await apiClient.post(`/companies/${companyId}/warehouses/${warehouseId}/deactivate`);
 };
 
@@ -104,4 +104,3 @@ export const releaseInventoryReservation = async (
 ): Promise<void> => {
   await apiClient.delete(`/companies/${companyId}/inventory/reservations/${reservationCode}`);
 };
-

@@ -15,7 +15,7 @@ export interface WorkspaceCategoryDto {
 }
 
 export interface CompanyProductDto {
-  id: string;
+  id: number;
   name: string;
   slug: string;
   description: string;
@@ -45,10 +45,16 @@ export interface UpsertProductRequest {
 }
 
 export interface WarehouseDto {
-  id: string;
+  id: number;
   name: string;
   code?: string | null;
-  address?: string | null;
+  street?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+  timeZone?: string | null;
+  priority?: number | null;
   isActive?: boolean;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -57,18 +63,30 @@ export interface WarehouseDto {
 export interface CreateWarehouseRequest {
   name: string;
   code?: string | null;
-  address?: string | null;
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  timeZone: string;
+  priority: number;
 }
 
 export interface UpdateWarehouseRequest {
   name: string;
   code?: string | null;
-  address?: string | null;
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  timeZone: string;
+  priority: number;
 }
 
 export interface InventoryStockDto {
-  productId: string;
-  warehouseId: string;
+  productId: number;
+  warehouseId: number;
   availableQty: number;
   reservedQty?: number;
   onHandQty?: number;
@@ -78,56 +96,59 @@ export interface InventoryStockDto {
 export interface InventoryMovementDto {
   id?: string;
   operationId?: string;
-  productId: string;
+  productId: number;
   movementType?: string;
   quantity: number;
-  fromWarehouseId?: string | null;
-  toWarehouseId?: string | null;
+  fromWarehouseId?: number | null;
+  toWarehouseId?: number | null;
   createdAt?: string | null;
 }
 
 export interface ReceiveStockRequest {
   operationId: string;
-  warehouseId: string;
-  productId: string;
+  warehouseId: number;
+  productId: number;
   quantity: number;
-  note?: string | null;
+  reference?: string | null;
 }
 
 export interface ShipStockRequest {
   operationId: string;
-  warehouseId: string;
-  productId: string;
+  warehouseId: number;
+  productId: number;
   quantity: number;
-  note?: string | null;
+  reference?: string | null;
 }
 
 export interface AdjustStockRequest {
   operationId: string;
-  warehouseId: string;
-  productId: string;
-  quantityDelta: number;
+  warehouseId: number;
+  productId: number;
+  onHand: number;
+  reserved: number;
+  reorderPoint: number;
   reason?: string | null;
 }
 
 export interface TransferStockRequest {
   operationId: string;
-  fromWarehouseId: string;
-  toWarehouseId: string;
-  productId: string;
+  fromWarehouseId: number;
+  toWarehouseId: number;
+  productId: number;
   quantity: number;
-  note?: string | null;
 }
 
 export interface CreateReservationRequest {
-  reservationCode: string;
-  warehouseId: string;
-  productId: string;
-  quantity: number;
-  note?: string | null;
+   reservationCode: string;
+  warehouseId: number;
+  productId: number;
+   quantity: number;
+  ttlMinutes: number;
+  reference?: string | null;
 }
 
 export interface CompanyMemberDto {
+  companyId?: string;
   userId: string;
   role: CompanyWorkspaceRole;
   isOwner: boolean;

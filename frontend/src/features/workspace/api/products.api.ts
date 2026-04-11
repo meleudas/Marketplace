@@ -44,14 +44,14 @@ export const createWorkspaceProduct = async (
 
 export const updateWorkspaceProduct = async (
   companyId: string,
-  id: string,
+  id: number,
   payload: UpsertProductRequest,
 ): Promise<CompanyProductDto> => {
   const response = await apiClient.put<CompanyProductDto>(`/companies/${companyId}/products/${id}`, payload);
   return response.data;
 };
 
-export const deleteWorkspaceProduct = async (companyId: string, id: string): Promise<void> => {
+export const deleteWorkspaceProduct = async (companyId: string, id: number): Promise<void> => {
   await apiClient.delete(`/companies/${companyId}/products/${id}`);
 };
 
@@ -59,4 +59,3 @@ export const getWorkspaceCategories = async (): Promise<WorkspaceCategoryDto[]> 
   const response = await apiClient.get<unknown>("/catalog/categories");
   return extractList<WorkspaceCategoryDto>(response.data);
 };
-

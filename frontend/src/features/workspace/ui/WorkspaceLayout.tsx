@@ -60,9 +60,15 @@ export function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
-        <div>
+        <div className={styles.headerMain}>
           <p className={styles.caption}>Internal area</p>
           <h1 className={styles.title}>Company Workspace</h1>
+          <p className={styles.subtitle}>
+            Manage products, inventory operations, and company members.
+          </p>
+          <p className={styles.userBadge}>
+            Signed in as {user.firstName} {user.lastName} ({user.role})
+          </p>
         </div>
 
         <Link href="/" className={styles.linkButton}>
@@ -71,6 +77,7 @@ export function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
       </header>
 
       <nav className={styles.nav}>
+        <span className={styles.navHint}>Sections:</span>
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -89,4 +96,3 @@ export function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
     </div>
   );
 }
-

@@ -80,10 +80,15 @@ export function WorkspaceOverviewScreen() {
   return (
     <div className={styles.stack}>
       <section className={styles.card}>
-        <h2 className={styles.sectionTitle}>Overview</h2>
-        <p className={styles.row}>
-          <span className={styles.label}>Company ID:</span> {WORKSPACE_COMPANY_ID}
-        </p>
+        <div className={styles.cardHeader}>
+          <h2 className={styles.sectionTitle}>Overview</h2>
+          <p className={styles.muted}>Quick snapshot of your current workspace access.</p>
+        </div>
+        <div className={styles.metaGrid}>
+          <p className={styles.metaItem}>Company ID: {WORKSPACE_COMPANY_ID}</p>
+          <p className={styles.metaItem}>Role: {membership?.role ?? "admin"}</p>
+          <p className={styles.metaItem}>Is owner: {membership?.isOwner ? "Yes" : "No"}</p>
+        </div>
       </section>
 
       <section className={styles.card}>
@@ -107,6 +112,7 @@ export function WorkspaceOverviewScreen() {
 
       <section className={styles.card}>
         <h2 className={styles.sectionTitle}>Quick links</h2>
+        <p className={styles.muted}>Go directly to a workspace section.</p>
         <div className={styles.links}>
           <Link href="/workspace/products" className={styles.linkButton}>
             Products

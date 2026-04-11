@@ -1,5 +1,6 @@
 "use client";
 
+import { AxiosError } from "axios";
 import { useEffect, useMemo, useState } from "react";
 import {
   assignCompanyMemberRole,
@@ -27,6 +28,7 @@ export function WorkspaceMembersScreen() {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [myMembership, setMyMembership] = useState<CompanyMembershipDto | null>(null);
   const [members, setMembers] = useState<CompanyMemberDto[]>([]);
+  const [canReadMembersList, setCanReadMembersList] = useState(false);
 
   const canManage = useMemo(() => canManageMembers(myMembership, user), [myMembership, user]);
 
@@ -52,7 +54,10 @@ export function WorkspaceMembersScreen() {
         }
       }
 
-      const allMembers = await getCompanyMembers(WORKSPACE_COMPANY_ID);
+      const canReadList = canManageMembers(me, user);
+      setCanReadMembersList(canReadList);
+
+      const allMembers = canReadList ? await getCompanyMembers(WORKSPACE_COMPANY_ID) : [];
 
       setMyMembership(me);
       setMembers(allMembers);
@@ -81,6 +86,21 @@ export function WorkspaceMembersScreen() {
     }
   };
 
+  const saveMemberRole = async (userId: string, role: CompanyMembershipDto["role"]): Promise<void> => {
+    try {
+      await changeCompanyMemberRole(WORKSPACE_COMPANY_ID, userId, { role });
+    } catch (error) {
+      const axiosError = error as AxiosError;
+
+      if (axiosError.response?.status === 404) {
+        await assignCompanyMemberRole(WORKSPACE_COMPANY_ID, userId, { role });
+        return;
+      }
+
+      throw error;
+    }
+  };
+
   if (loading) {
     return <p className={styles.state}>Loading members...</p>;
   }
@@ -92,43 +112,30 @@ export function WorkspaceMembersScreen() {
   return (
     <div className={styles.stack}>
       <section className={styles.card}>
-        <h2 className={styles.sectionTitle}>Members</h2>
-        <p className={styles.row}>Company ID: {WORKSPACE_COMPANY_ID}</p>
-        <p className={styles.row}>My role: {myMembership?.role ?? (isGlobalAdmin ? "admin" : "unknown")}</p>
-        <p className={styles.row}>Is owner: {myMembership?.isOwner ? "Yes" : "No"}</p>
+        <div className={styles.cardHeader}>
+          <h2 className={styles.sectionTitle}>Members</h2>
+          <p className={styles.muted}>Manage roles and company membership access.</p>
+        </div>
+        <div className={styles.metaGrid}>
+          <p className={styles.metaItem}>Company ID: {WORKSPACE_COMPANY_ID}</p>
+          <p className={styles.metaItem}>My role: {myMembership?.role ?? (isGlobalAdmin ? "admin" : "unknown")}</p>
+          <p className={styles.metaItem}>Is owner: {myMembership?.isOwner ? "Yes" : "No"}</p>
+        </div>
         {!canManage ? <p className={styles.hint}>Read-only mode for your role.</p> : null}
         {feedback ? <p className={styles.feedback}>{feedback}</p> : null}
-
       </section>
 
       {canManage ? (
         <section className={styles.card}>
-          <h3 className={styles.subTitle}>Assign role</h3>
+          <h3 className={styles.subTitle}>Set role</h3>
+          <p className={styles.muted}>Update role for an existing member, or create membership if it does not exist.</p>
           <MemberRoleForm
-            submitLabel="Assign"
+            submitLabel="Save role"
             busy={saving}
             onSubmit={async (values) => {
               await runAction(
-                async () =>
-                  assignCompanyMemberRole(WORKSPACE_COMPANY_ID, values.userId, {
-                    role: values.role,
-                  }),
-                "Role assigned.",
-              );
-            }}
-          />
-
-          <h3 className={styles.subTitle}>Change role</h3>
-          <MemberRoleForm
-            submitLabel="Change"
-            busy={saving}
-            onSubmit={async (values) => {
-              await runAction(
-                async () =>
-                  changeCompanyMemberRole(WORKSPACE_COMPANY_ID, values.userId, {
-                    role: values.role,
-                  }),
-                "Role changed.",
+                async () => saveMemberRole(values.userId, values.role),
+                "Role saved.",
               );
             }}
           />
@@ -137,9 +144,14 @@ export function WorkspaceMembersScreen() {
 
       <section className={styles.card}>
         <h3 className={styles.subTitle}>Company members</h3>
-        {members.length === 0 ? (
+        <p className={styles.muted}>Current members and their effective role in this company.</p>
+        {!canReadMembersList ? (
+          <p className={styles.state}>You do not have access to members list</p>
+        ) : null}
+        {canReadMembersList && members.length === 0 ? (
           <p className={styles.state}>No members found</p>
-        ) : (
+        ) : null}
+        {canReadMembersList && members.length > 0 ? (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
@@ -190,7 +202,7 @@ export function WorkspaceMembersScreen() {
               </tbody>
             </table>
           </div>
-        )}
+        ) : null}
       </section>
     </div>
   );

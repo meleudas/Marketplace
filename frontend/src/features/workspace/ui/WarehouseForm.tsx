@@ -20,7 +20,13 @@ export function WarehouseForm({ initialWarehouse, busy, submitLabel, onSubmit }:
     defaultValues: {
       name: initialWarehouse?.name ?? "",
       code: initialWarehouse?.code ?? "",
-      address: initialWarehouse?.address ?? "",
+      street: initialWarehouse?.street ?? "",
+      city: initialWarehouse?.city ?? "",
+      state: initialWarehouse?.state ?? "",
+      postalCode: initialWarehouse?.postalCode ?? "",
+      country: initialWarehouse?.country ?? "",
+      timeZone: initialWarehouse?.timeZone ?? "Europe/Kyiv",
+      priority: initialWarehouse?.priority ?? 0,
     },
   });
 
@@ -31,7 +37,13 @@ export function WarehouseForm({ initialWarehouse, busy, submitLabel, onSubmit }:
         await onSubmit({
           name: values.name,
           code: values.code?.trim() ? values.code : null,
-          address: values.address?.trim() ? values.address : null,
+          street: values.street,
+          city: values.city,
+          state: values.state,
+          postalCode: values.postalCode,
+          country: values.country,
+          timeZone: values.timeZone,
+          priority: values.priority,
         });
       })}
     >
@@ -47,8 +59,51 @@ export function WarehouseForm({ initialWarehouse, busy, submitLabel, onSubmit }:
       </label>
 
       <label className={styles.field}>
-        Address
-        <input className={styles.input} {...form.register("address")} />
+        Street
+        <input className={styles.input} {...form.register("street")} />
+        {form.formState.errors.street ? <span className={styles.error}>{form.formState.errors.street.message}</span> : null}
+      </label>
+
+      <label className={styles.field}>
+        City
+        <input className={styles.input} {...form.register("city")} />
+        {form.formState.errors.city ? <span className={styles.error}>{form.formState.errors.city.message}</span> : null}
+      </label>
+
+      <label className={styles.field}>
+        State
+        <input className={styles.input} {...form.register("state")} />
+        {form.formState.errors.state ? <span className={styles.error}>{form.formState.errors.state.message}</span> : null}
+      </label>
+
+      <label className={styles.field}>
+        Postal code
+        <input className={styles.input} {...form.register("postalCode")} />
+        {form.formState.errors.postalCode ? (
+          <span className={styles.error}>{form.formState.errors.postalCode.message}</span>
+        ) : null}
+      </label>
+
+      <label className={styles.field}>
+        Country
+        <input className={styles.input} {...form.register("country")} />
+        {form.formState.errors.country ? <span className={styles.error}>{form.formState.errors.country.message}</span> : null}
+      </label>
+
+      <label className={styles.field}>
+        Time zone
+        <input className={styles.input} {...form.register("timeZone")} />
+        {form.formState.errors.timeZone ? (
+          <span className={styles.error}>{form.formState.errors.timeZone.message}</span>
+        ) : null}
+      </label>
+
+      <label className={styles.field}>
+        Priority
+        <input type="number" className={styles.input} {...form.register("priority", { valueAsNumber: true })} />
+        {form.formState.errors.priority ? (
+          <span className={styles.error}>{form.formState.errors.priority.message}</span>
+        ) : null}
       </label>
 
       <button type="submit" className={styles.primaryButton} disabled={busy || form.formState.isSubmitting}>

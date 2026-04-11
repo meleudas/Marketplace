@@ -65,35 +65,35 @@ export function WorkspaceInventoryScreen() {
 
   const canWrite = useMemo(() => isGlobalAdmin || canWriteInventory(membership), [isGlobalAdmin, membership]);
 
-  const receiveForm = useForm<z.input<typeof receiveFormSchema>, unknown, ReceiveFormValues>({
-    resolver: zodResolver(receiveFormSchema),
-    defaultValues: { warehouseId: "", productId: "", quantity: 1, note: "" },
-  });
+    const receiveForm = useForm<z.input<typeof receiveFormSchema>, unknown, ReceiveFormValues>({
+        resolver: zodResolver(receiveFormSchema),
+        defaultValues: { quantity: 1, reference: "" },
+    });
 
-  const shipForm = useForm<z.input<typeof shipFormSchema>, unknown, ShipFormValues>({
-    resolver: zodResolver(shipFormSchema),
-    defaultValues: { warehouseId: "", productId: "", quantity: 1, note: "" },
-  });
+    const shipForm = useForm<z.input<typeof shipFormSchema>, unknown, ShipFormValues>({
+        resolver: zodResolver(shipFormSchema),
+        defaultValues: { quantity: 1, reference: "" },
+    });
 
-  const adjustForm = useForm<z.input<typeof adjustFormSchema>, unknown, AdjustFormValues>({
-    resolver: zodResolver(adjustFormSchema),
-    defaultValues: { warehouseId: "", productId: "", quantityDelta: 0, reason: "" },
-  });
+    const adjustForm = useForm<z.input<typeof adjustFormSchema>, unknown, AdjustFormValues>({
+        resolver: zodResolver(adjustFormSchema),
+        defaultValues: { reason: "" },
+    });
 
-  const transferForm = useForm<z.input<typeof transferFormSchema>, unknown, TransferFormValues>({
-    resolver: zodResolver(transferFormSchema),
-    defaultValues: { fromWarehouseId: "", toWarehouseId: "", productId: "", quantity: 1, note: "" },
-  });
+    const transferForm = useForm<z.input<typeof transferFormSchema>, unknown, TransferFormValues>({
+        resolver: zodResolver(transferFormSchema),
+        defaultValues: { quantity: 1 },
+    });
 
-  const reserveForm = useForm<z.input<typeof reserveFormSchema>, unknown, ReserveFormValues>({
-    resolver: zodResolver(reserveFormSchema),
-    defaultValues: { warehouseId: "", productId: "", quantity: 1, note: "" },
-  });
+    const reserveForm = useForm<z.input<typeof reserveFormSchema>, unknown, ReserveFormValues>({
+        resolver: zodResolver(reserveFormSchema),
+        defaultValues: { quantity: 1, ttlMinutes: 15, reference: "" },
+    });
 
-  const releaseForm = useForm<z.input<typeof releaseReservationFormSchema>, unknown, ReleaseReservationFormValues>({
-    resolver: zodResolver(releaseReservationFormSchema),
-    defaultValues: { reservationCode: "" },
-  });
+    const releaseForm = useForm<z.input<typeof releaseReservationFormSchema>, unknown, ReleaseReservationFormValues>({
+        resolver: zodResolver(releaseReservationFormSchema),
+        defaultValues: { reservationCode: "" },
+    });
 
   const load = async () => {
     try {
@@ -171,9 +171,14 @@ export function WorkspaceInventoryScreen() {
   return (
     <div className={styles.stack}>
       <section className={styles.card}>
-        <h2 className={styles.sectionTitle}>Inventory</h2>
-        <p className={styles.row}>Company ID: {WORKSPACE_COMPANY_ID}</p>
-        <p className={styles.row}>My role: {membership?.role ?? (isGlobalAdmin ? "admin" : "unknown")}</p>
+        <div className={styles.cardHeader}>
+          <h2 className={styles.sectionTitle}>Inventory</h2>
+          <p className={styles.muted}>Track warehouses, stocks, and inventory movements.</p>
+        </div>
+        <div className={styles.metaGrid}>
+          <p className={styles.metaItem}>Company ID: {WORKSPACE_COMPANY_ID}</p>
+          <p className={styles.metaItem}>My role: {membership?.role ?? (isGlobalAdmin ? "admin" : "unknown")}</p>
+        </div>
         {!canWrite ? <p className={styles.hint}>Read-only mode for your role.</p> : null}
         {feedback ? <p className={styles.feedback}>{feedback}</p> : null}
       </section>
@@ -217,6 +222,7 @@ export function WorkspaceInventoryScreen() {
 
       <section className={styles.card}>
         <h3 className={styles.subTitle}>Warehouses</h3>
+        <p className={styles.muted}>Warehouse list with status and update timestamp.</p>
         {warehouses.length === 0 ? (
           <p className={styles.state}>No warehouses found</p>
         ) : (
@@ -237,7 +243,11 @@ export function WorkspaceInventoryScreen() {
                   <tr key={warehouse.id}>
                     <td>{warehouse.name}</td>
                     <td>{warehouse.code ?? "-"}</td>
-                    <td>{warehouse.address ?? "-"}</td>
+                    <td>
+                      {[warehouse.street, warehouse.city, warehouse.state, warehouse.postalCode, warehouse.country]
+                        .filter(Boolean)
+                        .join(", ") || "-"}
+                    </td>
                     <td>{warehouse.isActive === false ? "No" : "Yes"}</td>
                     <td>{warehouse.updatedAt ?? "-"}</td>
                     {canWrite ? (
@@ -275,6 +285,7 @@ export function WorkspaceInventoryScreen() {
 
       <section className={styles.card}>
         <h3 className={styles.subTitle}>Stocks</h3>
+        <p className={styles.muted}>Current stock balances by product and warehouse.</p>
         {stocks.length === 0 ? (
           <p className={styles.state}>No stocks found</p>
         ) : (
@@ -309,6 +320,7 @@ export function WorkspaceInventoryScreen() {
 
       <section className={styles.card}>
         <h3 className={styles.subTitle}>Movements</h3>
+        <p className={styles.muted}>Recent inventory operations and transfer history.</p>
         {movements.length === 0 ? (
           <p className={styles.state}>No movements found</p>
         ) : (
@@ -349,7 +361,7 @@ export function WorkspaceInventoryScreen() {
 
           <div className={styles.formColumns}>
             <form
-              className={styles.formGrid}
+              className={`${styles.formGrid} ${styles.actionCard}`}
               onSubmit={receiveForm.handleSubmit(async (values) => {
                 await runWrite(
                   async () =>
@@ -358,32 +370,42 @@ export function WorkspaceInventoryScreen() {
                       warehouseId: values.warehouseId,
                       productId: values.productId,
                       quantity: Number(values.quantity),
-                      note: values.note?.trim() ? values.note : null,
+                      reference: values.reference?.trim() ? values.reference : null,
                     }),
                   "Stock received.",
                 );
               })}
             >
               <h4 className={styles.miniTitle}>Receive</h4>
-              <input className={styles.input} placeholder="Warehouse ID" {...receiveForm.register("warehouseId")} />
+              <input
+                type="number"
+                className={styles.input}
+                placeholder="Warehouse ID"
+                {...receiveForm.register("warehouseId", { valueAsNumber: true })}
+              />
               {receiveForm.formState.errors.warehouseId ? (
                 <span className={styles.error}>{receiveForm.formState.errors.warehouseId.message}</span>
               ) : null}
-              <input className={styles.input} placeholder="Product ID" {...receiveForm.register("productId")} />
+              <input
+                type="number"
+                className={styles.input}
+                placeholder="Product ID"
+                {...receiveForm.register("productId", { valueAsNumber: true })}
+              />
               <input
                 type="number"
                 className={styles.input}
                 placeholder="Quantity"
                 {...receiveForm.register("quantity", { valueAsNumber: true })}
               />
-              <input className={styles.input} placeholder="Note" {...receiveForm.register("note")} />
+              <input className={styles.input} placeholder="Reference" {...receiveForm.register("reference")} />
               <button type="submit" className={styles.primaryButton} disabled={saving}>
                 Receive
               </button>
             </form>
 
             <form
-              className={styles.formGrid}
+              className={`${styles.formGrid} ${styles.actionCard}`}
               onSubmit={shipForm.handleSubmit(async (values) => {
                 await runWrite(
                   async () =>
@@ -392,29 +414,39 @@ export function WorkspaceInventoryScreen() {
                       warehouseId: values.warehouseId,
                       productId: values.productId,
                       quantity: Number(values.quantity),
-                      note: values.note?.trim() ? values.note : null,
+                      reference: values.reference?.trim() ? values.reference : null,
                     }),
                   "Stock shipped.",
                 );
               })}
             >
               <h4 className={styles.miniTitle}>Ship</h4>
-              <input className={styles.input} placeholder="Warehouse ID" {...shipForm.register("warehouseId")} />
-              <input className={styles.input} placeholder="Product ID" {...shipForm.register("productId")} />
+              <input
+                type="number"
+                className={styles.input}
+                placeholder="Warehouse ID"
+                {...shipForm.register("warehouseId", { valueAsNumber: true })}
+              />
+              <input
+                type="number"
+                className={styles.input}
+                placeholder="Product ID"
+                {...shipForm.register("productId", { valueAsNumber: true })}
+              />
               <input
                 type="number"
                 className={styles.input}
                 placeholder="Quantity"
                 {...shipForm.register("quantity", { valueAsNumber: true })}
               />
-              <input className={styles.input} placeholder="Note" {...shipForm.register("note")} />
+              <input className={styles.input} placeholder="Reference" {...shipForm.register("reference")} />
               <button type="submit" className={styles.primaryButton} disabled={saving}>
                 Ship
               </button>
             </form>
 
             <form
-              className={styles.formGrid}
+              className={`${styles.formGrid} ${styles.actionCard}`}
               onSubmit={adjustForm.handleSubmit(async (values) => {
                 await runWrite(
                   async () =>
@@ -422,7 +454,9 @@ export function WorkspaceInventoryScreen() {
                       operationId: createOperationId(),
                       warehouseId: values.warehouseId,
                       productId: values.productId,
-                      quantityDelta: Number(values.quantityDelta),
+                      onHand: Number(values.onHand),
+                      reserved: Number(values.reserved),
+                      reorderPoint: Number(values.reorderPoint),
                       reason: values.reason?.trim() ? values.reason : null,
                     }),
                   "Stock adjusted.",
@@ -430,13 +464,35 @@ export function WorkspaceInventoryScreen() {
               })}
             >
               <h4 className={styles.miniTitle}>Adjust</h4>
-              <input className={styles.input} placeholder="Warehouse ID" {...adjustForm.register("warehouseId")} />
-              <input className={styles.input} placeholder="Product ID" {...adjustForm.register("productId")} />
               <input
                 type="number"
                 className={styles.input}
-                placeholder="Quantity delta"
-                {...adjustForm.register("quantityDelta", { valueAsNumber: true })}
+                placeholder="Warehouse ID"
+                {...adjustForm.register("warehouseId", { valueAsNumber: true })}
+              />
+              <input
+                type="number"
+                className={styles.input}
+                placeholder="Product ID"
+                {...adjustForm.register("productId", { valueAsNumber: true })}
+              />
+              <input
+                type="number"
+                className={styles.input}
+                placeholder="On hand"
+                {...adjustForm.register("onHand", { valueAsNumber: true })}
+              />
+              <input
+                type="number"
+                className={styles.input}
+                placeholder="Reserved"
+                {...adjustForm.register("reserved", { valueAsNumber: true })}
+              />
+              <input
+                type="number"
+                className={styles.input}
+                placeholder="Reorder point"
+                {...adjustForm.register("reorderPoint", { valueAsNumber: true })}
               />
               <input className={styles.input} placeholder="Reason" {...adjustForm.register("reason")} />
               <button type="submit" className={styles.primaryButton} disabled={saving}>
@@ -445,7 +501,7 @@ export function WorkspaceInventoryScreen() {
             </form>
 
             <form
-              className={styles.formGrid}
+              className={`${styles.formGrid} ${styles.actionCard}`}
               onSubmit={transferForm.handleSubmit(async (values) => {
                 await runWrite(
                   async () =>
@@ -455,30 +511,43 @@ export function WorkspaceInventoryScreen() {
                       toWarehouseId: values.toWarehouseId,
                       productId: values.productId,
                       quantity: Number(values.quantity),
-                      note: values.note?.trim() ? values.note : null,
                     }),
                   "Stock transferred.",
                 );
               })}
             >
               <h4 className={styles.miniTitle}>Transfer</h4>
-              <input className={styles.input} placeholder="From warehouse ID" {...transferForm.register("fromWarehouseId")} />
-              <input className={styles.input} placeholder="To warehouse ID" {...transferForm.register("toWarehouseId")} />
-              <input className={styles.input} placeholder="Product ID" {...transferForm.register("productId")} />
+              <input
+                type="number"
+                className={styles.input}
+                placeholder="From warehouse ID"
+                {...transferForm.register("fromWarehouseId", { valueAsNumber: true })}
+              />
+              <input
+                type="number"
+                className={styles.input}
+                placeholder="To warehouse ID"
+                {...transferForm.register("toWarehouseId", { valueAsNumber: true })}
+              />
+              <input
+                type="number"
+                className={styles.input}
+                placeholder="Product ID"
+                {...transferForm.register("productId", { valueAsNumber: true })}
+              />
               <input
                 type="number"
                 className={styles.input}
                 placeholder="Quantity"
                 {...transferForm.register("quantity", { valueAsNumber: true })}
               />
-              <input className={styles.input} placeholder="Note" {...transferForm.register("note")} />
               <button type="submit" className={styles.primaryButton} disabled={saving}>
                 Transfer
               </button>
             </form>
 
             <form
-              className={styles.formGrid}
+              className={`${styles.formGrid} ${styles.actionCard}`}
               onSubmit={reserveForm.handleSubmit(async (values) => {
                 await runWrite(
                   async () =>
@@ -487,29 +556,46 @@ export function WorkspaceInventoryScreen() {
                       warehouseId: values.warehouseId,
                       productId: values.productId,
                       quantity: Number(values.quantity),
-                      note: values.note?.trim() ? values.note : null,
+                      ttlMinutes: Number(values.ttlMinutes),
+                      reference: values.reference?.trim() ? values.reference : null,
                     }),
                   "Reservation created.",
                 );
               })}
             >
               <h4 className={styles.miniTitle}>Reserve</h4>
-              <input className={styles.input} placeholder="Warehouse ID" {...reserveForm.register("warehouseId")} />
-              <input className={styles.input} placeholder="Product ID" {...reserveForm.register("productId")} />
+              <input
+                type="number"
+                className={styles.input}
+                placeholder="Warehouse ID"
+                {...reserveForm.register("warehouseId", { valueAsNumber: true })}
+              />
+              <input
+                type="number"
+                className={styles.input}
+                placeholder="Product ID"
+                {...reserveForm.register("productId", { valueAsNumber: true })}
+              />
               <input
                 type="number"
                 className={styles.input}
                 placeholder="Quantity"
                 {...reserveForm.register("quantity", { valueAsNumber: true })}
               />
-              <input className={styles.input} placeholder="Note" {...reserveForm.register("note")} />
+              <input
+                type="number"
+                className={styles.input}
+                placeholder="TTL minutes"
+                {...reserveForm.register("ttlMinutes", { valueAsNumber: true })}
+              />
+              <input className={styles.input} placeholder="Reference" {...reserveForm.register("reference")} />
               <button type="submit" className={styles.primaryButton} disabled={saving}>
                 Reserve
               </button>
             </form>
 
             <form
-              className={styles.formGrid}
+              className={`${styles.formGrid} ${styles.actionCard}`}
               onSubmit={releaseForm.handleSubmit(async (values) => {
                 await runWrite(
                   async () =>

@@ -150,9 +150,14 @@ export function WorkspaceProductsScreen() {
   return (
     <div className={styles.stack}>
       <section className={styles.card}>
-        <h2 className={styles.sectionTitle}>Products</h2>
-        <p className={styles.row}>Company ID: {WORKSPACE_COMPANY_ID}</p>
-        <p className={styles.row}>My role: {membership?.role ?? (isGlobalAdmin ? "admin" : "unknown")}</p>
+        <div className={styles.cardHeader}>
+          <h2 className={styles.sectionTitle}>Products</h2>
+          <p className={styles.muted}>Manage company catalog and product lifecycle.</p>
+        </div>
+        <div className={styles.metaGrid}>
+          <p className={styles.metaItem}>Company ID: {WORKSPACE_COMPANY_ID}</p>
+          <p className={styles.metaItem}>My role: {membership?.role ?? (isGlobalAdmin ? "admin" : "unknown")}</p>
+        </div>
         {!canWrite ? <p className={styles.hint}>Read-only mode for your role.</p> : null}
         {feedback ? <p className={styles.feedback}>{feedback}</p> : null}
       </section>
@@ -190,6 +195,7 @@ export function WorkspaceProductsScreen() {
 
       <section className={styles.card}>
         <h3 className={styles.subTitle}>Company products</h3>
+        <p className={styles.muted}>Review products and use row actions to edit or delete.</p>
         {products.length === 0 ? (
           <p className={styles.state}>No products found</p>
         ) : (
