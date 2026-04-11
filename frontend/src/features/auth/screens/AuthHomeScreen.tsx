@@ -1,26 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/model/auth.store";
 import { ForgotPasswordForm } from "@/features/auth/ui/ForgotPasswordForm";
 import { LoginForm } from "@/features/auth/ui/LoginForm";
 import { RegisterForm } from "@/features/auth/ui/RegisterForm";
-import { ProfileCard } from "@/features/profile/ui/ProfileCard";
 import styles from "./AuthHomeScreen.module.css";
 
 export function AuthHomeScreen() {
+  const router = useRouter();
   const [authMode, setAuthMode] = useState<"login" | "register" | "forgotPassword">("login");
 
-  const user = useAuth((state) => state.user);
   const isAuthenticated = useAuth((state) => state.isAuthenticated);
   const loading = useAuth((state) => state.loading);
   const initialized = useAuth((state) => state.initialized);
   const loadMe = useAuth((state) => state.loadMe);
-  const logout = useAuth((state) => state.logout);
 
   useEffect(() => {
     void loadMe();
   }, [loadMe]);
+
+  useEffect(() => {
+    if (initialized && isAuthenticated) {
+      router.replace("/");
+    }
+  }, [initialized, isAuthenticated, router]);
 
   return (
     <main className={styles.main}>
@@ -54,16 +59,6 @@ export function AuthHomeScreen() {
             ) : null}
           </section>
         ) : null}
-
-        {initialized && isAuthenticated && user ? (
-          <ProfileCard
-            user={user}
-            loading={loading}
-            onLogout={async () => {
-              await logout();
-            }}
-          />
-        ) : null}
       </div>
 
       {loading ? (
@@ -74,4 +69,3 @@ export function AuthHomeScreen() {
     </main>
   );
 }
-

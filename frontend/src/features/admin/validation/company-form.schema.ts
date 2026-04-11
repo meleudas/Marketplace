@@ -5,7 +5,7 @@ export const companyFormSchema = z.object({
   slug: z.string().trim().min(1, "Slug is required"),
   description: z.string().trim().min(1, "Description is required"),
   imageUrl: z.string().nullable().optional(),
-  contactEmail: z.string().trim().min(1, "Contact email is required").email("Invalid email"),
+  contactEmail: z.string().trim().min(1, "Contact email is required").email("Enter a valid email"),
   contactPhone: z.string().trim().min(1, "Contact phone is required"),
   address: z.object({
     street: z.string().trim().min(1, "Street is required"),

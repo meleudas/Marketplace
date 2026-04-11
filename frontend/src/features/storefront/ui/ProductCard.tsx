@@ -1,0 +1,47 @@
+import Link from "next/link";
+import type { CatalogProductListItemDto } from "@/features/storefront/model/catalog.types";
+import styles from "./ProductCard.module.css";
+
+interface ProductCardProps {
+  product: CatalogProductListItemDto;
+}
+
+const formatPrice = (price: number | null | undefined): string => {
+  if (typeof price !== "number") {
+    return "-";
+  }
+
+  return `$${price.toFixed(2)}`;
+};
+
+export function ProductCard({ product }: ProductCardProps) {
+  return (
+    <article className={styles.card}>
+      {product.imageUrl ? <img src={product.imageUrl} alt={product.name} className={styles.image} /> : null}
+
+      <div className={styles.body}>
+        <h3 className={styles.title}>
+          <Link href={`/products/${product.slug}`} className={styles.titleLink}>
+            {product.name}
+          </Link>
+        </h3>
+
+        <p className={styles.meta}>Slug: {product.slug}</p>
+
+        <div className={styles.priceRow}>
+          <span className={styles.price}>{formatPrice(product.price)}</span>
+          {typeof product.oldPrice === "number" ? (
+            <span className={styles.oldPrice}>{formatPrice(product.oldPrice)}</span>
+          ) : null}
+        </div>
+
+        <p className={styles.meta}>Available: {product.availableQty}</p>
+        <p className={styles.meta}>Status: {product.availabilityStatus}</p>
+
+        {product.categoryName ? <p className={styles.meta}>Category: {product.categoryName}</p> : null}
+        {product.companyName ? <p className={styles.meta}>Company: {product.companyName}</p> : null}
+      </div>
+    </article>
+  );
+}
+
