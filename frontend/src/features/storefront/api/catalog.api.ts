@@ -36,6 +36,11 @@ export const getCatalogCompanies = async (): Promise<CatalogCompanyDto[]> => {
   return extractList<CatalogCompanyDto>(response.data);
 };
 
+export const getCatalogCompanyBySlug = async (slug: string): Promise<CatalogCompanyDto | null> => {
+  const companies = await getCatalogCompanies();
+  return companies.find((company) => company.slug === slug) ?? null;
+};
+
 export const getCatalogCategories = async (): Promise<CatalogCategoryDto[]> => {
   const response = await apiClient.get<unknown>("/catalog/categories");
   return extractList<CatalogCategoryDto>(response.data);

@@ -1,7 +1,7 @@
 "use client";
 
 import { AxiosError } from "axios";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   assignCompanyMemberRole,
   changeCompanyMemberRole,
@@ -32,28 +32,28 @@ export function WorkspaceMembersScreen() {
 
   const canManage = useMemo(() => canManageMembers(myMembership, user), [myMembership, user]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    let me: CompanyMembershipDto | null = null;
+
     try {
-      setLoading(true);
-      setError(null);
+      me = await getCompanyMembershipMe(WORKSPACE_COMPANY_ID);
+    } catch (membershipError) {
+      const isIgnorableMembershipError =
+        isGlobalAdmin &&
+        membershipError instanceof WorkspaceMembershipError &&
+        (membershipError.kind === "forbidden" || membershipError.kind === "notFound");
 
-      let me: CompanyMembershipDto | null = null;
-
-      if (!isGlobalAdmin) {
-        me = await getCompanyMembershipMe(WORKSPACE_COMPANY_ID);
-      } else {
-        try {
-          me = await getCompanyMembershipMe(WORKSPACE_COMPANY_ID);
-        } catch (membershipError) {
-          if (
-            !(membershipError instanceof WorkspaceMembershipError) ||
-            (membershipError.kind !== "forbidden" && membershipError.kind !== "notFound")
-          ) {
-            throw membershipError;
-          }
-        }
+      if (!isIgnorableMembershipError) {
+        setError(getWorkspaceErrorMessage(membershipError, "Failed to load company members"));
+        setLoading(false);
+        return;
       }
+    }
 
+    try {
       const canReadList = canManageMembers(me, user);
       setCanReadMembersList(canReadList);
 
@@ -66,11 +66,11 @@ export function WorkspaceMembersScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isGlobalAdmin, user]);
 
   useEffect(() => {
     void load();
-  }, [isGlobalAdmin]);
+  }, [load]);
 
   const runAction = async (action: () => Promise<void>, successMessage: string) => {
     try {

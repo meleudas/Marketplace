@@ -16,27 +16,25 @@ const formatPrice = (price: number | null | undefined): string => {
 
 export function ProductCard({ product }: ProductCardProps) {
   return (
-    <article className={styles.card}>
-      <div className={styles.body}>
-        <h3 className={styles.title}>
-          <Link href={`/products/${product.slug}`} className={styles.titleLink}>
-            {product.name}
-          </Link>
-        </h3>
+    <Link href={`/products/${product.slug}`} className={styles.cardLink}>
+      <article className={styles.card}>
+        <div className={styles.body}>
+          <h3 className={styles.title}>{product.name}</h3>
 
-        <p className={styles.meta}>Slug: {product.slug}</p>
+          <p className={styles.meta}>Slug: {product.slug}</p>
 
-        <div className={styles.priceRow}>
-          <span className={styles.price}>{formatPrice(product.price)}</span>
-          {typeof product.oldPrice === "number" ? (
-            <span className={styles.oldPrice}>{formatPrice(product.oldPrice)}</span>
-          ) : null}
+          <div className={styles.priceRow}>
+            <span className={styles.price}>{formatPrice(product.price)}</span>
+            {typeof product.oldPrice === "number" ? (
+              <span className={styles.oldPrice}>{formatPrice(product.oldPrice)}</span>
+            ) : null}
+          </div>
+
+          <p className={styles.meta}>Available: {product.availableQty}</p>
+          <p className={styles.meta}>Status: {product.availabilityStatus}</p>
         </div>
-
-        <p className={styles.meta}>Available: {product.availableQty}</p>
-        <p className={styles.meta}>Status: {product.availabilityStatus}</p>
-      </div>
-    </article>
+      </article>
+    </Link>
   );
 }
 
