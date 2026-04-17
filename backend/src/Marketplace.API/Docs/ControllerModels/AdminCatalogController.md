@@ -78,11 +78,13 @@
 - Body не потрібен:
   - `GET /admin/companies`
   - `GET /admin/companies/pending`
+  - `GET /admin/companies/{id}`
   - `POST /admin/companies/{id}/approve`
   - `POST /admin/companies/{id}/revoke-approval`
   - `DELETE /admin/companies/{id}`
   - `GET /admin/categories`
   - `GET /admin/categories/active`
+  - `GET /admin/categories/{id}`
   - `POST /admin/categories/{id}/activate`
   - `POST /admin/categories/{id}/deactivate`
   - `DELETE /admin/categories/{id}`

@@ -40,6 +40,9 @@ public sealed class CreateCompanyCommandHandler : IRequestHandler<CreateCompanyC
 
             await _companyRepository.AddAsync(company, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ApprovedCompanies, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.AdminCompanyByIdPrefix + company.Id.Value, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.CatalogCompanyByIdPrefix + company.Id.Value, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.CatalogCompanyBySlugPrefix + company.Slug.ToLowerInvariant(), ct);
             return Result<CompanyDto>.Success(CompanyMapper.ToDto(company));
         }
         catch (Exception ex)

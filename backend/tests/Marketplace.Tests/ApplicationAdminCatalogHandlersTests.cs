@@ -82,11 +82,18 @@ public class ApplicationAdminCatalogHandlersTests
         public Task<Company?> GetByIdAsync(CompanyId id, CancellationToken ct = default)
             => Task.FromResult(Items.GetValueOrDefault(id.Value));
 
+        public Task<Company?> GetApprovedNotDeletedBySlugAsync(string slug, CancellationToken ct = default)
+        {
+            var match = Items.Values.FirstOrDefault(c =>
+                string.Equals(c.Slug, slug.Trim(), StringComparison.Ordinal) && c.IsApproved && !c.IsDeleted);
+            return Task.FromResult(match);
+        }
+
         public Task<IReadOnlyList<Company>> GetAllAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Company>>(Items.Values.ToList());
 
         public Task<IReadOnlyList<Company>> GetApprovedAsync(CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<Company>>(Items.Values.Where(x => x.IsApproved).ToList());
+            => Task.FromResult<IReadOnlyList<Company>>(Items.Values.Where(x => x.IsApproved && !x.IsDeleted).ToList());
 
         public Task<IReadOnlyList<Company>> GetPendingApprovalAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Company>>(Items.Values.Where(x => !x.IsApproved).ToList());

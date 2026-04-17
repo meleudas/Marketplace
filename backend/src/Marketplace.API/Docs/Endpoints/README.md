@@ -24,6 +24,8 @@
 | [Products.md](Products.md) | `/companies/{companyId}/products` |
 | [Inventory.md](Inventory.md) | `/companies/{companyId}` (склади та інвентар) |
 | [CompanyMembers.md](CompanyMembers.md) | `/companies/{companyId}/members` |
+| [Cart.md](Cart.md) | `/me/cart` |
+| [Favorites.md](Favorites.md) | `/me/favorites` |
 | [TelegramIntegrations.md](TelegramIntegrations.md) | `/integrations/telegram` |
 
 ## Системні маршрути (не з контролерів, `Program.cs`)

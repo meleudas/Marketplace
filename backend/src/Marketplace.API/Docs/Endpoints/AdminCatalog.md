@@ -15,6 +15,13 @@
 - **Призначення:** компанії з `isApproved = false`.
 - **Повертає:** масив `CompanyDto`.
 
+### `GET /admin/companies/{id}`
+
+- **Призначення:** одна компанія за id (будь-який стан схвалення та soft-delete).
+- **Приймає:** path `id` (guid).
+- **Повертає:** **200** `CompanyDto`.
+- **Помилки:** **404** `Company not found`.
+
 ### `POST /admin/companies`
 
 - **Приймає:** body `CreateCompanyRequest` (див. кореневий README, таблиці полів).
@@ -53,6 +60,13 @@
 ### `GET /admin/categories/active`
 
 - **Повертає:** масив `CategoryDto` лише активні.
+
+### `GET /admin/categories/{id}`
+
+- **Призначення:** одна категорія за id (будь-який стан активності та soft-delete).
+- **Приймає:** path `id` (long).
+- **Повертає:** **200** `CategoryDto`.
+- **Помилки:** **404** `Category not found`.
 
 ### `POST /admin/categories`
 

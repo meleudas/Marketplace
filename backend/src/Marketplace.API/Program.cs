@@ -38,6 +38,10 @@ RecurringJob.AddOrUpdate<InventoryJobs>(
     "inventory-expire-reservations",
     job => job.ExpireReservationsAsync(default),
     Cron.Minutely);
+RecurringJob.AddOrUpdate<SearchIndexJobs>(
+    "search-full-reindex-products",
+    job => job.FullReindexAsync(default),
+    Cron.Daily(2));
 
 app.MapControllers();
 

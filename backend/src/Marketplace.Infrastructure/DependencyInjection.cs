@@ -1,15 +1,22 @@
 using Hangfire;
 using Hangfire.MemoryStorage;
+using Elastic.Clients.Elasticsearch;
 using Marketplace.Application.Auth.Ports;
+using Marketplace.Application.Common.Options;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Products.Ports;
 using Marketplace.Domain.Categories.Repositories;
 using Marketplace.Domain.Catalog.Repositories;
+using Marketplace.Domain.Cart.Repositories;
 using Marketplace.Domain.Companies.Repositories;
+using Marketplace.Domain.Favorites.Repositories;
 using Marketplace.Domain.Users.Repositories;
 using Marketplace.Domain.Inventory.Repositories;
+using Marketplace.Domain.Orders.Repositories;
 using Marketplace.Infrastructure.Caching;
 using Marketplace.Infrastructure.External.Email;
 using Marketplace.Infrastructure.External.OAuth;
+using Marketplace.Infrastructure.External.Search;
 using Marketplace.Infrastructure.External.Sms;
 using Marketplace.Infrastructure.External.Telegram;
 using Marketplace.Infrastructure.Identity;
@@ -40,6 +47,8 @@ public static class DependencyInjection
         services.Configure<SendGridOptions>(configuration.GetSection(SendGridOptions.SectionName));
         services.Configure<TelegramOptions>(configuration.GetSection(TelegramOptions.SectionName));
         services.Configure<FrontendOptions>(configuration.GetSection(FrontendOptions.SectionName));
+        services.Configure<CacheTtlOptions>(configuration.GetSection(CacheTtlOptions.SectionName));
+        services.Configure<ElasticsearchOptions>(configuration.GetSection(ElasticsearchOptions.SectionName));
 
         var connectionString = configuration.GetConnectionString("Database")
             ?? throw new InvalidOperationException("Connection string 'Database' is not configured.");
@@ -131,7 +140,19 @@ public static class DependencyInjection
         services.AddScoped<INotificationDispatcher, HangfireNotificationDispatcher>();
         services.AddScoped<NotificationJobs>();
         services.AddScoped<InventoryJobs>();
+        services.AddScoped<SearchIndexJobs>();
         services.AddScoped<IAppCachePort, AppCachePort>();
+        services.AddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ElasticsearchOptions>>().Value;
+            var settings = new ElasticsearchClientSettings(new Uri(options.Url));
+            if (!string.IsNullOrWhiteSpace(options.Username) && !string.IsNullOrWhiteSpace(options.Password))
+                settings = settings.Authentication(new Elastic.Transport.BasicAuthentication(options.Username, options.Password));
+            return new ElasticsearchClient(settings);
+        });
+        services.AddScoped<IProductSearchService, ElasticsearchProductSearchService>();
+        services.AddScoped<IProductSearchIndexer, ElasticsearchProductSearchService>();
+        services.AddScoped<IProductSearchIndexDispatcher, HangfireProductSearchIndexDispatcher>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<ICompanyMemberRepository, CompanyMemberRepository>();
@@ -139,6 +160,12 @@ public static class DependencyInjection
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IProductDetailRepository, ProductDetailRepository>();
         services.AddScoped<IProductImageRepository, ProductImageRepository>();
+        services.AddScoped<ICartRepository, CartRepository>();
+        services.AddScoped<ICartItemRepository, CartItemRepository>();
+        services.AddScoped<IFavoriteRepository, FavoriteRepository>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IOrderItemRepository, OrderItemRepository>();
+        services.AddScoped<IOrderAddressSnapshotRepository, OrderAddressSnapshotRepository>();
         services.AddScoped<IWarehouseRepository, WarehouseRepository>();
         services.AddScoped<IWarehouseStockRepository, WarehouseStockRepository>();
         services.AddScoped<IStockMovementRepository, StockMovementRepository>();

@@ -1,6 +1,7 @@
 using Marketplace.Application.Catalog.Cache;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Products.Authorization;
+using Marketplace.Application.Products.Ports;
 using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Shared.Kernel;
@@ -13,12 +14,14 @@ public sealed class DeleteProductCommandHandler : IRequestHandler<DeleteProductC
     private readonly IProductAccessService _access;
     private readonly IProductRepository _productRepository;
     private readonly IAppCachePort _cache;
+    private readonly IProductSearchIndexDispatcher _searchIndexDispatcher;
 
-    public DeleteProductCommandHandler(IProductAccessService access, IProductRepository productRepository, IAppCachePort cache)
+    public DeleteProductCommandHandler(IProductAccessService access, IProductRepository productRepository, IAppCachePort cache, IProductSearchIndexDispatcher searchIndexDispatcher)
     {
         _access = access;
         _productRepository = productRepository;
         _cache = cache;
+        _searchIndexDispatcher = searchIndexDispatcher;
     }
 
     public async Task<Result> Handle(DeleteProductCommand request, CancellationToken ct)
@@ -38,6 +41,7 @@ public sealed class DeleteProductCommandHandler : IRequestHandler<DeleteProductC
 
             await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductDetailPrefix + oldSlug, ct);
+            await _searchIndexDispatcher.EnqueueDeleteProductAsync(product.Id.Value, ct);
             return Result.Success();
         }
         catch (Exception ex)

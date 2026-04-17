@@ -16,6 +16,7 @@
 | [UsersController.md](UsersController.md) | [Endpoints/Users.md](../Endpoints/Users.md) |
 | [AdminCatalogController.md](AdminCatalogController.md) | [Endpoints/AdminCatalog.md](../Endpoints/AdminCatalog.md) |
 | [CatalogController.md](CatalogController.md) | [Endpoints/Catalog.md](../Endpoints/Catalog.md) |
+| [CartController.md](CartController.md) | [Endpoints/Cart.md](../Endpoints/Cart.md) |
 | [ProductsController.md](ProductsController.md) | [Endpoints/Products.md](../Endpoints/Products.md) |
 | [InventoryController.md](InventoryController.md) | [Endpoints/Inventory.md](../Endpoints/Inventory.md) |
 | [CompanyMembersController.md](CompanyMembersController.md) | [Endpoints/CompanyMembers.md](../Endpoints/CompanyMembers.md) |

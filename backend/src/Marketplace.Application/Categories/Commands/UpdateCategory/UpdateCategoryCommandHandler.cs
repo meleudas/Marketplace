@@ -40,6 +40,9 @@ public sealed class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategor
 
             await _categoryRepository.UpdateAsync(category, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ActiveCategories, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.AllCategories, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.CatalogCategoryByIdPrefix + category.Id.Value, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.AdminCategoryByIdPrefix + category.Id.Value, ct);
             return Result<CategoryDto>.Success(CategoryMapper.ToDto(category));
         }
         catch (Exception ex)

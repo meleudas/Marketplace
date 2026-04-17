@@ -21,6 +21,18 @@ public sealed class CompanyMemberRepository : ICompanyMemberRepository
         return row is null ? null : ToDomain(row);
     }
 
+    public async Task<IReadOnlyList<CompanyMember>> ListByUserAsync(Guid userId, CancellationToken ct = default)
+    {
+        var rows = await _context.CompanyMembers
+            .AsNoTracking()
+            .Where(x => x.UserId == userId && !x.IsDeleted)
+            .OrderByDescending(x => x.IsOwner)
+            .ThenBy(x => x.CreatedAt)
+            .ToListAsync(ct);
+
+        return rows.Select(ToDomain).ToList();
+    }
+
     public async Task<IReadOnlyList<CompanyMember>> ListByCompanyAsync(CompanyId companyId, CancellationToken ct = default)
     {
         var rows = await _context.CompanyMembers

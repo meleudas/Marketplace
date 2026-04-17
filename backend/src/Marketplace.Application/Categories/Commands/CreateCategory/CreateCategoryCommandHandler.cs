@@ -40,6 +40,9 @@ public sealed class CreateCategoryCommandHandler : IRequestHandler<CreateCategor
 
             var createdCategory = await _categoryRepository.AddAsync(category, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ActiveCategories, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.AllCategories, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.CatalogCategoryByIdPrefix + createdCategory.Id.Value, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.AdminCategoryByIdPrefix + createdCategory.Id.Value, ct);
             return Result<CategoryDto>.Success(CategoryMapper.ToDto(createdCategory));
         }
         catch (Exception ex)

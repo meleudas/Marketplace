@@ -127,6 +127,17 @@
 | `updatedAt` | string | |
 | `isDeleted` | boolean | |
 | `deletedAt` | string \| null | |
+| `companyMemberships` | масив `UserCompanyMembershipDto` | Для `GET /users/me` — компанії, де користувач є активним членом (не soft-deleted компанія). Для `GET /users` та `GET /users/search` — порожній масив. |
+
+**`UserCompanyMembershipDto`** — елементи `companyMemberships` у `GET /users/me`
+
+| Поле | Тип | Опис |
+|------|-----|------|
+| `companyId` | guid | Id компанії. |
+| `companyName` | string | Назва. |
+| `companySlug` | string | Slug для URL. |
+| `membershipRole` | string | Роль у компанії у нижньому регістрі: `owner`, `manager`, `seller`, `support`, `logistics`. |
+| `isOwner` | boolean | Чи позначено власника. |
 
 ### Каталог (компанії/категорії)
 
@@ -166,7 +177,7 @@
 | `address` | `CompanyAddressRequest` | Адреса компанії. |
 | `metaRaw` | string \| null | Додаткові JSON-дані (raw). |
 
-**`CompanyDto`** — елемент списків `GET /catalog/companies`, `GET /admin/companies`, `GET /admin/companies/pending`; також відповідь create/update компанії
+**`CompanyDto`** — елемент списків `GET /catalog/companies`, `GET /catalog/companies/{idOrSlug}`, `GET /admin/companies`, `GET /admin/companies/pending`; відповідь `GET /admin/companies/{id}`; також відповідь create/update компанії
 
 | Поле | Тип | Опис |
 |------|-----|------|
@@ -434,8 +445,8 @@
 
 #### `GET /users/me`
 
-- **Що робить:** повертає профіль маркетплейсу для поточного Identity id.
-- **Коли використовувати:** сторінка «мій профіль», ініціалізація стану після логіну.
+- **Що робить:** повертає профіль маркетплейсу для поточного Identity id і список компаній, у яких користувач має активне членство (`companyMemberships`).
+- **Коли використовувати:** сторінка «мій профіль», ініціалізація стану після логіну, перемикач «моя компанія».
 - **Успіх (200):** один об’єкт `UserDto`.
 
 #### `GET /users`
@@ -570,10 +581,17 @@
 
 #### `GET /catalog/companies`
 
-- **Що робить:** повертає лише **підтверджені** компанії для публічного каталогу.
+- **Що робить:** повертає лише **підтверджені** компанії для публічного каталогу (без soft-deleted).
 - **Авторизація:** не потрібна (`AllowAnonymous`).
 - **Body:** немає.
 - **Що повертає:** масив `CompanyDto` (може бути порожнім).
+
+#### `GET /catalog/companies/{idOrSlug}`
+
+- **Що робить:** картка **схваленої** компанії за **guid** або за **slug** (якщо рядок успішно парситься як `guid`, шукаємо за id).
+- **Авторизація:** не потрібна (`AllowAnonymous`).
+- **Що повертає:** один `CompanyDto`.
+- **Помилки:** **404** якщо компанія не знайдена, не схвалена або soft-deleted.
 
 #### `GET /catalog/categories`
 
@@ -581,6 +599,13 @@
 - **Авторизація:** не потрібна (`AllowAnonymous`).
 - **Body:** немає.
 - **Що повертає:** масив `CategoryDto` (може бути порожнім).
+
+#### `GET /catalog/categories/{id}`
+
+- **Що робить:** деталь **активної** категорії за числовим id (не soft-deleted).
+- **Авторизація:** не потрібна (`AllowAnonymous`).
+- **Що повертає:** один `CategoryDto`.
+- **Помилки:** **404** якщо категорія не знайдена, неактивна або видалена.
 
 #### `GET /catalog/companies/{companyId}/products/{productId}/availability`
 
@@ -638,6 +663,13 @@
 - **Що робить:** повертає лише компанії, які очікують модерації (`isApproved = false`).
 - **Що повертає:** масив `CompanyDto`.
 
+#### `GET /admin/companies/{id}`
+
+- **Що робить:** повертає компанію за id (у т.ч. не схвалені та soft-deleted — як у БД).
+- **Path:** `id` — guid.
+- **Що повертає:** один `CompanyDto`.
+- **Помилки:** **404** якщо запису немає.
+
 #### `POST /admin/companies`
 
 - **Що робить:** створює компанію (id генерується автоматично як `Guid`).
@@ -678,6 +710,13 @@
 
 - **Що робить:** повертає лише активні категорії.
 - **Що повертає:** масив `CategoryDto`.
+
+#### `GET /admin/categories/{id}`
+
+- **Що робить:** повертає категорію за id (у т.ч. неактивні та soft-deleted — як у БД).
+- **Path:** `id` — long.
+- **Що повертає:** один `CategoryDto`.
+- **Помилки:** **404** якщо запису немає.
 
 #### `POST /admin/categories`
 

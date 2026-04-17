@@ -3,6 +3,7 @@ using Marketplace.Application.Catalog.Cache;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Inventory.DTOs;
 using Marketplace.Application.Inventory.Mappings;
+using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Inventory.Entities;
 using Marketplace.Domain.Inventory.Enums;
@@ -17,17 +18,20 @@ public sealed class ReceiveStockCommandHandler : IRequestHandler<ReceiveStockCom
     private readonly IInventoryAccessService _access;
     private readonly IWarehouseStockRepository _stockRepository;
     private readonly IStockMovementRepository _movementRepository;
+    private readonly IProductRepository _productRepository;
     private readonly IAppCachePort _cache;
 
     public ReceiveStockCommandHandler(
         IInventoryAccessService access,
         IWarehouseStockRepository stockRepository,
         IStockMovementRepository movementRepository,
+        IProductRepository productRepository,
         IAppCachePort cache)
     {
         _access = access;
         _stockRepository = stockRepository;
         _movementRepository = movementRepository;
+        _productRepository = productRepository;
         _cache = cache;
     }
 
@@ -64,6 +68,9 @@ public sealed class ReceiveStockCommandHandler : IRequestHandler<ReceiveStockCom
                 request.Reference);
             await _movementRepository.AddAsync(movement, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
+            var product = await _productRepository.GetByIdAsync(productId, ct);
+            if (product is not null)
+                await _cache.RemoveAsync(CatalogCacheKeys.ProductDetailPrefix + product.Slug, ct);
 
             return Result<WarehouseStockDto>.Success(InventoryMapper.ToDto(stock));
         }

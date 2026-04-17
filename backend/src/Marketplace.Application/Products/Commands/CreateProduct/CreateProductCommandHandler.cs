@@ -3,6 +3,7 @@ using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Products.Authorization;
 using Marketplace.Application.Products.DTOs;
 using Marketplace.Application.Products.Mappings;
+using Marketplace.Application.Products.Ports;
 using Marketplace.Domain.Catalog.Entities;
 using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
@@ -18,19 +19,22 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
     private readonly IProductDetailRepository _detailRepository;
     private readonly IProductImageRepository _imageRepository;
     private readonly IAppCachePort _cache;
+    private readonly IProductSearchIndexDispatcher _searchIndexDispatcher;
 
     public CreateProductCommandHandler(
         IProductAccessService access,
         IProductRepository productRepository,
         IProductDetailRepository detailRepository,
         IProductImageRepository imageRepository,
-        IAppCachePort cache)
+        IAppCachePort cache,
+        IProductSearchIndexDispatcher searchIndexDispatcher)
     {
         _access = access;
         _productRepository = productRepository;
         _detailRepository = detailRepository;
         _imageRepository = imageRepository;
         _cache = cache;
+        _searchIndexDispatcher = searchIndexDispatcher;
     }
 
     public async Task<Result<ProductDto>> Handle(CreateProductCommand request, CancellationToken ct)
@@ -92,6 +96,7 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
 
             await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductDetailPrefix + product.Slug, ct);
+            await _searchIndexDispatcher.EnqueueUpsertProductAsync(product.Id.Value, ct);
 
             var dto = new ProductDto(
                 ProductMapper.ToListItemDto(product, 0, "out_of_stock"),

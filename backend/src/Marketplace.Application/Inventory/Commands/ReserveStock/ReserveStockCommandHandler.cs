@@ -1,6 +1,7 @@
 using Marketplace.Application.Inventory.Authorization;
 using Marketplace.Application.Catalog.Cache;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Inventory.Entities;
 using Marketplace.Domain.Inventory.Enums;
@@ -16,6 +17,7 @@ public sealed class ReserveStockCommandHandler : IRequestHandler<ReserveStockCom
     private readonly IWarehouseStockRepository _stockRepository;
     private readonly IInventoryReservationRepository _reservationRepository;
     private readonly IStockMovementRepository _movementRepository;
+    private readonly IProductRepository _productRepository;
     private readonly IAppCachePort _cache;
 
     public ReserveStockCommandHandler(
@@ -23,12 +25,14 @@ public sealed class ReserveStockCommandHandler : IRequestHandler<ReserveStockCom
         IWarehouseStockRepository stockRepository,
         IInventoryReservationRepository reservationRepository,
         IStockMovementRepository movementRepository,
+        IProductRepository productRepository,
         IAppCachePort cache)
     {
         _access = access;
         _stockRepository = stockRepository;
         _reservationRepository = reservationRepository;
         _movementRepository = movementRepository;
+        _productRepository = productRepository;
         _cache = cache;
     }
 
@@ -75,6 +79,9 @@ public sealed class ReserveStockCommandHandler : IRequestHandler<ReserveStockCom
                     reference: request.Reference),
                 ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
+            var product = await _productRepository.GetByIdAsync(ProductId.From(request.ProductId), ct);
+            if (product is not null)
+                await _cache.RemoveAsync(CatalogCacheKeys.ProductDetailPrefix + product.Slug, ct);
 
             return Result.Success();
         }

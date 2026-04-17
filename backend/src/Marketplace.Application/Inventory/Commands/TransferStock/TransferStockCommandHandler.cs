@@ -1,6 +1,7 @@
 using Marketplace.Application.Inventory.Authorization;
 using Marketplace.Application.Catalog.Cache;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Inventory.Entities;
 using Marketplace.Domain.Inventory.Enums;
@@ -15,13 +16,15 @@ public sealed class TransferStockCommandHandler : IRequestHandler<TransferStockC
     private readonly IInventoryAccessService _access;
     private readonly IWarehouseStockRepository _stockRepository;
     private readonly IStockMovementRepository _movementRepository;
+    private readonly IProductRepository _productRepository;
     private readonly IAppCachePort _cache;
 
-    public TransferStockCommandHandler(IInventoryAccessService access, IWarehouseStockRepository stockRepository, IStockMovementRepository movementRepository, IAppCachePort cache)
+    public TransferStockCommandHandler(IInventoryAccessService access, IWarehouseStockRepository stockRepository, IStockMovementRepository movementRepository, IProductRepository productRepository, IAppCachePort cache)
     {
         _access = access;
         _stockRepository = stockRepository;
         _movementRepository = movementRepository;
+        _productRepository = productRepository;
         _cache = cache;
     }
 
@@ -61,6 +64,9 @@ public sealed class TransferStockCommandHandler : IRequestHandler<TransferStockC
                 StockMovementId.From(0), companyId, WarehouseId.From(request.ToWarehouseId), productId,
                 StockMovementType.TransferIn, request.Quantity, $"{request.OperationId}:in", request.ActorUserId), ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
+            var product = await _productRepository.GetByIdAsync(productId, ct);
+            if (product is not null)
+                await _cache.RemoveAsync(CatalogCacheKeys.ProductDetailPrefix + product.Slug, ct);
 
             return Result.Success();
         }

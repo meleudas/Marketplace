@@ -26,6 +26,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<ProductRecord> Products => Set<ProductRecord>();
     public DbSet<ProductDetailRecord> ProductDetails => Set<ProductDetailRecord>();
     public DbSet<ProductImageRecord> ProductImages => Set<ProductImageRecord>();
+    public DbSet<CartRecord> Carts => Set<CartRecord>();
+    public DbSet<CartItemRecord> CartItems => Set<CartItemRecord>();
+    public DbSet<FavoriteRecord> Favorites => Set<FavoriteRecord>();
+    public DbSet<OrderRecord> Orders => Set<OrderRecord>();
+    public DbSet<OrderItemRecord> OrderItems => Set<OrderItemRecord>();
+    public DbSet<OrderAddressSnapshotRecord> OrderAddresses => Set<OrderAddressSnapshotRecord>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

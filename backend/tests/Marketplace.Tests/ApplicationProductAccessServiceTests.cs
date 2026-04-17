@@ -40,6 +40,8 @@ public class ApplicationProductAccessServiceTests
         public void Seed(CompanyMember member) => _items[(member.CompanyId.Value, member.UserId)] = member;
         public Task<CompanyMember?> GetByCompanyAndUserAsync(CompanyId companyId, Guid userId, CancellationToken ct = default)
             => Task.FromResult(_items.GetValueOrDefault((companyId.Value, userId)));
+        public Task<IReadOnlyList<CompanyMember>> ListByUserAsync(Guid userId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<CompanyMember>>(_items.Values.Where(x => x.UserId == userId && !x.IsDeleted).ToList());
         public Task<IReadOnlyList<CompanyMember>> ListByCompanyAsync(CompanyId companyId, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<CompanyMember>>(_items.Values.Where(x => x.CompanyId == companyId && !x.IsDeleted).ToList());
         public Task<bool> ExistsOwnerAsync(CompanyId companyId, CancellationToken ct = default)

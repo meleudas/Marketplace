@@ -32,6 +32,18 @@ public sealed class ProductRepository : IProductRepository
         return row is null ? null : ToDomain(row);
     }
 
+    public async Task<IReadOnlyList<Product>> ListByIdsAsync(IReadOnlyCollection<ProductId> ids, CancellationToken ct = default)
+    {
+        if (ids.Count == 0)
+            return [];
+
+        var values = ids.Select(x => x.Value).ToHashSet();
+        var rows = await _context.Products.AsNoTracking()
+            .Where(x => values.Contains(x.Id))
+            .ToListAsync(ct);
+        return rows.Select(ToDomain).ToList();
+    }
+
     public async Task<IReadOnlyList<Product>> ListByCompanyAsync(CompanyId companyId, CancellationToken ct = default)
     {
         var rows = await _context.Products.AsNoTracking()

@@ -29,6 +29,9 @@ public sealed class ActivateCategoryCommandHandler : IRequestHandler<ActivateCat
             category.Activate();
             await _categoryRepository.UpdateAsync(category, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ActiveCategories, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.AllCategories, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.CatalogCategoryByIdPrefix + category.Id.Value, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.AdminCategoryByIdPrefix + category.Id.Value, ct);
             return Result.Success();
         }
         catch (Exception ex)

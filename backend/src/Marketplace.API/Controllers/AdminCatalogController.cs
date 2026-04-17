@@ -5,6 +5,7 @@ using Marketplace.Application.Categories.Commands.DeactivateCategory;
 using Marketplace.Application.Categories.Commands.DeleteCategory;
 using Marketplace.Application.Categories.Commands.UpdateCategory;
 using Marketplace.Application.Categories.Queries.GetActiveCategories;
+using Marketplace.Application.Categories.Queries.GetAdminCategoryById;
 using Marketplace.Application.Categories.Queries.GetAllCategories;
 using Marketplace.Application.Companies.Commands.ApproveCompany;
 using Marketplace.Application.Companies.Commands.CreateCompany;
@@ -12,6 +13,7 @@ using Marketplace.Application.Companies.Commands.DeleteCompany;
 using Marketplace.Application.Companies.Commands.RevokeCompanyApproval;
 using Marketplace.Application.Companies.Commands.UpdateCompany;
 using Marketplace.Application.Companies.DTOs;
+using Marketplace.Application.Companies.Queries.GetAdminCompanyById;
 using Marketplace.Application.Companies.Queries.GetAllCompanies;
 using Marketplace.Application.Companies.Queries.GetPendingCompanies;
 using MediatR;
@@ -40,6 +42,13 @@ public sealed class AdminCatalogController : ControllerBase
     public async Task<IActionResult> GetPendingCompanies(CancellationToken ct)
     {
         var result = await _sender.Send(new GetPendingCompaniesQuery(), ct);
+        return result.ToActionResult();
+    }
+
+    [HttpGet("companies/{id:guid}")]
+    public async Task<IActionResult> GetCompany(Guid id, CancellationToken ct)
+    {
+        var result = await _sender.Send(new GetAdminCompanyByIdQuery(id), ct);
         return result.ToActionResult();
     }
 
@@ -113,6 +122,13 @@ public sealed class AdminCatalogController : ControllerBase
     public async Task<IActionResult> GetActiveCategories(CancellationToken ct)
     {
         var result = await _sender.Send(new GetActiveCategoriesQuery(), ct);
+        return result.ToActionResult();
+    }
+
+    [HttpGet("categories/{id:long}")]
+    public async Task<IActionResult> GetCategory(long id, CancellationToken ct)
+    {
+        var result = await _sender.Send(new GetAdminCategoryByIdQuery(id), ct);
         return result.ToActionResult();
     }
 

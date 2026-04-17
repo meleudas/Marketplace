@@ -7,7 +7,7 @@ namespace Marketplace.Application.Auth.Mappings;
 
 public static class AuthMapper
 {
-    public static UserDto ToUserDto(User user) =>
+    public static UserDto ToUserDto(User user, IReadOnlyList<UserCompanyMembershipDto>? companyMemberships = null) =>
         new(
             user.Id.Value,
             user.FirstName,
@@ -21,7 +21,8 @@ public static class AuthMapper
             user.CreatedAt,
             user.UpdatedAt,
             user.IsDeleted,
-            user.DeletedAt);
+            user.DeletedAt,
+            companyMemberships ?? Array.Empty<UserCompanyMembershipDto>());
 
     public static AuthTokensDto ToAuthTokensDto(AuthTokens tokens) =>
         new(

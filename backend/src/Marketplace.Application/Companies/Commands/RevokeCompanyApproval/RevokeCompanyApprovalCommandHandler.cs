@@ -29,6 +29,9 @@ public sealed class RevokeCompanyApprovalCommandHandler : IRequestHandler<Revoke
             company.RevokeApproval();
             await _companyRepository.UpdateAsync(company, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ApprovedCompanies, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.AdminCompanyByIdPrefix + company.Id.Value, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.CatalogCompanyByIdPrefix + company.Id.Value, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.CatalogCompanyBySlugPrefix + company.Slug.ToLowerInvariant(), ct);
             return Result.Success();
         }
         catch (Exception ex)
