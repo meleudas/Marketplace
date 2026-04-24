@@ -10,4 +10,13 @@ public sealed record CreatedOrderDto(
     Guid CompanyId,
     OrderStatus Status,
     int ItemCount,
-    decimal TotalPrice);
+    decimal TotalPrice,
+    PaymentInitDto? Payment);
+
+public sealed record PaymentInitDto(
+    string Provider,
+    string Status,
+    string? TransactionId,
+    string Data,
+    string Signature,
+    string? CheckoutUrl);

@@ -1,5 +1,6 @@
 using Marketplace.Application.Carts.Commands.CheckoutCart;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Payments.Ports;
 using Marketplace.Domain.Cart.Entities;
 using Marketplace.Domain.Cart.Enums;
 using Marketplace.Domain.Cart.Repositories;
@@ -10,6 +11,9 @@ using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Entities;
 using Marketplace.Domain.Orders.Enums;
 using Marketplace.Domain.Orders.Repositories;
+using Marketplace.Domain.Payments.Entities;
+using Marketplace.Domain.Payments.Enums;
+using Marketplace.Domain.Payments.Repositories;
 
 namespace Marketplace.Tests;
 
@@ -40,7 +44,16 @@ public class ApplicationCheckoutCartCommandTests
         var orderAddressRepo = new InMemoryOrderAddressRepository();
         var cache = new SpyCachePort();
 
-        var handler = new CheckoutCartCommandHandler(cartRepo, cartItemRepo, products, orderRepo, orderItemRepo, orderAddressRepo, cache);
+        var handler = new CheckoutCartCommandHandler(
+            cartRepo,
+            cartItemRepo,
+            products,
+            orderRepo,
+            orderItemRepo,
+            orderAddressRepo,
+            new InMemoryPaymentRepository(),
+            new FakeLiqPayPort(),
+            cache);
         var cmd = new CheckoutCartCommand(
             userId,
             CheckoutPaymentMethod.Card,
@@ -74,6 +87,8 @@ public class ApplicationCheckoutCartCommandTests
             new InMemoryOrderRepository(),
             new InMemoryOrderItemRepository(),
             new InMemoryOrderAddressRepository(),
+            new InMemoryPaymentRepository(),
+            new FakeLiqPayPort(),
             new SpyCachePort());
 
         var result = await handler.Handle(
@@ -180,6 +195,46 @@ public class ApplicationCheckoutCartCommandTests
             _items[id] = saved;
             return Task.FromResult(saved);
         }
+
+        public Task UpdateAsync(Order order, CancellationToken ct = default)
+        {
+            _items[order.Id.Value] = order;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class InMemoryPaymentRepository : IPaymentRepository
+    {
+        private readonly Dictionary<long, Payment> _items = new();
+        private long _nextId = 1;
+
+        public Task<Payment?> GetByIdAsync(PaymentId id, CancellationToken ct = default) => Task.FromResult(_items.GetValueOrDefault(id.Value));
+        public Task<Payment?> GetByOrderIdAsync(OrderId orderId, CancellationToken ct = default) => Task.FromResult(_items.Values.FirstOrDefault(x => x.OrderId == orderId));
+        public Task<Payment?> GetByTransactionIdAsync(string transactionId, CancellationToken ct = default) => Task.FromResult(_items.Values.FirstOrDefault(x => x.TransactionId == transactionId));
+        public Task<IReadOnlyList<Payment>> ListByStatusAsync(PaymentTransactionStatus status, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Payment>>(_items.Values.Where(x => x.Status == status).ToList());
+        public Task<Payment> AddAsync(Payment payment, CancellationToken ct = default)
+        {
+            var id = payment.Id.Value <= 0 ? _nextId++ : payment.Id.Value;
+            var saved = Payment.Reconstitute(PaymentId.From(id), payment.OrderId, payment.PaymentMethod, payment.Amount, payment.Currency, payment.TransactionId, payment.Status, payment.ProviderResponse, payment.ProcessedAt, payment.CreatedAt, payment.UpdatedAt, payment.IsDeleted, payment.DeletedAt);
+            _items[id] = saved;
+            return Task.FromResult(saved);
+        }
+        public Task UpdateAsync(Payment payment, CancellationToken ct = default)
+        {
+            _items[payment.Id.Value] = payment;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeLiqPayPort : ILiqPayPort
+    {
+        public Task<LiqPayCreatePaymentResult> CreatePaymentAsync(LiqPayCreatePaymentRequest request, CancellationToken ct = default)
+            => Task.FromResult(new LiqPayCreatePaymentResult(true, request.OrderNumber, "https://liqpay.test", "data", "sig", "{\"status\":\"ok\"}", null));
+        public Task<bool> VerifySignatureAsync(string data, string signature, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<LiqPayPaymentStatusResult> GetPaymentStatusAsync(string transactionId, CancellationToken ct = default) => Task.FromResult(new LiqPayPaymentStatusResult(true, transactionId, "success", "{}", null));
+        public Task<LiqPayRefundResult> RefundAsync(LiqPayRefundRequest request, CancellationToken ct = default) => Task.FromResult(new LiqPayRefundResult(true, request.TransactionId, "ok", "{}", null));
+        public Task<LiqPayHealthResult> CheckReadinessAsync(CancellationToken ct = default) => Task.FromResult(new LiqPayHealthResult(true, "LiqPay", "ok"));
+        public LiqPayConfigHealthResult CheckConfig() => new(true, "ok");
     }
 
     private sealed class InMemoryOrderItemRepository : IOrderItemRepository

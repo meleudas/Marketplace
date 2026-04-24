@@ -20,6 +20,7 @@ public class ApplicationAdminCatalogValidatorsTests
             "",
             "",
             new CompanyAddressDto("", "", "", "", ""),
+            new CompanyLegalProfileDto("", "llc", null, null, null, false, null),
             null);
 
         var result = validator.Validate(command);

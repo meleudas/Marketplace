@@ -29,5 +29,32 @@ public sealed class CreateCompanyCommandValidator : AbstractValidator<CreateComp
         RuleFor(x => x.Address)
             .NotNull()
             .WithMessage("Company address is required");
+
+        RuleFor(x => x.LegalProfile)
+            .NotNull()
+            .WithMessage("Company legal profile is required");
+
+        RuleFor(x => x.LegalProfile.LegalName)
+            .NotEmpty()
+            .WithMessage("Legal name is required");
+
+        RuleFor(x => x.LegalProfile.LegalType)
+            .NotEmpty()
+            .WithMessage("Legal type is required");
+
+        RuleFor(x => x.LegalProfile.InitialCommissionPercent)
+            .InclusiveBetween(0.0001m, 100m)
+            .When(x => x.LegalProfile.InitialCommissionPercent.HasValue)
+            .WithMessage("Initial commission percent must be in range (0, 100]");
+
+        RuleFor(x => x.LegalProfile.Edrpou)
+            .NotEmpty()
+            .When(x => x.LegalProfile.LegalType is "llc" or "jsc")
+            .WithMessage("EDRPOU is required for legal entities");
+
+        RuleFor(x => x.LegalProfile.Ipn)
+            .NotEmpty()
+            .When(x => x.LegalProfile.LegalType is "individual" or "entrepreneur")
+            .WithMessage("IPN is required for individual or entrepreneur");
     }
 }

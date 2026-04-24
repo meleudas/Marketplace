@@ -11,6 +11,7 @@ using Marketplace.Application.Companies.Commands.ApproveCompany;
 using Marketplace.Application.Companies.Commands.CreateCompany;
 using Marketplace.Application.Companies.Commands.DeleteCompany;
 using Marketplace.Application.Companies.Commands.RevokeCompanyApproval;
+using Marketplace.Application.Companies.Commands.SetCompanyCommissionRate;
 using Marketplace.Application.Companies.Commands.UpdateCompany;
 using Marketplace.Application.Companies.DTOs;
 using Marketplace.Application.Companies.Queries.GetAdminCompanyById;
@@ -63,6 +64,7 @@ public sealed class AdminCatalogController : ControllerBase
             request.ContactEmail,
             request.ContactPhone,
             request.Address.ToDto(),
+            request.LegalProfile.ToDto(),
             request.MetaRaw);
 
         var result = await _sender.Send(command, ct);
@@ -101,6 +103,18 @@ public sealed class AdminCatalogController : ControllerBase
     public async Task<IActionResult> RevokeCompanyApproval(Guid id, CancellationToken ct)
     {
         var result = await _sender.Send(new RevokeCompanyApprovalCommand(id), ct);
+        return result.ToActionResult();
+    }
+
+    [HttpPost("companies/{id:guid}/commission-rates")]
+    public async Task<IActionResult> SetCompanyCommissionRate(Guid id, [FromBody] SetCompanyCommissionRateRequest request, CancellationToken ct)
+    {
+        if (!User.TryGetUserId(out var adminUserId))
+            return Unauthorized();
+
+        var result = await _sender.Send(
+            new SetCompanyCommissionRateCommand(id, request.CommissionPercent, request.EffectiveFrom, request.Reason, adminUserId),
+            ct);
         return result.ToActionResult();
     }
 
@@ -211,7 +225,27 @@ public sealed record CreateCompanyRequest(
     string ContactEmail,
     string ContactPhone,
     CompanyAddressRequest Address,
+    CompanyLegalProfileRequest LegalProfile,
     string? MetaRaw);
+
+public sealed record CompanyLegalProfileRequest(
+    string LegalName,
+    string LegalType,
+    string? Edrpou,
+    string? Ipn,
+    string? CertificateNumber,
+    bool IsVatPayer,
+    decimal? InitialCommissionPercent)
+{
+    public CompanyLegalProfileDto ToDto() => new(
+        LegalName,
+        LegalType,
+        Edrpou,
+        Ipn,
+        CertificateNumber,
+        IsVatPayer,
+        InitialCommissionPercent);
+}
 
 public sealed record UpdateCompanyRequest(
     string Name,
@@ -241,3 +275,8 @@ public sealed record UpdateCategoryRequest(
     string? Description,
     string? MetaRaw,
     int SortOrder);
+
+public sealed record SetCompanyCommissionRateRequest(
+    decimal CommissionPercent,
+    DateTime EffectiveFrom,
+    string? Reason);

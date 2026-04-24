@@ -96,8 +96,8 @@ public class CompanyRepository : ICompanyRepository
             r.ApprovedAt,
             r.ApprovedByUserId,
             r.Rating,
-            0,
-            0,
+            r.ReviewCount,
+            r.FollowerCount,
             new JsonBlob(r.MetaRaw),
             r.CreatedAt,
             r.UpdatedAt,
@@ -124,6 +124,8 @@ public class CompanyRepository : ICompanyRepository
             ApprovedAt = company.ApprovedAt,
             ApprovedByUserId = company.ApprovedByUserId,
             Rating = company.Rating,
+            ReviewCount = company.ReviewCount,
+            FollowerCount = company.FollowerCount,
             MetaRaw = company.Meta.Raw,
             CreatedAt = company.CreatedAt,
             UpdatedAt = company.UpdatedAt,
@@ -148,6 +150,8 @@ public class CompanyRepository : ICompanyRepository
         row.ApprovedAt = company.ApprovedAt;
         row.ApprovedByUserId = company.ApprovedByUserId;
         row.Rating = company.Rating;
+        row.ReviewCount = company.ReviewCount;
+        row.FollowerCount = company.FollowerCount;
         row.MetaRaw = company.Meta.Raw;
         row.UpdatedAt = company.UpdatedAt;
         row.IsDeleted = company.IsDeleted;

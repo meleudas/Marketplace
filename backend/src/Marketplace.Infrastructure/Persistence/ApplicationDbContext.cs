@@ -18,6 +18,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<RefreshTokenRecord> RefreshTokens => Set<RefreshTokenRecord>();
     public DbSet<CompanyRecord> Companies => Set<CompanyRecord>();
     public DbSet<CompanyMemberRecord> CompanyMembers => Set<CompanyMemberRecord>();
+    public DbSet<CompanyLegalProfileRecord> CompanyLegalProfiles => Set<CompanyLegalProfileRecord>();
+    public DbSet<CompanyContractRecord> CompanyContracts => Set<CompanyContractRecord>();
+    public DbSet<CompanyCommissionRateRecord> CompanyCommissionRates => Set<CompanyCommissionRateRecord>();
     public DbSet<CategoryRecord> Categories => Set<CategoryRecord>();
     public DbSet<WarehouseRecord> Warehouses => Set<WarehouseRecord>();
     public DbSet<WarehouseStockRecord> WarehouseStocks => Set<WarehouseStockRecord>();
@@ -32,6 +35,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<OrderRecord> Orders => Set<OrderRecord>();
     public DbSet<OrderItemRecord> OrderItems => Set<OrderItemRecord>();
     public DbSet<OrderAddressSnapshotRecord> OrderAddresses => Set<OrderAddressSnapshotRecord>();
+    public DbSet<PaymentRecord> Payments => Set<PaymentRecord>();
+    public DbSet<RefundRecord> Refunds => Set<RefundRecord>();
+    public DbSet<ProductReviewRecord> ProductReviews => Set<ProductReviewRecord>();
+    public DbSet<CompanyReviewRecord> CompanyReviews => Set<CompanyReviewRecord>();
+    public DbSet<ReviewReplyRecord> ReviewReplies => Set<ReviewReplyRecord>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -39,6 +39,20 @@
 
 Джерело: `Marketplace.Application/Products/Authorization/ProductAccessService.cs`.
 
+### Відповіді продавця на відгуки (`ReviewAccessService`)
+
+| Роль | `PUT /reviews/products/{reviewId}/reply` | `PUT /reviews/companies/{reviewId}/reply` |
+|------|------------------------------------------|-------------------------------------------|
+| Owner | Так | Так |
+| Manager | Так | Так |
+| Seller | Так | Так |
+| Support | Ні | Ні |
+| Logistics | Ні | Ні |
+| Не член | Ні | Ні |
+| **Admin** | Так | Так |
+
+Модерація відгуків: `POST /admin/reviews/*/moderate` доступна `Admin` і `Moderator`.
+
 ### Доступ до складу та інвентарю (`InventoryAccessService`)
 
 | Роль | Читання складів, стоків, рухів (ReadInternal) | Операції receive/ship/adjust/transfer/reserve/release, CRUD складу (WriteStock) |

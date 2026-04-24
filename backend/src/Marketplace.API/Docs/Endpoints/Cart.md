@@ -58,9 +58,10 @@
 - **Авторизація:** `[Authorize]`.
 - **Side effects:**
   - створює **N** ордерів (1 компанія = 1 ордер);
+  - для безготівкових методів ініціалізує LiqPay платіж і повертає `payment` (`data`, `signature`, `checkoutUrl`) в кожному `createdOrders[]`;
   - для кожного ордера створює `order_items`;
   - фіксує snapshot адреси в `order_addresses`;
-  - стартовий статус кожного ордера: `pending`;
+  - стартовий статус ордера: `pending`, або `cancelled` при провалі ініціалізації payment;
   - soft-delete checkout-нутих позицій кошика.
 - **Кеш:** інвалідує `cart:user:{userId}:active`.
 - **Помилки:** `400` (`Invalid paymentMethod`, валідація), `404/400` (`Cart not found`, `Cart is empty`, `Product ... not found`).

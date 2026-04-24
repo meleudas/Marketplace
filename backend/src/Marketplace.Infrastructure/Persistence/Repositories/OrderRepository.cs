@@ -36,6 +36,25 @@ public sealed class OrderRepository : IOrderRepository
         return ToDomain(row);
     }
 
+    public async Task UpdateAsync(Order order, CancellationToken ct = default)
+    {
+        var row = await _context.Orders.FirstOrDefaultAsync(x => x.Id == order.Id.Value, ct)
+            ?? throw new InvalidOperationException($"Order '{order.Id.Value}' was not found.");
+
+        row.Status = (short)order.Status;
+        row.Notes = order.Notes;
+        row.TrackingNumber = order.TrackingNumber;
+        row.ShippedAt = order.ShippedAt;
+        row.DeliveredAt = order.DeliveredAt;
+        row.CancelledAt = order.CancelledAt;
+        row.RefundedAt = order.RefundedAt;
+        row.UpdatedAt = order.UpdatedAt;
+        row.IsDeleted = order.IsDeleted;
+        row.DeletedAt = order.DeletedAt;
+
+        await _context.SaveChangesAsync(ct);
+    }
+
     private static Order ToDomain(OrderRecord x) =>
         Order.Reconstitute(
             OrderId.From(x.Id),

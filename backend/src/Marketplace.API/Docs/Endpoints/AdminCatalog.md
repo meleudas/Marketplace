@@ -39,12 +39,22 @@
 - **Призначення:** схвалити компанію від імені поточного адміна.
 - **Приймає:** path `id`; з JWT береться `adminUserId` для аудиту.
 - **Повертає:** **200** порожнє тіло при успіху.
-- **Side effects:** `isApproved`, `approvedAt`, `approvedByUserId`.
+- **Side effects:** `isApproved`, `approvedAt`, `approvedByUserId`, авто-створення `company_contracts` та початкової версії `company_commission_rates` (якщо ще не існують).
 
 ### `POST /admin/companies/{id}/revoke-approval`
 
 - **Повертає:** **200** порожнє тіло.
 - **Side effects:** скасування апруву (компанія зникає з публічного каталогу approved).
+
+### `POST /admin/companies/{id}/commission-rates`
+
+- **Призначення:** створити нову версію відсоткової комісії компанії.
+- **Приймає:** path `id` + body:
+  - `commissionPercent` (`0 < x <= 100`)
+  - `effectiveFrom` (UTC дата старту)
+  - `reason` (optional)
+- **Повертає:** **200** порожнє тіло.
+- **Side effects:** закриває попередню активну ставку (`effectiveTo`) і додає новий запис `company_commission_rates`.
 
 ### `DELETE /admin/companies/{id}`
 

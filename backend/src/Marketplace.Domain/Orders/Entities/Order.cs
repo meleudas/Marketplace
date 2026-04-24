@@ -1,5 +1,6 @@
 using Marketplace.Domain.Common.Models;
 using Marketplace.Domain.Common.ValueObjects;
+using Marketplace.Domain.Common.Exceptions;
 using Marketplace.Domain.Orders.Enums;
 
 namespace Marketplace.Domain.Orders.Entities;
@@ -74,4 +75,33 @@ public sealed class Order : AuditableSoftDeleteAggregateRoot<OrderId>
             IsDeleted = isDeleted,
             DeletedAt = deletedAt
         };
+
+    public void MarkPaid()
+    {
+        EnsureNotDeleted();
+        Status = OrderStatus.Paid;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void MarkFailed()
+    {
+        EnsureNotDeleted();
+        Status = OrderStatus.Cancelled;
+        CancelledAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void MarkRefunded()
+    {
+        EnsureNotDeleted();
+        Status = OrderStatus.Refunded;
+        RefundedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    private void EnsureNotDeleted()
+    {
+        if (IsDeleted)
+            throw new DomainException("Cannot modify deleted order");
+    }
 }

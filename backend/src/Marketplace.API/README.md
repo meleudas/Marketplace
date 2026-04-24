@@ -10,6 +10,7 @@
 | **Матриця ролей і DDD-логіка** | [Docs/DDD/README.md](Docs/DDD/README.md), [Docs/DDD/RoleAccessMatrix.md](Docs/DDD/RoleAccessMatrix.md), [Docs/DDD/BusinessFlows.md](Docs/DDD/BusinessFlows.md) |
 | **Тестові сутності та сценарії** | [Docs/DDD/TestEntitiesAndScenarios.md](Docs/DDD/TestEntitiesAndScenarios.md) |
 | **Приклади JSON body** (швидке копіювання) | [Docs/ControllerModels/README.md](Docs/ControllerModels/README.md) |
+| **Відгуки та відповіді продавця** | [Docs/Endpoints/Reviews.md](Docs/Endpoints/Reviews.md) |
 
 Нижче збережено **довідник полів DTO** та узагальнений опис маршрутів; деталі по кожному методу підтримуйте в `Docs/Endpoints` (щоб не дублювати тричі).
 

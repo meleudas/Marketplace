@@ -17,12 +17,26 @@ BEGIN;
 DO $$
 BEGIN
     IF to_regclass('public.inventory_reservations') IS NOT NULL THEN DELETE FROM inventory_reservations; END IF;
+    IF to_regclass('public.review_replies') IS NOT NULL THEN DELETE FROM review_replies; END IF;
+    IF to_regclass('public.company_reviews') IS NOT NULL THEN DELETE FROM company_reviews; END IF;
+    IF to_regclass('public.product_reviews') IS NOT NULL THEN DELETE FROM product_reviews; END IF;
+    IF to_regclass('public.refunds') IS NOT NULL THEN DELETE FROM refunds; END IF;
+    IF to_regclass('public.payments') IS NOT NULL THEN DELETE FROM payments; END IF;
+    IF to_regclass('public.order_addresses') IS NOT NULL THEN DELETE FROM order_addresses; END IF;
+    IF to_regclass('public.order_items') IS NOT NULL THEN DELETE FROM order_items; END IF;
+    IF to_regclass('public.orders') IS NOT NULL THEN DELETE FROM orders; END IF;
+    IF to_regclass('public.favorites') IS NOT NULL THEN DELETE FROM favorites; END IF;
+    IF to_regclass('public.cart_items') IS NOT NULL THEN DELETE FROM cart_items; END IF;
+    IF to_regclass('public.carts') IS NOT NULL THEN DELETE FROM carts; END IF;
     IF to_regclass('public.stock_movements') IS NOT NULL THEN DELETE FROM stock_movements; END IF;
     IF to_regclass('public.warehouse_stocks') IS NOT NULL THEN DELETE FROM warehouse_stocks; END IF;
     IF to_regclass('public.warehouses') IS NOT NULL THEN DELETE FROM warehouses; END IF;
     IF to_regclass('public.product_images') IS NOT NULL THEN DELETE FROM product_images; END IF;
     IF to_regclass('public.product_details') IS NOT NULL THEN DELETE FROM product_details; END IF;
     IF to_regclass('public.products') IS NOT NULL THEN DELETE FROM products; END IF;
+    IF to_regclass('public.company_commission_rates') IS NOT NULL THEN DELETE FROM company_commission_rates; END IF;
+    IF to_regclass('public.company_contracts') IS NOT NULL THEN DELETE FROM company_contracts; END IF;
+    IF to_regclass('public.company_legal_profiles') IS NOT NULL THEN DELETE FROM company_legal_profiles; END IF;
     IF to_regclass('public.company_members') IS NOT NULL THEN DELETE FROM company_members; END IF;
 END $$;
 
@@ -302,6 +316,28 @@ INSERT INTO marketplace_users (
 ('88888888-8888-8888-8888-888888888888', 'Support', 'Agent', 1, NULL, NULL, TRUE, NULL, NOW(), NOW(), NOW(), FALSE, NULL),
 ('99999999-9999-9999-9999-999999999999', 'Logistics', 'Lead', 1, NULL, NULL, TRUE, NULL, NOW(), NOW(), NOW(), FALSE, NULL);
 
+-- 4.1) Refresh tokens
+INSERT INTO refresh_tokens ("Id", "UserId", "TokenHash", "ExpiresAt", "CreatedAt", "RevokedAt", "ReplacedByTokenHash")
+VALUES
+(
+    'aaaaaaaa-1111-1111-1111-111111111111',
+    '33333333-3333-3333-3333-333333333333',
+    '1111111111111111111111111111111111111111111111111111111111111111',
+    NOW() + INTERVAL '30 days',
+    NOW(),
+    NULL,
+    NULL
+),
+(
+    'bbbbbbbb-2222-2222-2222-222222222222',
+    '22222222-2222-2222-2222-222222222222',
+    '2222222222222222222222222222222222222222222222222222222222222222',
+    NOW() + INTERVAL '30 days',
+    NOW(),
+    NULL,
+    NULL
+);
+
 -- 5) Categories (ProductCount removed in migration RemoveCountersFromDbModels)
 INSERT INTO categories (
     "Name",
@@ -553,6 +589,131 @@ BEGIN
          NOW(), NOW(), FALSE, NULL);
         END IF;
     END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'company_legal_profiles') THEN
+        INSERT INTO company_legal_profiles (
+            "Id", "CompanyId", "LegalName", "LegalType", "Edrpou", "Ipn", "CertificateNumber", "IsVatPayer",
+            "InitialCommissionPercent", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Tech Store LLC', 1, '12345678', '123456789', 'TS-CERT-001', TRUE, 7.5000, NOW(), NOW(), FALSE, NULL),
+        (2, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Home Comfort LLC', 1, '87654321', '987654321', 'HC-CERT-001', FALSE, 6.2500, NOW(), NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'company_contracts') THEN
+        INSERT INTO company_contracts (
+            "Id", "CompanyId", "ContractNumber", "Status", "EffectiveFrom", "EffectiveTo", "SignedAt", "Notes",
+            "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'CTR-TECH-2026-001', 1, NOW() - INTERVAL '30 days', NULL, NOW() - INTERVAL '35 days', 'Seed contract for Tech Store',
+         NOW(), NOW(), FALSE, NULL),
+        (2, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'CTR-HOME-2026-001', 1, NOW() - INTERVAL '20 days', NULL, NOW() - INTERVAL '22 days', 'Seed contract for Home Comfort',
+         NOW(), NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'company_commission_rates') THEN
+        INSERT INTO company_commission_rates (
+            "Id", "CompanyId", "ContractId", "CommissionPercent", "EffectiveFrom", "EffectiveTo", "Reason", "CreatedByUserId",
+            "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 7.5000, NOW() - INTERVAL '30 days', NULL, 'Initial seed commission', '11111111-1111-1111-1111-111111111111',
+         NOW(), NOW(), FALSE, NULL),
+        (2, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 2, 6.2500, NOW() - INTERVAL '20 days', NULL, 'Initial seed commission', '11111111-1111-1111-1111-111111111111',
+         NOW(), NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'carts') THEN
+        INSERT INTO carts ("Id", "UserId", "Status", "LastActivityAt", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt")
+        VALUES
+        (1, '11111111-1111-1111-1111-111111111111', 0, NOW(), NOW(), NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'cart_items') THEN
+        INSERT INTO cart_items ("Id", "CartId", "ProductId", "Quantity", "PriceAtMoment", "Discount", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt")
+        VALUES
+        (1, 1, 1, 2, 12999.00, 0, NOW(), NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'favorites') THEN
+        INSERT INTO favorites ("Id", "UserId", "ProductId", "AddedAt", "PriceAtAdd", "IsAvailable", "NotificationsRaw", "MetaRaw", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt")
+        VALUES
+        (1, '11111111-1111-1111-1111-111111111111', 2, NOW(), 45999.00, TRUE, '{"priceDrop":true}', '{"seed":true}', NOW(), NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'orders') THEN
+        INSERT INTO orders (
+            "Id", "OrderNumber", "CustomerId", "CompanyId", "Status", "TotalPrice", "Subtotal", "ShippingCost", "DiscountAmount", "TaxAmount",
+            "ShippingMethodId", "PaymentMethod", "Notes", "TrackingNumber", "ShippedAt", "DeliveredAt", "CancelledAt", "RefundedAt",
+            "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 'ORD-SEED-0001', '11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 26098.00, 25998.00, 100.00, 0.00, 0.00,
+         1, 2, 'Seed order for checkout/payment demo', NULL, NULL, NULL, NULL, NULL, NOW(), NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'order_items') THEN
+        INSERT INTO order_items (
+            "Id", "OrderId", "ProductId", "ProductName", "ProductImage", "Quantity", "PriceAtMoment", "Discount", "TotalPrice", "CompanyId",
+            "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 1, 1, 'Seed Phone Alpha', 'https://placehold.co/200x200/png?text=Phone', 2, 12999.00, 0.00, 25998.00, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+         NOW(), NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'order_addresses') THEN
+        INSERT INTO order_addresses (
+            "Id", "OrderId", "Kind", "FirstName", "LastName", "Phone", "Street", "City", "State", "PostalCode", "Country",
+            "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 1, 0, 'Admin', 'User', '+380000000001', 'Delivery street 1', 'Kyiv', 'Kyiv', '01001', 'UA', NOW(), NOW(), FALSE, NULL),
+        (2, 1, 1, 'Admin', 'User', '+380000000001', 'Billing street 2', 'Kyiv', 'Kyiv', '01002', 'UA', NOW(), NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'payments') THEN
+        INSERT INTO payments (
+            "Id", "OrderId", "PaymentMethod", "Amount", "Currency", "TransactionId", "Status", "ProviderResponseRaw", "ProcessedAt",
+            "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 1, 2, 26098.00, 'UAH', 'liqpay-seed-transaction-001', 1, '{"provider":"liqpay","seed":true}', NOW(), NOW(), NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'refunds') THEN
+        INSERT INTO refunds (
+            "Id", "PaymentId", "OrderId", "Amount", "Reason", "Status", "ProcessedByUserId", "ProcessedAt", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 1, 1, 500.00, 'Seed partial refund', 1, '11111111-1111-1111-1111-111111111111', NOW(), NOW(), NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'product_reviews') THEN
+        INSERT INTO product_reviews (
+            "Id", "ProductId", "UserId", "UserName", "UserAvatar", "Rating", "Title", "Comment", "ImagesRaw", "ProsRaw", "ConsRaw",
+            "IsVerifiedPurchase", "OrderId", "HelpfulRaw", "Status", "ModeratedByUserId", "ModeratedAt", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 1, '11111111-1111-1111-1111-111111111111', 'Admin User', NULL, 5, 'Great demo phone', 'Works well in tests',
+         '[]'::jsonb, '["battery"]'::jsonb, '[]'::jsonb, TRUE, 1, '{"up":3,"down":0}'::jsonb, 1, '44444444-4444-4444-4444-444444444444', NOW(), NOW(), NOW(), FALSE, NULL),
+        (2, 4, '55555555-5555-5555-5555-555555555555', 'Plain User', NULL, 4, 'Good kettle', 'Heats quickly',
+         '[]'::jsonb, '["fast"]'::jsonb, '["short-cable"]'::jsonb, FALSE, NULL, '{"up":1,"down":0}'::jsonb, 1, '44444444-4444-4444-4444-444444444444', NOW(), NOW(), NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'company_reviews') THEN
+        INSERT INTO company_reviews (
+            "Id", "CompanyId", "UserId", "UserName", "OrderId", "IsVerifiedPurchase", "RatingsRaw", "OverallRating", "Comment",
+            "Status", "ModeratedByUserId", "ModeratedAt", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'Admin User', 1, TRUE,
+         '{"service":5,"shipping":4}'::jsonb, 4.50, 'Fast support and delivery', 1, '44444444-4444-4444-4444-444444444444', NOW(), NOW(), NOW(), FALSE, NULL),
+        (2, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '55555555-5555-5555-5555-555555555555', 'Plain User', NULL, FALSE,
+         '{"service":4,"quality":4}'::jsonb, 4.00, 'Nice assortment', 1, '44444444-4444-4444-4444-444444444444', NOW(), NOW(), NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'review_replies') THEN
+        INSERT INTO review_replies (
+            "Id", "ProductReviewId", "CompanyReviewId", "CompanyId", "AuthorUserId", "Body", "IsEdited",
+            "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 1, NULL, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'Thanks for your feedback on the phone!', FALSE,
+         NOW(), NOW(), FALSE, NULL),
+        (2, NULL, 1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'We appreciate your review and will keep improving.', FALSE,
+         NOW(), NOW(), FALSE, NULL);
+    END IF;
     END IF;
 END $$;
 
@@ -600,6 +761,90 @@ BEGIN
         seq_name := pg_get_serial_sequence('inventory_reservations', 'Id');
         IF seq_name IS NOT NULL THEN
             PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM inventory_reservations), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'company_legal_profiles') THEN
+        seq_name := pg_get_serial_sequence('company_legal_profiles', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM company_legal_profiles), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'company_contracts') THEN
+        seq_name := pg_get_serial_sequence('company_contracts', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM company_contracts), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'company_commission_rates') THEN
+        seq_name := pg_get_serial_sequence('company_commission_rates', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM company_commission_rates), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'carts') THEN
+        seq_name := pg_get_serial_sequence('carts', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM carts), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'cart_items') THEN
+        seq_name := pg_get_serial_sequence('cart_items', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM cart_items), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'favorites') THEN
+        seq_name := pg_get_serial_sequence('favorites', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM favorites), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'orders') THEN
+        seq_name := pg_get_serial_sequence('orders', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM orders), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'order_items') THEN
+        seq_name := pg_get_serial_sequence('order_items', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM order_items), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'order_addresses') THEN
+        seq_name := pg_get_serial_sequence('order_addresses', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM order_addresses), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'payments') THEN
+        seq_name := pg_get_serial_sequence('payments', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM payments), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'refunds') THEN
+        seq_name := pg_get_serial_sequence('refunds', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM refunds), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'product_reviews') THEN
+        seq_name := pg_get_serial_sequence('product_reviews', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM product_reviews), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'company_reviews') THEN
+        seq_name := pg_get_serial_sequence('company_reviews', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM company_reviews), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'review_replies') THEN
+        seq_name := pg_get_serial_sequence('review_replies', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM review_replies), true);
         END IF;
     END IF;
 END $$;

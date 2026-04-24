@@ -1,5 +1,6 @@
 using Hangfire;
 using Marketplace.API.Extensions;
+using Marketplace.Application.Payments.Ports;
 using Marketplace.Infrastructure.External.Email;
 using Marketplace.Infrastructure.Jobs;
 using Microsoft.Extensions.Options;
@@ -42,6 +43,10 @@ RecurringJob.AddOrUpdate<SearchIndexJobs>(
     "search-full-reindex-products",
     job => job.FullReindexAsync(default),
     Cron.Daily(2));
+RecurringJob.AddOrUpdate<PaymentJobs>(
+    "payments-sync-pending-liqpay",
+    job => job.SyncPendingPaymentsAsync(default),
+    Cron.Minutely);
 
 app.MapControllers();
 
@@ -81,6 +86,32 @@ app.MapGet("/health/sendgrid/key-trace", (IConfiguration cfg, IOptions<SendGridO
     return Results.Ok(response);
 })
     .WithName("SendGridKeyTrace")
+    .WithTags("Health");
+
+app.MapGet("/health/liqpay/config", (ILiqPayPort port) =>
+{
+    var status = port.CheckConfig();
+    return status.IsHealthy
+        ? Results.Ok(status)
+        : Results.Problem(
+            title: "LiqPay config health check failed",
+            detail: status.Message,
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+})
+    .WithName("LiqPayConfigHealthCheck")
+    .WithTags("Health");
+
+app.MapGet("/health/liqpay", async (ILiqPayPort port, CancellationToken ct) =>
+{
+    var status = await port.CheckReadinessAsync(ct);
+    return status.IsHealthy
+        ? Results.Ok(status)
+        : Results.Problem(
+            title: "LiqPay readiness check failed",
+            detail: status.Message,
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+})
+    .WithName("LiqPayReadinessHealthCheck")
     .WithTags("Health");
 
 app.Run();

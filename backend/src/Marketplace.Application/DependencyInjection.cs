@@ -2,6 +2,8 @@ using FluentValidation;
 using Marketplace.Application.Common.Behaviors;
 using Marketplace.Application.Inventory.Authorization;
 using Marketplace.Application.Products.Authorization;
+using Marketplace.Application.Reviews.Authorization;
+using Marketplace.Application.Reviews.Services;
 using Marketplace.Application.Users.Services;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +28,9 @@ public static class DependencyInjection
         services.AddScoped<IUserManagementService, UserManagementService>();
         services.AddScoped<IInventoryAccessService, InventoryAccessService>();
         services.AddScoped<IProductAccessService, ProductAccessService>();
+        services.AddScoped<IReviewAccessService, ReviewAccessService>();
+        services.AddScoped<IReviewPurchaseVerificationService, ReviewPurchaseVerificationService>();
+        services.AddScoped<IReviewRatingAggregationService, ReviewRatingAggregationService>();
 
         return services;
     }

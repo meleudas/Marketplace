@@ -163,6 +163,16 @@ public sealed class Product : AuditableSoftDeleteAggregateRoot<ProductId>
         Touch();
     }
 
+    public void SetReviewStats(decimal? rating, int reviewCount)
+    {
+        EnsureNotDeleted();
+        if (reviewCount < 0)
+            throw new DomainException("Review count cannot be negative");
+        Rating = rating;
+        ReviewCount = reviewCount;
+        Touch();
+    }
+
     public void SoftDelete()
     {
         if (IsDeleted)

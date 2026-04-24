@@ -5,6 +5,7 @@ using Marketplace.Application.Auth.Ports;
 using Marketplace.Application.Common.Options;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Products.Ports;
+using Marketplace.Application.Payments.Ports;
 using Marketplace.Domain.Categories.Repositories;
 using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Cart.Repositories;
@@ -13,12 +14,15 @@ using Marketplace.Domain.Favorites.Repositories;
 using Marketplace.Domain.Users.Repositories;
 using Marketplace.Domain.Inventory.Repositories;
 using Marketplace.Domain.Orders.Repositories;
+using Marketplace.Domain.Payments.Repositories;
+using Marketplace.Domain.Reviews.Repositories;
 using Marketplace.Infrastructure.Caching;
 using Marketplace.Infrastructure.External.Email;
 using Marketplace.Infrastructure.External.OAuth;
 using Marketplace.Infrastructure.External.Search;
 using Marketplace.Infrastructure.External.Sms;
 using Marketplace.Infrastructure.External.Telegram;
+using Marketplace.Infrastructure.External.Payments;
 using Marketplace.Infrastructure.Identity;
 using Marketplace.Infrastructure.Identity.Entities;
 using Marketplace.Infrastructure.Identity.Managers;
@@ -49,6 +53,7 @@ public static class DependencyInjection
         services.Configure<FrontendOptions>(configuration.GetSection(FrontendOptions.SectionName));
         services.Configure<CacheTtlOptions>(configuration.GetSection(CacheTtlOptions.SectionName));
         services.Configure<ElasticsearchOptions>(configuration.GetSection(ElasticsearchOptions.SectionName));
+        services.Configure<LiqPayOptions>(configuration.GetSection(LiqPayOptions.SectionName));
 
         var connectionString = configuration.GetConnectionString("Database")
             ?? throw new InvalidOperationException("Connection string 'Database' is not configured.");
@@ -141,7 +146,9 @@ public static class DependencyInjection
         services.AddScoped<NotificationJobs>();
         services.AddScoped<InventoryJobs>();
         services.AddScoped<SearchIndexJobs>();
+        services.AddScoped<PaymentJobs>();
         services.AddScoped<IAppCachePort, AppCachePort>();
+        services.AddHttpClient<ILiqPayPort, LiqPayClient>();
         services.AddSingleton(sp =>
         {
             var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ElasticsearchOptions>>().Value;
@@ -156,6 +163,9 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<ICompanyMemberRepository, CompanyMemberRepository>();
+        services.AddScoped<ICompanyLegalProfileRepository, CompanyLegalProfileRepository>();
+        services.AddScoped<ICompanyContractRepository, CompanyContractRepository>();
+        services.AddScoped<ICompanyCommissionRateRepository, CompanyCommissionRateRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IProductDetailRepository, ProductDetailRepository>();
@@ -166,6 +176,11 @@ public static class DependencyInjection
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IOrderItemRepository, OrderItemRepository>();
         services.AddScoped<IOrderAddressSnapshotRepository, OrderAddressSnapshotRepository>();
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
+        services.AddScoped<IRefundRepository, RefundRepository>();
+        services.AddScoped<IProductReviewRepository, ProductReviewRepository>();
+        services.AddScoped<ICompanyReviewRepository, CompanyReviewRepository>();
+        services.AddScoped<IReviewReplyRepository, ReviewReplyRepository>();
         services.AddScoped<IWarehouseRepository, WarehouseRepository>();
         services.AddScoped<IWarehouseStockRepository, WarehouseStockRepository>();
         services.AddScoped<IStockMovementRepository, StockMovementRepository>();

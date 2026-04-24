@@ -12,4 +12,7 @@ public static class CatalogCacheKeys
     public const string AdminCompanyByIdPrefix = "admin:companies:id:";
     public const string CatalogCategoryByIdPrefix = "catalog:categories:id:";
     public const string AdminCategoryByIdPrefix = "admin:categories:id:";
+    public const string AdminCompanyLegalProfilePrefix = "admin:companies:legal-profile:";
+    public const string AdminCompanyCommissionRatesPrefix = "admin:companies:commission-rates:";
+    public const string AdminCompanyContractsPrefix = "admin:companies:contracts:";
 }

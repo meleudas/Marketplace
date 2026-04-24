@@ -1,12 +1,16 @@
 using Marketplace.Application.Carts.Cache;
 using Marketplace.Application.Carts.DTOs;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Payments.Ports;
 using Marketplace.Domain.Cart.Repositories;
 using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Entities;
 using Marketplace.Domain.Orders.Enums;
 using Marketplace.Domain.Orders.Repositories;
+using Marketplace.Domain.Payments.Entities;
+using Marketplace.Domain.Payments.Enums;
+using Marketplace.Domain.Payments.Repositories;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
 
@@ -20,6 +24,8 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
     private readonly IOrderRepository _orderRepository;
     private readonly IOrderItemRepository _orderItemRepository;
     private readonly IOrderAddressSnapshotRepository _orderAddressRepository;
+    private readonly IPaymentRepository _paymentRepository;
+    private readonly ILiqPayPort _liqPayPort;
     private readonly IAppCachePort _cache;
 
     public CheckoutCartCommandHandler(
@@ -29,6 +35,8 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
         IOrderRepository orderRepository,
         IOrderItemRepository orderItemRepository,
         IOrderAddressSnapshotRepository orderAddressRepository,
+        IPaymentRepository paymentRepository,
+        ILiqPayPort liqPayPort,
         IAppCachePort cache)
     {
         _cartRepository = cartRepository;
@@ -37,6 +45,8 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
         _orderRepository = orderRepository;
         _orderItemRepository = orderItemRepository;
         _orderAddressRepository = orderAddressRepository;
+        _paymentRepository = paymentRepository;
+        _liqPayPort = liqPayPort;
         _cache = cache;
     }
 
@@ -139,13 +149,77 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
 
                 await _orderAddressRepository.AddRangeAsync([address], ct);
 
+                PaymentInitDto? paymentDto = null;
+                var paymentMethodKind = request.PaymentMethod switch
+                {
+                    CheckoutPaymentMethod.Card => PaymentMethodKind.LiqPay,
+                    CheckoutPaymentMethod.PayPal => PaymentMethodKind.PayPal,
+                    CheckoutPaymentMethod.BankTransfer => PaymentMethodKind.BankTransfer,
+                    CheckoutPaymentMethod.Cash => PaymentMethodKind.Cash,
+                    _ => PaymentMethodKind.Card
+                };
+
+                if (paymentMethodKind == PaymentMethodKind.Cash)
+                {
+                    var cashPayment = Payment.Create(
+                        PaymentId.From(0),
+                        savedOrder.Id,
+                        PaymentMethodKind.Cash,
+                        savedOrder.TotalPrice,
+                        "UAH",
+                        null,
+                        PaymentTransactionStatus.Pending,
+                        JsonBlob.Empty);
+                    await _paymentRepository.AddAsync(cashPayment, ct);
+                }
+                else
+                {
+                    var callbackUrl = "/integrations/liqpay/webhook";
+                    var resultUrl = "/checkout/result";
+                    var liqPayResult = await _liqPayPort.CreatePaymentAsync(
+                        new LiqPayCreatePaymentRequest(
+                            savedOrder.OrderNumber,
+                            savedOrder.TotalPrice.Amount,
+                            "UAH",
+                            $"Marketplace order {savedOrder.OrderNumber}",
+                            callbackUrl,
+                            resultUrl),
+                        ct);
+
+                    var payment = Payment.Create(
+                        PaymentId.From(0),
+                        savedOrder.Id,
+                        paymentMethodKind == PaymentMethodKind.LiqPay ? PaymentMethodKind.LiqPay : paymentMethodKind,
+                        savedOrder.TotalPrice,
+                        "UAH",
+                        liqPayResult.TransactionId,
+                        liqPayResult.IsSuccess ? PaymentTransactionStatus.Pending : PaymentTransactionStatus.Failed,
+                        new JsonBlob(liqPayResult.RawResponse));
+                    await _paymentRepository.AddAsync(payment, ct);
+
+                    paymentDto = new PaymentInitDto(
+                        "liqpay",
+                        liqPayResult.IsSuccess ? "pending" : "pending_failed_init",
+                        liqPayResult.TransactionId,
+                        liqPayResult.Data,
+                        liqPayResult.Signature,
+                        liqPayResult.CheckoutUrl);
+
+                    if (!liqPayResult.IsSuccess)
+                    {
+                        savedOrder.MarkFailed();
+                        await _orderRepository.UpdateAsync(savedOrder, ct);
+                    }
+                }
+
                 createdOrders.Add(new CreatedOrderDto(
                     savedOrder.Id.Value,
                     savedOrder.OrderNumber,
                     savedOrder.CompanyId.Value,
                     savedOrder.Status,
                     orderItems.Count,
-                    savedOrder.TotalPrice.Amount));
+                    savedOrder.TotalPrice.Amount,
+                    paymentDto));
             }
 
             await _cartItemRepository.SoftDeleteByCartIdAsync(cart.Id, now, ct);

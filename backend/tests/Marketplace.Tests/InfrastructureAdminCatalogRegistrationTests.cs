@@ -10,7 +10,7 @@ namespace Marketplace.Tests;
 public class InfrastructureAdminCatalogRegistrationTests
 {
     [Fact]
-    public void AddInfrastructure_Registers_Company_And_Category_Repositories()
+    public void AddInfrastructure_Registers_Company_Contract_And_Category_Repositories()
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -20,9 +20,15 @@ public class InfrastructureAdminCatalogRegistrationTests
         using var scope = provider.CreateScope();
 
         var companyRepository = scope.ServiceProvider.GetRequiredService<ICompanyRepository>();
+        var legalProfileRepository = scope.ServiceProvider.GetRequiredService<ICompanyLegalProfileRepository>();
+        var contractRepository = scope.ServiceProvider.GetRequiredService<ICompanyContractRepository>();
+        var commissionRepository = scope.ServiceProvider.GetRequiredService<ICompanyCommissionRateRepository>();
         var categoryRepository = scope.ServiceProvider.GetRequiredService<ICategoryRepository>();
 
         Assert.IsType<CompanyRepository>(companyRepository);
+        Assert.IsType<CompanyLegalProfileRepository>(legalProfileRepository);
+        Assert.IsType<CompanyContractRepository>(contractRepository);
+        Assert.IsType<CompanyCommissionRateRepository>(commissionRepository);
         Assert.IsType<CategoryRepository>(categoryRepository);
     }
 

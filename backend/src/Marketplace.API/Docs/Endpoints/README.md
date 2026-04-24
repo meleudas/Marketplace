@@ -26,6 +26,9 @@
 | [CompanyMembers.md](CompanyMembers.md) | `/companies/{companyId}/members` |
 | [Cart.md](Cart.md) | `/me/cart` |
 | [Favorites.md](Favorites.md) | `/me/favorites` |
+| [Reviews.md](Reviews.md) | `/products/*/reviews`, `/companies/*/reviews`, `/reviews/*`, `/admin/reviews/*` |
+| [AdminPayments.md](AdminPayments.md) | `/admin/payments` |
+| [PaymentsIntegrations.md](PaymentsIntegrations.md) | `/integrations/liqpay` |
 | [TelegramIntegrations.md](TelegramIntegrations.md) | `/integrations/telegram` |
 
 ## Системні маршрути (не з контролерів, `Program.cs`)
@@ -46,3 +49,13 @@
 
 - **Призначення:** діагностика джерел API-ключа (масковано).
 - **Авторизація:** немає в коді — **не відкривати в публічному інтернеті без захисту**.
+
+### `GET /health/liqpay/config`
+
+- **Призначення:** liveness перевірка наявності LiqPay ключів у конфігурації.
+- **Повертає:** healthy/unhealthy JSON.
+
+### `GET /health/liqpay`
+
+- **Призначення:** readiness перевірка доступності LiqPay API.
+- **Повертає:** healthy/unhealthy JSON.

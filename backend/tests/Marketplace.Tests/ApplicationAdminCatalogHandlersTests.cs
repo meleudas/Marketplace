@@ -8,6 +8,7 @@ using Marketplace.Domain.Categories.Entities;
 using Marketplace.Domain.Categories.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Companies.Entities;
+using Marketplace.Domain.Companies.Enums;
 using Marketplace.Domain.Companies.Repositories;
 
 namespace Marketplace.Tests;
@@ -18,7 +19,8 @@ public class ApplicationAdminCatalogHandlersTests
     public async Task CreateCompanyHandler_Creates_Company()
     {
         var repo = new InMemoryCompanyRepository();
-        var handler = new CreateCompanyCommandHandler(repo, new NoOpCachePort());
+        var legalRepo = new InMemoryCompanyLegalProfileRepository();
+        var handler = new CreateCompanyCommandHandler(repo, legalRepo, new NoOpCachePort());
         var command = new CreateCompanyCommand(
             "Company",
             "company",
@@ -27,19 +29,26 @@ public class ApplicationAdminCatalogHandlersTests
             "mail@company.com",
             "+380000000000",
             new CompanyAddressDto("Street", "City", "State", "00000", "UA"),
+            new CompanyLegalProfileDto("Company LLC", "llc", "12345678", null, null, true, 12m),
             null);
 
         var result = await handler.Handle(command, CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Single(repo.Items);
+        Assert.Single(legalRepo.Items);
     }
 
     [Fact]
     public async Task ApproveCompanyHandler_Returns_Failure_When_Not_Found()
     {
         var repo = new InMemoryCompanyRepository();
-        var handler = new ApproveCompanyCommandHandler(repo, new NoOpCachePort());
+        var handler = new ApproveCompanyCommandHandler(
+            repo,
+            new InMemoryCompanyLegalProfileRepository(),
+            new InMemoryCompanyContractRepository(),
+            new InMemoryCompanyCommissionRateRepository(),
+            new NoOpCachePort());
 
         var result = await handler.Handle(new ApproveCompanyCommand(Guid.NewGuid(), Guid.NewGuid()), CancellationToken.None);
 
@@ -153,6 +162,118 @@ public class ApplicationAdminCatalogHandlersTests
         public Task UpdateAsync(Category category, CancellationToken ct = default)
         {
             Items[category.Id.Value] = category;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class InMemoryCompanyLegalProfileRepository : ICompanyLegalProfileRepository
+    {
+        public Dictionary<Guid, CompanyLegalProfile> Items { get; } = new();
+        private long _nextId = 1;
+
+        public Task<CompanyLegalProfile?> GetByCompanyIdAsync(CompanyId companyId, CancellationToken ct = default)
+            => Task.FromResult(Items.GetValueOrDefault(companyId.Value));
+
+        public Task AddAsync(CompanyLegalProfile legalProfile, CancellationToken ct = default)
+        {
+            if (legalProfile.Id.Value == 0)
+            {
+                legalProfile = CompanyLegalProfile.Reconstitute(
+                    CompanyLegalProfileId.From(_nextId++),
+                    legalProfile.CompanyId,
+                    legalProfile.LegalName,
+                    legalProfile.LegalType,
+                    legalProfile.Edrpou,
+                    legalProfile.Ipn,
+                    legalProfile.CertificateNumber,
+                    legalProfile.IsVatPayer,
+                    legalProfile.InitialCommissionPercent,
+                    legalProfile.CreatedAt,
+                    legalProfile.UpdatedAt,
+                    legalProfile.IsDeleted,
+                    legalProfile.DeletedAt);
+            }
+
+            Items[legalProfile.CompanyId.Value] = legalProfile;
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(CompanyLegalProfile legalProfile, CancellationToken ct = default)
+        {
+            Items[legalProfile.CompanyId.Value] = legalProfile;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class InMemoryCompanyContractRepository : ICompanyContractRepository
+    {
+        private readonly Dictionary<Guid, CompanyContract> _contractsByCompany = new();
+        private long _nextId = 1;
+
+        public Task<CompanyContract?> GetActiveByCompanyIdAsync(CompanyId companyId, CancellationToken ct = default)
+            => Task.FromResult(_contractsByCompany.GetValueOrDefault(companyId.Value));
+
+        public Task<CompanyContract?> GetByIdAsync(CompanyContractId id, CancellationToken ct = default)
+            => Task.FromResult(_contractsByCompany.Values.FirstOrDefault(x => x.Id == id));
+
+        public Task<CompanyContract> AddAsync(CompanyContract contract, CancellationToken ct = default)
+        {
+            if (contract.Id.Value == 0)
+            {
+                contract = CompanyContract.Reconstitute(
+                    CompanyContractId.From(_nextId++),
+                    contract.CompanyId,
+                    contract.ContractNumber,
+                    CompanyContractStatus.Active,
+                    contract.EffectiveFrom,
+                    contract.EffectiveTo,
+                    contract.SignedAt,
+                    contract.Notes,
+                    contract.CreatedAt,
+                    contract.UpdatedAt,
+                    contract.IsDeleted,
+                    contract.DeletedAt);
+            }
+
+            _contractsByCompany[contract.CompanyId.Value] = contract;
+            return Task.FromResult(contract);
+        }
+    }
+
+    private sealed class InMemoryCompanyCommissionRateRepository : ICompanyCommissionRateRepository
+    {
+        private readonly Dictionary<Guid, CompanyCommissionRate> _activeByCompany = new();
+        private long _nextId = 1;
+
+        public Task<CompanyCommissionRate?> GetActiveByCompanyIdAsync(CompanyId companyId, CancellationToken ct = default)
+            => Task.FromResult(_activeByCompany.GetValueOrDefault(companyId.Value));
+
+        public Task<CompanyCommissionRate> AddAsync(CompanyCommissionRate rate, CancellationToken ct = default)
+        {
+            if (rate.Id.Value == 0)
+            {
+                rate = CompanyCommissionRate.Reconstitute(
+                    CompanyCommissionRateId.From(_nextId++),
+                    rate.CompanyId,
+                    rate.ContractId,
+                    rate.CommissionPercent,
+                    rate.EffectiveFrom,
+                    rate.EffectiveTo,
+                    rate.Reason,
+                    rate.CreatedByUserId,
+                    rate.CreatedAt,
+                    rate.UpdatedAt,
+                    rate.IsDeleted,
+                    rate.DeletedAt);
+            }
+
+            _activeByCompany[rate.CompanyId.Value] = rate;
+            return Task.FromResult(rate);
+        }
+
+        public Task UpdateAsync(CompanyCommissionRate rate, CancellationToken ct = default)
+        {
+            _activeByCompany[rate.CompanyId.Value] = rate;
             return Task.CompletedTask;
         }
     }

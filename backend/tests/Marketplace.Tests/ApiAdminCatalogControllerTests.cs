@@ -51,6 +51,7 @@ public class ApiAdminCatalogControllerTests
             new CreateCompanyRequest(
                 "Company", "company", "Description", null, "mail@company.com", "+380",
                 new CompanyAddressRequest("Street", "City", "State", "00000", "UA"),
+                new CompanyLegalProfileRequest("Company LLC", "llc", "12345678", null, null, true, 12m),
                 null),
             CancellationToken.None);
 
