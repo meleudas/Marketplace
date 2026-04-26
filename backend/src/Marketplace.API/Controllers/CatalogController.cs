@@ -85,7 +85,8 @@ public sealed class CatalogController : ControllerBase
             request.AvailabilityStatus,
             request.Sort,
             request.Page ?? 1,
-            request.PageSize ?? 20), ct);
+            request.PageSize ?? 20,
+            request.SearchAfter), ct);
         return result.ToActionResult();
     }
 }
@@ -100,4 +101,5 @@ public sealed record SearchCatalogProductsRequest(
     string? AvailabilityStatus,
     string? Sort,
     int? Page,
-    int? PageSize);
+    int? PageSize,
+    string? SearchAfter);

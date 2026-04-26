@@ -1,4 +1,5 @@
 using Marketplace.Application.Payments.Ports;
+using Marketplace.Application.Orders.Services;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Repositories;
 using Marketplace.Domain.Payments.Entities;
@@ -15,17 +16,20 @@ public sealed class RequestRefundCommandHandler : IRequestHandler<RequestRefundC
     private readonly IRefundRepository _refundRepository;
     private readonly IOrderRepository _orderRepository;
     private readonly ILiqPayPort _liqPayPort;
+    private readonly IOrderStatusHistoryWriter _historyWriter;
 
     public RequestRefundCommandHandler(
         IPaymentRepository paymentRepository,
         IRefundRepository refundRepository,
         IOrderRepository orderRepository,
-        ILiqPayPort liqPayPort)
+        ILiqPayPort liqPayPort,
+        IOrderStatusHistoryWriter historyWriter)
     {
         _paymentRepository = paymentRepository;
         _refundRepository = refundRepository;
         _orderRepository = orderRepository;
         _liqPayPort = liqPayPort;
+        _historyWriter = historyWriter;
     }
 
     public async Task<Result> Handle(RequestRefundCommand request, CancellationToken ct)
@@ -62,8 +66,16 @@ public sealed class RequestRefundCommandHandler : IRequestHandler<RequestRefundC
             var order = await _orderRepository.GetByIdAsync(payment.OrderId, ct);
             if (order is not null)
             {
+                var oldStatus = order.Status;
                 order.MarkRefunded();
                 await _orderRepository.UpdateAsync(order, ct);
+                await _historyWriter.WriteIfChangedAsync(
+                    order,
+                    oldStatus,
+                    request.AdminUserId,
+                    "refund",
+                    correlationId: response.TransactionId,
+                    ct: ct);
             }
 
             return Result.Success();

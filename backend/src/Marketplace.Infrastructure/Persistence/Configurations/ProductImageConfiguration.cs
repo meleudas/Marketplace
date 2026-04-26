@@ -12,6 +12,9 @@ public sealed class ProductImageConfiguration : IEntityTypeConfiguration<Product
         builder.HasKey(x => x.Id);
         builder.Property(x => x.ImageUrl).HasMaxLength(2048).IsRequired();
         builder.Property(x => x.ThumbnailUrl).HasMaxLength(2048).IsRequired();
+        builder.Property(x => x.OriginalObjectKey).HasMaxLength(1024).IsRequired();
+        builder.Property(x => x.ImageObjectKey).HasMaxLength(1024).IsRequired();
+        builder.Property(x => x.ThumbnailObjectKey).HasMaxLength(1024).IsRequired();
         builder.Property(x => x.AltText).HasMaxLength(512).IsRequired();
         builder.Property(x => x.IsDeleted).HasDefaultValue(false);
 

@@ -1,4 +1,5 @@
 using Marketplace.Application.Payments.Commands.HandleLiqPayWebhook;
+using Marketplace.Infrastructure.Observability;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,7 +18,12 @@ public sealed class PaymentsIntegrationsController : ControllerBase
     [HttpPost("webhook")]
     public async Task<IActionResult> Webhook([FromBody] LiqPayWebhookRequest request, CancellationToken ct)
     {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.WebhookLatencyMs, new KeyValuePair<string, object?>("provider", "liqpay"));
         var result = await _sender.Send(new HandleLiqPayWebhookCommand(request.Data, request.Signature), ct);
+        if (result.IsSuccess)
+            MarketplaceMetrics.WebhookOps.Add(1, [new KeyValuePair<string, object?>("provider", "liqpay"), new KeyValuePair<string, object?>("status", "success")]);
+        else
+            MarketplaceMetrics.WebhookErrors.Add(1, [new KeyValuePair<string, object?>("provider", "liqpay")]);
         return result.IsSuccess ? Ok() : Unauthorized();
     }
 }

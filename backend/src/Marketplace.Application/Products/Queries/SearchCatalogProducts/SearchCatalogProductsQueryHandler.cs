@@ -40,6 +40,7 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
                 request.Sort,
                 request.Page,
                 request.PageSize,
+                request.SearchAfter,
                 ct);
 
             if (esResult.IsSuccess)

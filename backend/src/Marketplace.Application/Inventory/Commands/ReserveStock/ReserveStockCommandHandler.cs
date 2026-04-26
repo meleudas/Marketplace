@@ -19,6 +19,7 @@ public sealed class ReserveStockCommandHandler : IRequestHandler<ReserveStockCom
     private readonly IStockMovementRepository _movementRepository;
     private readonly IProductRepository _productRepository;
     private readonly IAppCachePort _cache;
+    private readonly IOutboxWriter _outbox;
 
     public ReserveStockCommandHandler(
         IInventoryAccessService access,
@@ -26,7 +27,8 @@ public sealed class ReserveStockCommandHandler : IRequestHandler<ReserveStockCom
         IInventoryReservationRepository reservationRepository,
         IStockMovementRepository movementRepository,
         IProductRepository productRepository,
-        IAppCachePort cache)
+        IAppCachePort cache,
+        IOutboxWriter outbox)
     {
         _access = access;
         _stockRepository = stockRepository;
@@ -34,6 +36,7 @@ public sealed class ReserveStockCommandHandler : IRequestHandler<ReserveStockCom
         _movementRepository = movementRepository;
         _productRepository = productRepository;
         _cache = cache;
+        _outbox = outbox;
     }
 
     public async Task<Result> Handle(ReserveStockCommand request, CancellationToken ct)
@@ -77,6 +80,21 @@ public sealed class ReserveStockCommandHandler : IRequestHandler<ReserveStockCom
                     $"reserve:{request.ReservationCode}",
                     request.ActorUserId,
                     reference: request.Reference),
+                ct);
+            await _outbox.AppendAsync(
+                "InventoryReservation",
+                reservation.Id.Value.ToString(),
+                "InventoryReserved",
+                System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    messageId = Guid.NewGuid(),
+                    reservationId = reservation.Id.Value,
+                    companyId = request.CompanyId,
+                    warehouseId = request.WarehouseId,
+                    productId = request.ProductId,
+                    quantity = request.Quantity,
+                    reservationCode = request.ReservationCode
+                }),
                 ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
             var product = await _productRepository.GetByIdAsync(ProductId.From(request.ProductId), ct);

@@ -1,6 +1,8 @@
 using Marketplace.Application.Carts.Cache;
 using Marketplace.Application.Carts.DTOs;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Orders.Cache;
+using Marketplace.Application.Orders.Services;
 using Marketplace.Application.Payments.Ports;
 using Marketplace.Domain.Cart.Repositories;
 using Marketplace.Domain.Catalog.Repositories;
@@ -27,6 +29,9 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
     private readonly IPaymentRepository _paymentRepository;
     private readonly ILiqPayPort _liqPayPort;
     private readonly IAppCachePort _cache;
+    private readonly IOrderCacheInvalidationService _orderCacheInvalidation;
+    private readonly IOutboxWriter _outbox;
+    private readonly IOrderStatusHistoryWriter _historyWriter;
 
     public CheckoutCartCommandHandler(
         ICartRepository cartRepository,
@@ -37,7 +42,10 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
         IOrderAddressSnapshotRepository orderAddressRepository,
         IPaymentRepository paymentRepository,
         ILiqPayPort liqPayPort,
-        IAppCachePort cache)
+        IAppCachePort cache,
+        IOrderCacheInvalidationService orderCacheInvalidation,
+        IOutboxWriter outbox,
+        IOrderStatusHistoryWriter historyWriter)
     {
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
@@ -48,6 +56,9 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
         _paymentRepository = paymentRepository;
         _liqPayPort = liqPayPort;
         _cache = cache;
+        _orderCacheInvalidation = orderCacheInvalidation;
+        _outbox = outbox;
+        _historyWriter = historyWriter;
     }
 
     public async Task<Result<CheckoutResultDto>> Handle(CheckoutCartCommand request, CancellationToken ct)
@@ -207,8 +218,16 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
 
                     if (!liqPayResult.IsSuccess)
                     {
+                        var oldStatus = savedOrder.Status;
                         savedOrder.MarkFailed();
                         await _orderRepository.UpdateAsync(savedOrder, ct);
+                        await _historyWriter.WriteIfChangedAsync(
+                            savedOrder,
+                            oldStatus,
+                            request.ActorUserId,
+                            "checkout",
+                            correlationId: liqPayResult.TransactionId,
+                            ct: ct);
                     }
                 }
 
@@ -220,6 +239,25 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
                     orderItems.Count,
                     savedOrder.TotalPrice.Amount,
                     paymentDto));
+
+                await _orderCacheInvalidation.InvalidateOrderAsync(
+                    savedOrder.Id.Value,
+                    savedOrder.CustomerId,
+                    savedOrder.CompanyId.Value,
+                    ct);
+                await _outbox.AppendAsync(
+                    "Order",
+                    savedOrder.Id.Value.ToString(),
+                    "OrderCreated",
+                    System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        messageId = Guid.NewGuid(),
+                        orderId = savedOrder.Id.Value,
+                        customerId = savedOrder.CustomerId,
+                        companyId = savedOrder.CompanyId.Value,
+                        orderNumber = savedOrder.OrderNumber
+                    }),
+                    ct);
             }
 
             await _cartItemRepository.SoftDeleteByCartIdAsync(cart.Id, now, ct);

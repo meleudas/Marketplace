@@ -18,6 +18,7 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
     private readonly IProductRepository _productRepository;
     private readonly IProductDetailRepository _detailRepository;
     private readonly IProductImageRepository _imageRepository;
+    private readonly IObjectStorage _storage;
     private readonly IAppCachePort _cache;
     private readonly IProductSearchIndexDispatcher _searchIndexDispatcher;
 
@@ -26,6 +27,7 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
         IProductRepository productRepository,
         IProductDetailRepository detailRepository,
         IProductImageRepository imageRepository,
+        IObjectStorage storage,
         IAppCachePort cache,
         IProductSearchIndexDispatcher searchIndexDispatcher)
     {
@@ -33,6 +35,7 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
         _productRepository = productRepository;
         _detailRepository = detailRepository;
         _imageRepository = imageRepository;
+        _storage = storage;
         _cache = cache;
         _searchIndexDispatcher = searchIndexDispatcher;
     }
@@ -94,12 +97,21 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
                 }
             }
 
+            var existingImages = await _imageRepository.ListByProductIdAsync(product.Id, ct);
+            var oldKeys = existingImages
+                .SelectMany(x => new[] { x.OriginalObjectKey, x.ImageObjectKey, x.ThumbnailObjectKey })
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
             var images = (request.Images ?? [])
                 .Select(x => ProductImage.Create(
                     ProductImageId.From(0),
                     product.Id,
                     x.ImageUrl,
                     x.ThumbnailUrl,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
                     x.AltText,
                     x.SortOrder,
                     x.IsMain,
@@ -108,6 +120,23 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
                     x.FileSize))
                 .ToList();
             await _imageRepository.ReplaceForProductAsync(product.Id, images, ct);
+
+            var keepKeys = images
+                .SelectMany(x => new[] { x.OriginalObjectKey, x.ImageObjectKey, x.ThumbnailObjectKey })
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var key in oldKeys.Where(x => !keepKeys.Contains(x)))
+            {
+                try
+                {
+                    await _storage.DeleteAsync(key, ct);
+                }
+                catch
+                {
+                    // Best-effort cleanup; recurring cleanup job removes leftovers.
+                }
+            }
 
             await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductDetailPrefix + oldSlug, ct);

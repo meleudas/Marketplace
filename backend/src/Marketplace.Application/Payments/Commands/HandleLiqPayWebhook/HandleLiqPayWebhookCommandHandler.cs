@@ -1,6 +1,10 @@
 using System.Text;
 using System.Text.Json;
+using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Payments.Ports;
+using Marketplace.Application.Payments.Services;
+using Marketplace.Application.Orders.Services;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Repositories;
 using Marketplace.Domain.Payments.Enums;
@@ -15,15 +19,27 @@ public sealed class HandleLiqPayWebhookCommandHandler : IRequestHandler<HandleLi
     private readonly ILiqPayPort _liqPayPort;
     private readonly IPaymentRepository _paymentRepository;
     private readonly IOrderRepository _orderRepository;
+    private readonly IOrderCacheInvalidationService _orderCacheInvalidation;
+    private readonly IOrderPaymentStateApplier _paymentStateApplier;
+    private readonly IOutboxWriter _outbox;
+    private readonly IOrderStatusHistoryWriter _historyWriter;
 
     public HandleLiqPayWebhookCommandHandler(
         ILiqPayPort liqPayPort,
         IPaymentRepository paymentRepository,
-        IOrderRepository orderRepository)
+        IOrderRepository orderRepository,
+        IOrderCacheInvalidationService orderCacheInvalidation,
+        IOrderPaymentStateApplier paymentStateApplier,
+        IOutboxWriter outbox,
+        IOrderStatusHistoryWriter historyWriter)
     {
         _liqPayPort = liqPayPort;
         _paymentRepository = paymentRepository;
         _orderRepository = orderRepository;
+        _orderCacheInvalidation = orderCacheInvalidation;
+        _paymentStateApplier = paymentStateApplier;
+        _outbox = outbox;
+        _historyWriter = historyWriter;
     }
 
     public async Task<Result> Handle(HandleLiqPayWebhookCommand request, CancellationToken ct)
@@ -50,18 +66,36 @@ public sealed class HandleLiqPayWebhookCommandHandler : IRequestHandler<HandleLi
 
             payment.UpdateProviderState(mappedStatus, transactionId, new JsonBlob(json.GetRawText()));
             await _paymentRepository.UpdateAsync(payment, ct);
+            await _outbox.AppendAsync(
+                "Payment",
+                payment.Id.Value.ToString(),
+                "PaymentStatusChanged",
+                JsonSerializer.Serialize(new
+                {
+                    messageId = Guid.NewGuid(),
+                    paymentId = payment.Id.Value,
+                    orderId = payment.OrderId.Value,
+                    transactionId,
+                    status = mappedStatus.ToString(),
+                    source = "webhook"
+                }),
+                ct);
 
             var order = await _orderRepository.GetByIdAsync(payment.OrderId, ct);
             if (order is not null)
             {
-                if (mappedStatus == PaymentTransactionStatus.Completed)
-                    order.MarkPaid();
-                else if (mappedStatus == PaymentTransactionStatus.Refunded)
-                    order.MarkRefunded();
-                else if (mappedStatus == PaymentTransactionStatus.Failed)
-                    order.MarkFailed();
+                var oldStatus = order.Status;
+                _paymentStateApplier.TryApply(order, mappedStatus, out _);
 
                 await _orderRepository.UpdateAsync(order, ct);
+                await _historyWriter.WriteIfChangedAsync(
+                    order,
+                    oldStatus,
+                    Guid.Empty,
+                    "webhook",
+                    correlationId: transactionId,
+                    ct: ct);
+                await _orderCacheInvalidation.InvalidateOrderAsync(order.Id.Value, order.CustomerId, order.CompanyId.Value, ct);
             }
 
             return Result.Success();

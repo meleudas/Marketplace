@@ -22,7 +22,7 @@ public class ApplicationProductSearchQueryTests
                 1, 1, 20)));
         var handler = new SearchCatalogProductsQueryHandler(service, new InMemoryProductRepository(), new InMemoryWarehouseStockRepository());
 
-        var result = await handler.Handle(new SearchCatalogProductsQuery("a", null, null, null, null, null, null, null, 1, 20), CancellationToken.None);
+        var result = await handler.Handle(new SearchCatalogProductsQuery("a", null, null, null, null, null, null, null, 1, 20, null), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value!.Items);
@@ -64,7 +64,7 @@ public class ApplicationProductSearchQueryTests
             stocks);
 
         var result = await handler.Handle(
-            new SearchCatalogProductsQuery("key", null, null, null, 50, 200, null, "price_asc", 1, 20),
+            new SearchCatalogProductsQuery("key", null, null, null, 50, 200, null, "price_asc", 1, 20, null),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -88,6 +88,7 @@ public class ApplicationProductSearchQueryTests
             string? sort,
             int page,
             int pageSize,
+            string? searchAfter,
             CancellationToken ct = default)
             => Task.FromResult(_result);
     }

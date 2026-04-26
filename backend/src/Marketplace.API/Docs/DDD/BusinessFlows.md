@@ -62,8 +62,19 @@
 1. **`POST .../inventory/reservations`** з **`reservationCode`** і **`ttlMinutes`** (1..120) збільшує `Reserved` на складі, створює запис резервації і рух типу Reserve.
 2. Повторний виклик з тим самим кодом, поки резерв **активний**, повертає успіх **без подвійного списання**.
 3. **`DELETE .../reservations/{reservationCode}`** звільняє резерв (логіка в `ReleaseReservationCommandHandler`).
+4. Операції reserve/release пишуть події в `outbox_messages`; повторні доставки обробляються через `inbox_messages` (dedup).
 
 **Контексти:** [InventoryContext](InventoryContext.md).
+
+---
+
+## 6.1 Узгодженість order-payment-inventory (outbox/inbox)
+
+1. Критичні write-операції (`checkout`, `order status/cancel`, payment webhook/sync/jobs, inventory reserve/release) додають події в `outbox_messages`.
+2. Hangfire job `outbox-dispatch-pending` читає pending batch, застосовує retry з backoff і переводить невдалі повідомлення в poison-стан після ліміту спроб.
+3. Consumer-и маркують оброблені повідомлення в `inbox_messages`; дублікати (webhook replay/retry race) стають no-op.
+4. Для `orders` кешу використовується hybrid strategy: інвалідація detail + version bump для list scope (`my`, `company`, `admin`).
+5. Кожен transition статусу order пишеться в `order_status_history` з `source` і `correlationId` для audit trail/timeline.
 
 ---
 

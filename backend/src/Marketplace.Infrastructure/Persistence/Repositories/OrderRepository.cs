@@ -28,6 +28,43 @@ public sealed class OrderRepository : IOrderRepository
         return rows.Select(ToDomain).ToList();
     }
 
+    public async Task<(IReadOnlyList<Order> Items, long Total)> ListAsync(OrderListFilter filter, CancellationToken ct = default)
+    {
+        var q = _context.Orders.AsNoTracking().AsQueryable();
+
+        if (filter.CustomerId.HasValue)
+            q = q.Where(x => x.CustomerId == filter.CustomerId.Value);
+        if (filter.CompanyId.HasValue)
+            q = q.Where(x => x.CompanyId == filter.CompanyId.Value);
+        if (filter.Statuses is { Count: > 0 })
+        {
+            var statuses = filter.Statuses.Select(x => (short)x).ToArray();
+            q = q.Where(x => statuses.Contains(x.Status));
+        }
+        if (filter.CreatedFromUtc.HasValue)
+            q = q.Where(x => x.CreatedAt >= filter.CreatedFromUtc.Value);
+        if (filter.CreatedToUtc.HasValue)
+            q = q.Where(x => x.CreatedAt <= filter.CreatedToUtc.Value);
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var s = filter.Search.Trim();
+            q = q.Where(x => x.OrderNumber.Contains(s));
+        }
+
+        q = (filter.Sort ?? "created_desc").Trim().ToLowerInvariant() switch
+        {
+            "created_asc" => q.OrderBy(x => x.CreatedAt),
+            "total_asc" => q.OrderBy(x => x.TotalPrice),
+            "total_desc" => q.OrderByDescending(x => x.TotalPrice),
+            _ => q.OrderByDescending(x => x.CreatedAt)
+        };
+
+        var total = await q.LongCountAsync(ct);
+        var skip = Math.Max(0, (filter.Page - 1) * filter.PageSize);
+        var rows = await q.Skip(skip).Take(filter.PageSize).ToListAsync(ct);
+        return (rows.Select(ToDomain).ToList(), total);
+    }
+
     public async Task<Order> AddAsync(Order order, CancellationToken ct = default)
     {
         var row = ToRecord(order);

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Marketplace.Application.Payments.Ports;
+using Marketplace.Infrastructure.Observability;
 using Microsoft.Extensions.Options;
 
 namespace Marketplace.Infrastructure.External.Payments;
@@ -19,6 +20,7 @@ public sealed class LiqPayClient : ILiqPayPort
 
     public async Task<LiqPayCreatePaymentResult> CreatePaymentAsync(LiqPayCreatePaymentRequest request, CancellationToken ct = default)
     {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.PaymentLatencyMs, new KeyValuePair<string, object?>("operation", "create_payment"));
         var payload = new
         {
             public_key = _options.PublicKey,
@@ -37,7 +39,11 @@ public sealed class LiqPayClient : ILiqPayPort
         var response = await SendFormAsync("request", data, signature, ct);
 
         if (!response.IsSuccess)
+        {
+            MarketplaceMetrics.PaymentErrors.Add(1, [new KeyValuePair<string, object?>("operation", "create_payment")]);
             return new LiqPayCreatePaymentResult(false, null, null, data, signature, response.RawResponse, response.Error);
+        }
+        MarketplaceMetrics.PaymentOps.Add(1, [new KeyValuePair<string, object?>("operation", "create_payment"), new KeyValuePair<string, object?>("status", "success")]);
 
         var json = response.Json!.Value;
         var transactionId = TryGetString(json, "liqpay_order_id") ?? TryGetString(json, "order_id");
@@ -53,6 +59,7 @@ public sealed class LiqPayClient : ILiqPayPort
 
     public async Task<LiqPayPaymentStatusResult> GetPaymentStatusAsync(string transactionId, CancellationToken ct = default)
     {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.PaymentLatencyMs, new KeyValuePair<string, object?>("operation", "status"));
         var payload = new
         {
             public_key = _options.PublicKey,
@@ -64,7 +71,11 @@ public sealed class LiqPayClient : ILiqPayPort
         var signature = BuildSignature(data);
         var response = await SendFormAsync("request", data, signature, ct);
         if (!response.IsSuccess)
+        {
+            MarketplaceMetrics.PaymentErrors.Add(1, [new KeyValuePair<string, object?>("operation", "status")]);
             return new LiqPayPaymentStatusResult(false, transactionId, null, response.RawResponse, response.Error);
+        }
+        MarketplaceMetrics.PaymentOps.Add(1, [new KeyValuePair<string, object?>("operation", "status"), new KeyValuePair<string, object?>("status", "success")]);
 
         var json = response.Json!.Value;
         var status = TryGetString(json, "status");
@@ -74,6 +85,7 @@ public sealed class LiqPayClient : ILiqPayPort
 
     public async Task<LiqPayRefundResult> RefundAsync(LiqPayRefundRequest request, CancellationToken ct = default)
     {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.PaymentLatencyMs, new KeyValuePair<string, object?>("operation", "refund"));
         var payload = new
         {
             public_key = _options.PublicKey,
@@ -88,7 +100,11 @@ public sealed class LiqPayClient : ILiqPayPort
         var signature = BuildSignature(data);
         var response = await SendFormAsync("request", data, signature, ct);
         if (!response.IsSuccess)
+        {
+            MarketplaceMetrics.PaymentErrors.Add(1, [new KeyValuePair<string, object?>("operation", "refund")]);
             return new LiqPayRefundResult(false, request.TransactionId, null, response.RawResponse, response.Error);
+        }
+        MarketplaceMetrics.PaymentOps.Add(1, [new KeyValuePair<string, object?>("operation", "refund"), new KeyValuePair<string, object?>("status", "success")]);
 
         var json = response.Json!.Value;
         var status = TryGetString(json, "status");

@@ -8,4 +8,5 @@ public sealed record ProductImageDto(
     bool IsMain,
     int? Width,
     int? Height,
-    long? FileSize);
+    long? FileSize,
+    string Status = "ready");

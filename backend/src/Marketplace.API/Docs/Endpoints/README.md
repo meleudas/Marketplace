@@ -28,8 +28,9 @@
 | [Favorites.md](Favorites.md) | `/me/favorites` |
 | [Reviews.md](Reviews.md) | `/products/*/reviews`, `/companies/*/reviews`, `/reviews/*`, `/admin/reviews/*` |
 | [AdminPayments.md](AdminPayments.md) | `/admin/payments` |
+| [Orders.md](Orders.md) | `/me/orders`, `/companies/{companyId}/orders`, `/admin/orders`, `/orders/{orderId}/*` |
 | [PaymentsIntegrations.md](PaymentsIntegrations.md) | `/integrations/liqpay` |
-| [TelegramIntegrations.md](TelegramIntegrations.md) | `/integrations/telegram` |
+| [TelegramIntegrations.md](TelegramIntegrations.md) | `/integrations/telegram` 
 
 ## Системні маршрути (не з контролерів, `Program.cs`)
 
@@ -59,3 +60,8 @@
 
 - **Призначення:** readiness перевірка доступності LiqPay API.
 - **Повертає:** healthy/unhealthy JSON.
+
+### `GET /metrics`
+
+- **Призначення:** Prometheus scrape endpoint для OpenTelemetry metrics.
+- **Містить:** HTTP, runtime, cache, payment/webhook, Hangfire counters/histograms.

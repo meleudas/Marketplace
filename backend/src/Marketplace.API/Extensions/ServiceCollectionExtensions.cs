@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.OpenApi;
+using OpenTelemetry.Metrics;
+using Marketplace.Infrastructure.Observability;
 
 namespace Marketplace.API.Extensions;
 
@@ -76,6 +78,17 @@ public static class ServiceCollectionExtensions
                     .AllowCredentials();
             });
         });
+
+        services.AddOpenTelemetry()
+            .WithMetrics(metrics =>
+            {
+                metrics
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddRuntimeInstrumentation()
+                    .AddMeter(MarketplaceMetrics.MeterName)
+                    .AddPrometheusExporter();
+            });
 
         return services;
     }

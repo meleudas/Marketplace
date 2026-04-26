@@ -15,5 +15,6 @@ public interface IProductSearchService
         string? sort,
         int page,
         int pageSize,
+        string? searchAfter,
         CancellationToken ct = default);
 }

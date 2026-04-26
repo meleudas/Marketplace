@@ -58,7 +58,8 @@
   - `availabilityStatus` (`out_of_stock` / `low_stock` / `in_stock`, опційно)
   - `sort` (`relevance` / `newest` / `price_asc` / `price_desc`)
   - `page` (int, default 1), `pageSize` (int, default 20)
-- **Повертає:** `ProductSearchResultDto` (`items`, `total`, `page`, `pageSize`).
+  - `searchAfter` (base64 cursor, опційно) — cursor для наступної сторінки
+- **Повертає:** `ProductSearchResultDto` (`items`, `total`, `page`, `pageSize`, `nextSearchAfter`).
 - **Side effects:** читає з Elasticsearch; якщо ES недоступний, fallback на БД-логіку каталогу.
 - **Примітки:** `name` комбінується з `categoryIds` як AND-фільтр (пошук по назві всередині вибраних категорій).
 

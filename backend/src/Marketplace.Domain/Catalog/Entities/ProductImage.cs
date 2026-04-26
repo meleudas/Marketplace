@@ -10,6 +10,9 @@ public sealed class ProductImage : AuditableSoftDeleteAggregateRoot<ProductImage
     public ProductId ProductId { get; private set; } = null!;
     public string ImageUrl { get; private set; } = string.Empty;
     public string ThumbnailUrl { get; private set; } = string.Empty;
+    public string OriginalObjectKey { get; private set; } = string.Empty;
+    public string ImageObjectKey { get; private set; } = string.Empty;
+    public string ThumbnailObjectKey { get; private set; } = string.Empty;
     public string AltText { get; private set; } = string.Empty;
     public int SortOrder { get; private set; }
     public bool IsMain { get; private set; }
@@ -22,6 +25,9 @@ public sealed class ProductImage : AuditableSoftDeleteAggregateRoot<ProductImage
         ProductId productId,
         string imageUrl,
         string thumbnailUrl,
+        string originalObjectKey,
+        string imageObjectKey,
+        string thumbnailObjectKey,
         string altText,
         int sortOrder,
         bool isMain,
@@ -36,6 +42,9 @@ public sealed class ProductImage : AuditableSoftDeleteAggregateRoot<ProductImage
             ProductId = productId,
             ImageUrl = imageUrl,
             ThumbnailUrl = thumbnailUrl,
+            OriginalObjectKey = originalObjectKey,
+            ImageObjectKey = imageObjectKey,
+            ThumbnailObjectKey = thumbnailObjectKey,
             AltText = altText,
             SortOrder = sortOrder,
             IsMain = isMain,
@@ -53,6 +62,9 @@ public sealed class ProductImage : AuditableSoftDeleteAggregateRoot<ProductImage
         ProductId productId,
         string imageUrl,
         string thumbnailUrl,
+        string originalObjectKey,
+        string imageObjectKey,
+        string thumbnailObjectKey,
         string altText,
         int sortOrder,
         bool isMain,
@@ -69,6 +81,9 @@ public sealed class ProductImage : AuditableSoftDeleteAggregateRoot<ProductImage
             ProductId = productId,
             ImageUrl = imageUrl,
             ThumbnailUrl = thumbnailUrl,
+            OriginalObjectKey = originalObjectKey,
+            ImageObjectKey = imageObjectKey,
+            ThumbnailObjectKey = thumbnailObjectKey,
             AltText = altText,
             SortOrder = sortOrder,
             IsMain = isMain,
@@ -84,6 +99,9 @@ public sealed class ProductImage : AuditableSoftDeleteAggregateRoot<ProductImage
     public void Update(
         string imageUrl,
         string thumbnailUrl,
+        string originalObjectKey,
+        string imageObjectKey,
+        string thumbnailObjectKey,
         string altText,
         int sortOrder,
         bool isMain,
@@ -96,6 +114,9 @@ public sealed class ProductImage : AuditableSoftDeleteAggregateRoot<ProductImage
 
         ImageUrl = imageUrl;
         ThumbnailUrl = thumbnailUrl;
+        OriginalObjectKey = originalObjectKey;
+        ImageObjectKey = imageObjectKey;
+        ThumbnailObjectKey = thumbnailObjectKey;
         AltText = altText;
         SortOrder = sortOrder;
         IsMain = isMain;

@@ -25,6 +25,15 @@ public sealed class RefundRepository : IRefundRepository
         return rows.Select(ToDomain).ToList();
     }
 
+    public async Task<IReadOnlyList<Refund>> ListByOrderIdAsync(OrderId orderId, CancellationToken ct = default)
+    {
+        var rows = await _context.Refunds.AsNoTracking()
+            .Where(x => x.OrderId == orderId.Value)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(ct);
+        return rows.Select(ToDomain).ToList();
+    }
+
     public async Task<Refund> AddAsync(Refund refund, CancellationToken ct = default)
     {
         var row = ToRecord(refund);

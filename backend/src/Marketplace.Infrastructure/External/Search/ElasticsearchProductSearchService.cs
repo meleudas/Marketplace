@@ -9,6 +9,8 @@ using Marketplace.Domain.Shared.Kernel;
 using Marketplace.Infrastructure.External.Search.Documents;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Text;
+using System.Text.Json;
 
 namespace Marketplace.Infrastructure.External.Search;
 
@@ -47,6 +49,7 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
         string? sort,
         int page,
         int pageSize,
+        string? searchAfter,
         CancellationToken ct = default)
     {
         if (!_options.Enabled)
@@ -56,28 +59,31 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
         {
             await EnsureIndexExistsAsync(ct);
 
+            var cursorValues = DecodeSearchAfter(searchAfter);
             var response = await _client.SearchAsync<ProductSearchDocument>(s =>
             {
                 s.Indices(_options.ProductsIndex);
-                s.Size(1000);
+                s.Size(Math.Clamp(pageSize, 1, 200));
+                if (cursorValues.Count > 0)
+                    s.SearchAfter(cursorValues);
+                else if (page > 1)
+                    s.From(Math.Max(0, (page - 1) * pageSize));
                 if (string.IsNullOrWhiteSpace(name))
-                {
                     s.Query(q => q.MatchAll(_ => { }));
-                }
                 else
-                {
                     s.Query(q => q.Match(m => m
                         .Field(f => f.Name)
                         .Query(name)
+                        .Fuzziness(new Elastic.Clients.Elasticsearch.Fuzziness("AUTO"))
+                        .PrefixLength(1)
+                        .MaxExpansions(50)
                         .Operator(Elastic.Clients.Elasticsearch.QueryDsl.Operator.And)));
-                }
             }, ct);
 
             if (!response.IsValidResponse)
                 return Result<ProductSearchResultDto>.Failure($"Elasticsearch search failed: {response.ElasticsearchServerError?.Error?.Reason ?? "invalid response"}");
 
             IEnumerable<ProductSearchDocument> docs = response.Documents;
-
             if (categoryIds is { Count: > 0 })
                 docs = docs.Where(x => categoryIds.Contains(x.CategoryId));
             if (companyId.HasValue)
@@ -91,21 +97,22 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
 
             docs = (sort ?? "relevance").Trim().ToLowerInvariant() switch
             {
-                "price_asc" => docs.OrderBy(x => x.Price),
-                "price_desc" => docs.OrderByDescending(x => x.Price),
-                "newest" => docs.OrderByDescending(x => x.CreatedAt),
-                _ => docs
+                "price_asc" => docs.OrderBy(x => x.Price).ThenBy(x => x.Id),
+                "price_desc" => docs.OrderByDescending(x => x.Price).ThenBy(x => x.Id),
+                "newest" => docs.OrderByDescending(x => x.CreatedAt).ThenBy(x => x.Id),
+                _ => docs.OrderByDescending(x => x.CreatedAt).ThenBy(x => x.Id)
             };
 
-            var total = docs.LongCount();
-            var skip = Math.Max(0, (page - 1) * pageSize);
-            var items = docs
-                .Skip(skip)
-                .Take(pageSize)
+            var filtered = docs.ToList();
+            var items = filtered
                 .Select(ToProductListItem)
                 .ToList();
+            var total = filtered.LongCount();
+            var nextSearchAfter = filtered.Count > 0
+                ? EncodeSearchAfter([FieldValue.String(filtered[^1].CreatedAt.ToString("O")), FieldValue.Long(filtered[^1].Id)])
+                : null;
 
-            return Result<ProductSearchResultDto>.Success(new ProductSearchResultDto(items, total, page, pageSize));
+            return Result<ProductSearchResultDto>.Success(new ProductSearchResultDto(items, total, page, pageSize, nextSearchAfter));
         }
         catch (Exception ex)
         {
@@ -212,4 +219,28 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
             x.AvailabilityStatus,
             x.CreatedAt,
             x.UpdatedAt);
+
+    private static string? EncodeSearchAfter(IReadOnlyCollection<FieldValue>? values)
+    {
+        if (values is null || values.Count == 0)
+            return null;
+        var raw = values.Select(v => v.ToString()).ToArray();
+        return Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(raw)));
+    }
+
+    private static List<FieldValue> DecodeSearchAfter(string? encoded)
+    {
+        if (string.IsNullOrWhiteSpace(encoded))
+            return [];
+        try
+        {
+            var json = Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
+            var arr = JsonSerializer.Deserialize<string[]>(json) ?? [];
+            return arr.Select(FieldValue.String).ToList();
+        }
+        catch
+        {
+            return [];
+        }
+    }
 }

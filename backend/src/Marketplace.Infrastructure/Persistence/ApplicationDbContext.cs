@@ -33,10 +33,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<CartItemRecord> CartItems => Set<CartItemRecord>();
     public DbSet<FavoriteRecord> Favorites => Set<FavoriteRecord>();
     public DbSet<OrderRecord> Orders => Set<OrderRecord>();
+    public DbSet<OrderStatusHistoryRecord> OrderStatusHistory => Set<OrderStatusHistoryRecord>();
     public DbSet<OrderItemRecord> OrderItems => Set<OrderItemRecord>();
     public DbSet<OrderAddressSnapshotRecord> OrderAddresses => Set<OrderAddressSnapshotRecord>();
     public DbSet<PaymentRecord> Payments => Set<PaymentRecord>();
     public DbSet<RefundRecord> Refunds => Set<RefundRecord>();
+    public DbSet<OutboxMessageRecord> OutboxMessages => Set<OutboxMessageRecord>();
+    public DbSet<InboxMessageRecord> InboxMessages => Set<InboxMessageRecord>();
     public DbSet<ProductReviewRecord> ProductReviews => Set<ProductReviewRecord>();
     public DbSet<CompanyReviewRecord> CompanyReviews => Set<CompanyReviewRecord>();
     public DbSet<ReviewReplyRecord> ReviewReplies => Set<ReviewReplyRecord>();

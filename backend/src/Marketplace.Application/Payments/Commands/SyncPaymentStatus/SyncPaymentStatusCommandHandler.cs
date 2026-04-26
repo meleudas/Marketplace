@@ -1,4 +1,9 @@
+using System.Text.Json;
+using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Payments.Ports;
+using Marketplace.Application.Orders.Cache;
+using Marketplace.Application.Payments.Services;
+using Marketplace.Application.Orders.Services;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Repositories;
 using Marketplace.Domain.Payments.Enums;
@@ -13,12 +18,27 @@ public sealed class SyncPaymentStatusCommandHandler : IRequestHandler<SyncPaymen
     private readonly IPaymentRepository _paymentRepository;
     private readonly IOrderRepository _orderRepository;
     private readonly ILiqPayPort _liqPayPort;
+    private readonly IOrderCacheInvalidationService _orderCacheInvalidation;
+    private readonly IOrderPaymentStateApplier _paymentStateApplier;
+    private readonly IOutboxWriter _outbox;
+    private readonly IOrderStatusHistoryWriter _historyWriter;
 
-    public SyncPaymentStatusCommandHandler(IPaymentRepository paymentRepository, IOrderRepository orderRepository, ILiqPayPort liqPayPort)
+    public SyncPaymentStatusCommandHandler(
+        IPaymentRepository paymentRepository,
+        IOrderRepository orderRepository,
+        ILiqPayPort liqPayPort,
+        IOrderCacheInvalidationService orderCacheInvalidation,
+        IOrderPaymentStateApplier paymentStateApplier,
+        IOutboxWriter outbox,
+        IOrderStatusHistoryWriter historyWriter)
     {
         _paymentRepository = paymentRepository;
         _orderRepository = orderRepository;
         _liqPayPort = liqPayPort;
+        _orderCacheInvalidation = orderCacheInvalidation;
+        _paymentStateApplier = paymentStateApplier;
+        _outbox = outbox;
+        _historyWriter = historyWriter;
     }
 
     public async Task<Result> Handle(SyncPaymentStatusCommand request, CancellationToken ct)
@@ -47,17 +67,35 @@ public sealed class SyncPaymentStatusCommandHandler : IRequestHandler<SyncPaymen
 
             payment.UpdateProviderState(mapped, statusResult.TransactionId, new JsonBlob(statusResult.RawResponse));
             await _paymentRepository.UpdateAsync(payment, ct);
+            await _outbox.AppendAsync(
+                "Payment",
+                payment.Id.Value.ToString(),
+                "PaymentStatusChanged",
+                JsonSerializer.Serialize(new
+                {
+                    messageId = Guid.NewGuid(),
+                    paymentId = payment.Id.Value,
+                    orderId = payment.OrderId.Value,
+                    transactionId = statusResult.TransactionId,
+                    status = mapped.ToString(),
+                    source = "sync"
+                }),
+                ct);
 
             var order = await _orderRepository.GetByIdAsync(payment.OrderId, ct);
             if (order is not null)
             {
-                if (mapped == PaymentTransactionStatus.Completed)
-                    order.MarkPaid();
-                else if (mapped == PaymentTransactionStatus.Refunded)
-                    order.MarkRefunded();
-                else if (mapped == PaymentTransactionStatus.Failed)
-                    order.MarkFailed();
+                var oldStatus = order.Status;
+                _paymentStateApplier.TryApply(order, mapped, out _);
                 await _orderRepository.UpdateAsync(order, ct);
+                await _historyWriter.WriteIfChangedAsync(
+                    order,
+                    oldStatus,
+                    Guid.Empty,
+                    "sync",
+                    correlationId: statusResult.TransactionId,
+                    ct: ct);
+                await _orderCacheInvalidation.InvalidateOrderAsync(order.Id.Value, order.CustomerId, order.CompanyId.Value, ct);
             }
 
             return Result.Success();

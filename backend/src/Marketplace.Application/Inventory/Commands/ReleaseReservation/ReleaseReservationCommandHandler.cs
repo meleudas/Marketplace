@@ -17,19 +17,22 @@ public sealed class ReleaseReservationCommandHandler : IRequestHandler<ReleaseRe
     private readonly IWarehouseStockRepository _stockRepository;
     private readonly IProductRepository _productRepository;
     private readonly IAppCachePort _cache;
+    private readonly IOutboxWriter _outbox;
 
     public ReleaseReservationCommandHandler(
         IInventoryAccessService access,
         IInventoryReservationRepository reservationRepository,
         IWarehouseStockRepository stockRepository,
         IProductRepository productRepository,
-        IAppCachePort cache)
+        IAppCachePort cache,
+        IOutboxWriter outbox)
     {
         _access = access;
         _reservationRepository = reservationRepository;
         _stockRepository = stockRepository;
         _productRepository = productRepository;
         _cache = cache;
+        _outbox = outbox;
     }
 
     public async Task<Result> Handle(ReleaseReservationCommand request, CancellationToken ct)
@@ -54,6 +57,19 @@ public sealed class ReleaseReservationCommandHandler : IRequestHandler<ReleaseRe
             reservation.Release();
             await _stockRepository.UpdateAsync(stock, ct);
             await _reservationRepository.UpdateAsync(reservation, ct);
+            await _outbox.AppendAsync(
+                "InventoryReservation",
+                reservation.Id.Value.ToString(),
+                "InventoryReleased",
+                System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    messageId = Guid.NewGuid(),
+                    reservationId = reservation.Id.Value,
+                    companyId = request.CompanyId,
+                    reservationCode = request.ReservationCode,
+                    quantity = reservation.Quantity
+                }),
+                ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
             var product = await _productRepository.GetByIdAsync(reservation.ProductId, ct);
             if (product is not null)

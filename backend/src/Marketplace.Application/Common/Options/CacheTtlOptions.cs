@@ -23,6 +23,8 @@ public sealed class CacheTtlOptions
     public int AdminCompanyMinutes { get; set; } = 5;
     public int AdminCategoryMinutes { get; set; } = 10;
     public int AdminAllCategoriesMinutes { get; set; } = 10;
+    public int OrdersListMinutes { get; set; } = 3;
+    public int OrderDetailMinutes { get; set; } = 2;
 
     public TimeSpan Cart => TimeSpan.FromSeconds(Math.Clamp(CartSeconds, 5, 3600));
     public TimeSpan Favorites => TimeSpan.FromMinutes(Math.Clamp(FavoritesMinutes, 1, 120));
@@ -40,4 +42,6 @@ public sealed class CacheTtlOptions
     public TimeSpan AdminCompany => TimeSpan.FromMinutes(Math.Clamp(AdminCompanyMinutes, 1, 240));
     public TimeSpan AdminCategory => TimeSpan.FromMinutes(Math.Clamp(AdminCategoryMinutes, 1, 240));
     public TimeSpan AdminAllCategories => TimeSpan.FromMinutes(Math.Clamp(AdminAllCategoriesMinutes, 1, 240));
+    public TimeSpan OrdersList => TimeSpan.FromMinutes(Math.Clamp(OrdersListMinutes, 1, 60));
+    public TimeSpan OrderDetail => TimeSpan.FromMinutes(Math.Clamp(OrderDetailMinutes, 1, 60));
 }

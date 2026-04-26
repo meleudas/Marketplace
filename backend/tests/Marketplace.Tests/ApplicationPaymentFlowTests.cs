@@ -3,6 +3,9 @@ using Marketplace.Application.Payments.Commands.HandleLiqPayWebhook;
 using Marketplace.Application.Payments.Commands.RequestRefund;
 using Marketplace.Application.Payments.Commands.SyncPaymentStatus;
 using Marketplace.Application.Payments.Ports;
+using Marketplace.Application.Payments.Services;
+using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Orders.Cache;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Entities;
 using Marketplace.Domain.Orders.Enums;
@@ -27,7 +30,14 @@ public class ApplicationPaymentFlowTests
         _ = await paymentRepo.AddAsync(Payment.Create(PaymentId.From(0), order.Id, PaymentMethodKind.LiqPay, new Money(100), "UAH", "ORD-1", PaymentTransactionStatus.Pending, JsonBlob.Empty));
 
         var payload = Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"order_id\":\"ORD-1\",\"status\":\"success\"}"));
-        var handler = new HandleLiqPayWebhookCommandHandler(new FakeLiqPayPort(), paymentRepo, orderRepo);
+        var handler = new HandleLiqPayWebhookCommandHandler(
+            new FakeLiqPayPort(),
+            paymentRepo,
+            orderRepo,
+            new NoopOrderCacheInvalidationService(),
+            new OrderPaymentStateApplier(),
+            new InMemoryOutboxWriter(),
+            new NoopOrderStatusHistoryWriter());
         var result = await handler.Handle(new HandleLiqPayWebhookCommand(payload, "sig"), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -47,7 +57,7 @@ public class ApplicationPaymentFlowTests
             null, null, null, null, null, null, DateTime.UtcNow, DateTime.UtcNow, false, null));
         var payment = await paymentRepo.AddAsync(Payment.Create(PaymentId.From(0), order.Id, PaymentMethodKind.LiqPay, new Money(200), "UAH", "ORD-2", PaymentTransactionStatus.Completed, JsonBlob.Empty));
 
-        var handler = new RequestRefundCommandHandler(paymentRepo, refundRepo, orderRepo, new FakeLiqPayPort());
+        var handler = new RequestRefundCommandHandler(paymentRepo, refundRepo, orderRepo, new FakeLiqPayPort(), new NoopOrderStatusHistoryWriter());
         var result = await handler.Handle(new RequestRefundCommand(payment.Id.Value, 100m, "Customer request", Guid.NewGuid()), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -66,7 +76,14 @@ public class ApplicationPaymentFlowTests
             null, null, null, null, null, null, DateTime.UtcNow, DateTime.UtcNow, false, null));
         var payment = await paymentRepo.AddAsync(Payment.Create(PaymentId.From(0), order.Id, PaymentMethodKind.LiqPay, new Money(50), "UAH", "ORD-3", PaymentTransactionStatus.Pending, JsonBlob.Empty));
 
-        var handler = new SyncPaymentStatusCommandHandler(paymentRepo, orderRepo, new FakeLiqPayPort());
+        var handler = new SyncPaymentStatusCommandHandler(
+            paymentRepo,
+            orderRepo,
+            new FakeLiqPayPort(),
+            new NoopOrderCacheInvalidationService(),
+            new OrderPaymentStateApplier(),
+            new InMemoryOutboxWriter(),
+            new NoopOrderStatusHistoryWriter());
         var result = await handler.Handle(new SyncPaymentStatusCommand(payment.Id.Value), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -94,6 +111,16 @@ public class ApplicationPaymentFlowTests
         private long _nextId = 1;
         public Task<Order?> GetByIdAsync(OrderId id, CancellationToken ct = default) => Task.FromResult(_items.GetValueOrDefault(id.Value));
         public Task<IReadOnlyList<Order>> ListByCustomerAsync(Guid customerId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Order>>(_items.Values.Where(x => x.CustomerId == customerId).ToList());
+        public Task<(IReadOnlyList<Order> Items, long Total)> ListAsync(OrderListFilter filter, CancellationToken ct = default)
+        {
+            IEnumerable<Order> q = _items.Values;
+            if (filter.CustomerId.HasValue)
+                q = q.Where(x => x.CustomerId == filter.CustomerId.Value);
+            if (filter.CompanyId.HasValue)
+                q = q.Where(x => x.CompanyId.Value == filter.CompanyId.Value);
+            var list = q.ToList();
+            return Task.FromResult(((IReadOnlyList<Order>)list, (long)list.Count));
+        }
         public Task<Order> AddAsync(Order order, CancellationToken ct = default)
         {
             var id = order.Id.Value <= 0 ? _nextId++ : order.Id.Value;
@@ -128,6 +155,7 @@ public class ApplicationPaymentFlowTests
         private long _nextId = 1;
         public Task<Refund?> GetByIdAsync(RefundId id, CancellationToken ct = default) => Task.FromResult(Items.FirstOrDefault(x => x.Id == id));
         public Task<IReadOnlyList<Refund>> ListByStatusAsync(RefundStatus status, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Refund>>(Items.Where(x => x.Status == status).ToList());
+        public Task<IReadOnlyList<Refund>> ListByOrderIdAsync(OrderId orderId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Refund>>(Items.Where(x => x.OrderId == orderId).ToList());
         public Task<Refund> AddAsync(Refund refund, CancellationToken ct = default)
         {
             var saved = Refund.Reconstitute(RefundId.From(_nextId++), refund.PaymentId, refund.OrderId, refund.Amount, refund.Reason, refund.Status, refund.ProcessedByUserId, refund.ProcessedAt, refund.CreatedAt, refund.UpdatedAt, refund.IsDeleted, refund.DeletedAt);
@@ -135,5 +163,26 @@ public class ApplicationPaymentFlowTests
             return Task.FromResult(saved);
         }
         public Task UpdateAsync(Refund refund, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class NoopOrderCacheInvalidationService : IOrderCacheInvalidationService
+    {
+        public Task<long> GetListVersionAsync(string scope, Guid? actorUserId, Guid? companyId, CancellationToken ct = default) => Task.FromResult(1L);
+        public Task InvalidateOrderAsync(long orderId, Guid customerId, Guid companyId, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class InMemoryOutboxWriter : IOutboxWriter
+    {
+        public Task AppendAsync(string aggregateType, string aggregateId, string eventType, string payload, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<IReadOnlyList<OutboxMessage>> ListPendingAsync(int batchSize, DateTime utcNow, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<OutboxMessage>>([]);
+        public Task MarkProcessedAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
+        public Task MarkFailedAsync(Guid id, string error, DateTime nextAttemptAtUtc, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class NoopOrderStatusHistoryWriter : Marketplace.Application.Orders.Services.IOrderStatusHistoryWriter
+    {
+        public Task WriteIfChangedAsync(Order order, OrderStatus oldStatus, Guid actorUserId, string source, string? comment = null, string? correlationId = null, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 }

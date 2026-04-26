@@ -14,4 +14,5 @@ public sealed record SearchCatalogProductsQuery(
     string? AvailabilityStatus,
     string? Sort,
     int Page = 1,
-    int PageSize = 20) : IRequest<Result<ProductSearchResultDto>>;
+    int PageSize = 20,
+    string? SearchAfter = null) : IRequest<Result<ProductSearchResultDto>>;

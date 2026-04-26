@@ -4,4 +4,5 @@ public sealed record ProductSearchResultDto(
     IReadOnlyList<ProductListItemDto> Items,
     long Total,
     int Page,
-    int PageSize);
+    int PageSize,
+    string? NextSearchAfter = null);

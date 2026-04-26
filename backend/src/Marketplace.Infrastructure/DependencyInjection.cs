@@ -22,6 +22,7 @@ using Marketplace.Infrastructure.External.OAuth;
 using Marketplace.Infrastructure.External.Search;
 using Marketplace.Infrastructure.External.Sms;
 using Marketplace.Infrastructure.External.Telegram;
+using Marketplace.Infrastructure.External.Storage;
 using Marketplace.Infrastructure.External.Payments;
 using Marketplace.Infrastructure.Identity;
 using Marketplace.Infrastructure.Identity.Entities;
@@ -54,6 +55,7 @@ public static class DependencyInjection
         services.Configure<CacheTtlOptions>(configuration.GetSection(CacheTtlOptions.SectionName));
         services.Configure<ElasticsearchOptions>(configuration.GetSection(ElasticsearchOptions.SectionName));
         services.Configure<LiqPayOptions>(configuration.GetSection(LiqPayOptions.SectionName));
+        services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
 
         var connectionString = configuration.GetConnectionString("Database")
             ?? throw new InvalidOperationException("Connection string 'Database' is not configured.");
@@ -147,7 +149,13 @@ public static class DependencyInjection
         services.AddScoped<InventoryJobs>();
         services.AddScoped<SearchIndexJobs>();
         services.AddScoped<PaymentJobs>();
+        services.AddScoped<OutboxDispatcherJobs>();
+        services.AddScoped<ProductImageJobs>();
+        services.AddScoped<MediaCleanupJobs>();
+        services.AddScoped<IOutboxEventProcessor, OutboxEventProcessor>();
         services.AddScoped<IAppCachePort, AppCachePort>();
+        services.AddScoped<IOutboxWriter, OutboxRepository>();
+        services.AddScoped<IInboxDeduplicator, InboxDeduplicator>();
         services.AddHttpClient<ILiqPayPort, LiqPayClient>();
         services.AddSingleton(sp =>
         {
@@ -160,6 +168,8 @@ public static class DependencyInjection
         services.AddScoped<IProductSearchService, ElasticsearchProductSearchService>();
         services.AddScoped<IProductSearchIndexer, ElasticsearchProductSearchService>();
         services.AddScoped<IProductSearchIndexDispatcher, HangfireProductSearchIndexDispatcher>();
+        services.AddScoped<IProductImageProcessingDispatcher, HangfireProductImageProcessingDispatcher>();
+        services.AddScoped<IImageCompressionPolicy, AdaptiveImageCompressionPolicy>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<ICompanyMemberRepository, CompanyMemberRepository>();
@@ -174,6 +184,7 @@ public static class DependencyInjection
         services.AddScoped<ICartItemRepository, CartItemRepository>();
         services.AddScoped<IFavoriteRepository, FavoriteRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IOrderStatusHistoryRepository, OrderStatusHistoryRepository>();
         services.AddScoped<IOrderItemRepository, OrderItemRepository>();
         services.AddScoped<IOrderAddressSnapshotRepository, OrderAddressSnapshotRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
@@ -222,6 +233,12 @@ public static class DependencyInjection
         services.AddScoped<LoggingSmsSender>();
         services.AddScoped<ISmsPort>(sp => sp.GetRequiredService<LoggingSmsSender>());
         services.AddScoped<ISmsSender>(sp => sp.GetRequiredService<LoggingSmsSender>());
+
+        var storageOptions = configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>() ?? new StorageOptions();
+        if (storageOptions.Enabled)
+            services.AddSingleton<IObjectStorage, MinioObjectStorage>();
+        else
+            services.AddSingleton<IObjectStorage, DisabledObjectStorage>();
 
         return services;
     }

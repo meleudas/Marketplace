@@ -99,6 +99,46 @@ public sealed class Order : AuditableSoftDeleteAggregateRoot<OrderId>
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void SetProcessing()
+    {
+        EnsureNotDeleted();
+        if (Status is not (OrderStatus.Pending or OrderStatus.Paid))
+            throw new DomainException("Invalid status transition");
+        Status = OrderStatus.Processing;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetShipped(string? trackingNumber)
+    {
+        EnsureNotDeleted();
+        if (Status != OrderStatus.Processing)
+            throw new DomainException("Invalid status transition");
+        Status = OrderStatus.Shipped;
+        TrackingNumber = string.IsNullOrWhiteSpace(trackingNumber) ? TrackingNumber : trackingNumber.Trim();
+        ShippedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetDelivered()
+    {
+        EnsureNotDeleted();
+        if (Status != OrderStatus.Shipped)
+            throw new DomainException("Invalid status transition");
+        Status = OrderStatus.Delivered;
+        DeliveredAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Cancel()
+    {
+        EnsureNotDeleted();
+        if (Status is OrderStatus.Delivered or OrderStatus.Refunded or OrderStatus.Cancelled or OrderStatus.Shipped)
+            throw new DomainException("Invalid status transition");
+        Status = OrderStatus.Cancelled;
+        CancelledAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     private void EnsureNotDeleted()
     {
         if (IsDeleted)

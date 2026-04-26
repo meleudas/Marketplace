@@ -47,8 +47,17 @@ RecurringJob.AddOrUpdate<PaymentJobs>(
     "payments-sync-pending-liqpay",
     job => job.SyncPendingPaymentsAsync(default),
     Cron.Minutely);
+RecurringJob.AddOrUpdate<OutboxDispatcherJobs>(
+    "outbox-dispatch-pending",
+    job => job.DispatchPendingAsync(default),
+    Cron.Minutely);
+RecurringJob.AddOrUpdate<MediaCleanupJobs>(
+    "media-cleanup-orphans",
+    job => job.CleanupOrphansAsync(default),
+    Cron.Hourly);
 
 app.MapControllers();
+app.MapPrometheusScrapingEndpoint("/metrics");
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
     .WithName("HealthCheck")

@@ -1,5 +1,6 @@
 using Marketplace.Application.Carts.Commands.CheckoutCart;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Payments.Ports;
 using Marketplace.Domain.Cart.Entities;
 using Marketplace.Domain.Cart.Enums;
@@ -53,7 +54,10 @@ public class ApplicationCheckoutCartCommandTests
             orderAddressRepo,
             new InMemoryPaymentRepository(),
             new FakeLiqPayPort(),
-            cache);
+            cache,
+            new NoopOrderCacheInvalidationService(),
+            new NoopOutboxWriter(),
+            new NoopOrderStatusHistoryWriter());
         var cmd = new CheckoutCartCommand(
             userId,
             CheckoutPaymentMethod.Card,
@@ -89,7 +93,10 @@ public class ApplicationCheckoutCartCommandTests
             new InMemoryOrderAddressRepository(),
             new InMemoryPaymentRepository(),
             new FakeLiqPayPort(),
-            new SpyCachePort());
+            new SpyCachePort(),
+            new NoopOrderCacheInvalidationService(),
+            new NoopOutboxWriter(),
+            new NoopOrderStatusHistoryWriter());
 
         var result = await handler.Handle(
             new CheckoutCartCommand(userId, CheckoutPaymentMethod.Card, new CheckoutAddressDto("A", "B", "1", "S", "C", "ST", "P", "U"), null),
@@ -188,6 +195,16 @@ public class ApplicationCheckoutCartCommandTests
 
         public Task<Order?> GetByIdAsync(OrderId id, CancellationToken ct = default) => Task.FromResult(_items.GetValueOrDefault(id.Value));
         public Task<IReadOnlyList<Order>> ListByCustomerAsync(Guid customerId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Order>>(_items.Values.Where(x => x.CustomerId == customerId).ToList());
+        public Task<(IReadOnlyList<Order> Items, long Total)> ListAsync(OrderListFilter filter, CancellationToken ct = default)
+        {
+            IEnumerable<Order> q = _items.Values;
+            if (filter.CustomerId.HasValue)
+                q = q.Where(x => x.CustomerId == filter.CustomerId.Value);
+            if (filter.CompanyId.HasValue)
+                q = q.Where(x => x.CompanyId.Value == filter.CompanyId.Value);
+            var list = q.ToList();
+            return Task.FromResult(((IReadOnlyList<Order>)list, (long)list.Count));
+        }
         public Task<Order> AddAsync(Order order, CancellationToken ct = default)
         {
             var id = order.Id.Value <= 0 ? _nextId++ : order.Id.Value;
@@ -257,5 +274,25 @@ public class ApplicationCheckoutCartCommandTests
         public Task<T?> GetAsync<T>(string key, CancellationToken ct = default) where T : class => Task.FromResult<T?>(null);
         public Task SetAsync<T>(string key, T value, TimeSpan ttl, CancellationToken ct = default) where T : class => Task.CompletedTask;
         public Task RemoveAsync(string key, CancellationToken ct = default) { RemovedKeys.Add(key); return Task.CompletedTask; }
+    }
+
+    private sealed class NoopOrderCacheInvalidationService : IOrderCacheInvalidationService
+    {
+        public Task<long> GetListVersionAsync(string scope, Guid? actorUserId, Guid? companyId, CancellationToken ct = default) => Task.FromResult(1L);
+        public Task InvalidateOrderAsync(long orderId, Guid customerId, Guid companyId, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class NoopOutboxWriter : IOutboxWriter
+    {
+        public Task AppendAsync(string aggregateType, string aggregateId, string eventType, string payload, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<IReadOnlyList<OutboxMessage>> ListPendingAsync(int batchSize, DateTime utcNow, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<OutboxMessage>>([]);
+        public Task MarkProcessedAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
+        public Task MarkFailedAsync(Guid id, string error, DateTime nextAttemptAtUtc, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class NoopOrderStatusHistoryWriter : Marketplace.Application.Orders.Services.IOrderStatusHistoryWriter
+    {
+        public Task WriteIfChangedAsync(Order order, OrderStatus oldStatus, Guid actorUserId, string source, string? comment = null, string? correlationId = null, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 }
