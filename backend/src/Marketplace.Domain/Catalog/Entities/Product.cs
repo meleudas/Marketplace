@@ -19,6 +19,10 @@ public sealed class Product : AuditableSoftDeleteAggregateRoot<ProductId>
     public int MinStock { get; private set; }
     public CategoryId CategoryId { get; private set; } = null!;
     public ProductStatus Status { get; private set; }
+    /// <summary>Користувач, який подав товар на модерацію (для нотифікацій після рішення).</summary>
+    public Guid? SubmittedByUserId { get; private set; }
+    /// <summary>Причина відхилення (лише після <see cref="Reject"/>).</summary>
+    public string? ModerationRejectionReason { get; private set; }
     public decimal? Rating { get; private set; }
     public int ReviewCount { get; private set; }
     public long ViewCount { get; private set; }
@@ -88,7 +92,9 @@ public sealed class Product : AuditableSoftDeleteAggregateRoot<ProductId>
         DateTime createdAt,
         DateTime updatedAt,
         bool isDeleted,
-        DateTime? deletedAt) =>
+        DateTime? deletedAt,
+        Guid? submittedByUserId = null,
+        string? moderationRejectionReason = null) =>
         new()
         {
             Id = id,
@@ -102,6 +108,8 @@ public sealed class Product : AuditableSoftDeleteAggregateRoot<ProductId>
             MinStock = minStock,
             CategoryId = categoryId,
             Status = status,
+            SubmittedByUserId = submittedByUserId,
+            ModerationRejectionReason = moderationRejectionReason,
             Rating = rating,
             ReviewCount = reviewCount,
             ViewCount = viewCount,
@@ -124,6 +132,8 @@ public sealed class Product : AuditableSoftDeleteAggregateRoot<ProductId>
         bool hasVariants)
     {
         EnsureNotDeleted();
+        if (Status == ProductStatus.Archived)
+            throw new DomainException("Cannot modify archived product");
         ValidateText(name, "Product name");
         ValidateText(slug, "Product slug");
         ValidateText(description, "Product description");
@@ -144,6 +154,40 @@ public sealed class Product : AuditableSoftDeleteAggregateRoot<ProductId>
     {
         EnsureNotDeleted();
         Status = ProductStatus.Active;
+        Touch();
+    }
+
+    /// <summary>Перехід чернетки на модерацію (створення або повторна подача після відхилення).</summary>
+    public void SubmitForModeration(Guid submittedByUserId)
+    {
+        EnsureNotDeleted();
+        if (Status != ProductStatus.Draft)
+            throw new DomainException("Only draft products can be submitted for moderation");
+        if (submittedByUserId == Guid.Empty)
+            throw new DomainException("SubmittedBy user is required");
+        Status = ProductStatus.PendingReview;
+        SubmittedByUserId = submittedByUserId;
+        ModerationRejectionReason = null;
+        Touch();
+    }
+
+    public void Approve()
+    {
+        EnsureNotDeleted();
+        if (Status != ProductStatus.PendingReview)
+            throw new DomainException("Only products pending review can be approved");
+        Status = ProductStatus.Active;
+        ModerationRejectionReason = null;
+        Touch();
+    }
+
+    public void Reject(string? reason)
+    {
+        EnsureNotDeleted();
+        if (Status != ProductStatus.PendingReview)
+            throw new DomainException("Only products pending review can be rejected");
+        Status = ProductStatus.Draft;
+        ModerationRejectionReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
         Touch();
     }
 

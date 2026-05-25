@@ -1,10 +1,14 @@
+using System.Text.Json;
 using Marketplace.Application.Catalog.Cache;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Notifications;
+using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Products.Authorization;
 using Marketplace.Application.Products.DTOs;
 using Marketplace.Application.Products.Mappings;
 using Marketplace.Application.Products.Ports;
 using Marketplace.Domain.Catalog.Entities;
+using Marketplace.Domain.Catalog.Enums;
 using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Shared.Kernel;
@@ -21,6 +25,7 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
     private readonly IObjectStorage _storage;
     private readonly IAppCachePort _cache;
     private readonly IProductSearchIndexDispatcher _searchIndexDispatcher;
+    private readonly IAppNotificationScheduler _appNotifications;
 
     public UpdateProductCommandHandler(
         IProductAccessService access,
@@ -29,7 +34,8 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
         IProductImageRepository imageRepository,
         IObjectStorage storage,
         IAppCachePort cache,
-        IProductSearchIndexDispatcher searchIndexDispatcher)
+        IProductSearchIndexDispatcher searchIndexDispatcher,
+        IAppNotificationScheduler appNotifications)
     {
         _access = access;
         _productRepository = productRepository;
@@ -38,6 +44,7 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
         _storage = storage;
         _cache = cache;
         _searchIndexDispatcher = searchIndexDispatcher;
+        _appNotifications = appNotifications;
     }
 
     public async Task<Result<ProductDto>> Handle(UpdateProductCommand request, CancellationToken ct)
@@ -52,6 +59,7 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
                 return Result<ProductDto>.Failure("Product not found");
 
             var oldSlug = product.Slug;
+            var wasDraft = product.Status == ProductStatus.Draft;
             product.UpdateProfile(
                 request.Name,
                 request.Slug,
@@ -61,6 +69,9 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
                 request.MinStock,
                 CategoryId.From(request.CategoryId),
                 request.HasVariants);
+
+            if (wasDraft)
+                product.SubmitForModeration(request.ActorUserId);
 
             await _productRepository.UpdateAsync(product, ct);
 
@@ -141,7 +152,28 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
             await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductDetailPrefix + oldSlug, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductDetailPrefix + product.Slug, ct);
-            await _searchIndexDispatcher.EnqueueUpsertProductAsync(product.Id.Value, ct);
+            if (product.Status == ProductStatus.Active)
+                await _searchIndexDispatcher.EnqueueUpsertProductAsync(product.Id.Value, ct);
+
+            if (wasDraft)
+            {
+                await _appNotifications.ScheduleAsync(
+                    new AppNotificationRequest
+                    {
+                        TemplateKey = AppNotificationTemplateKeys.AdminProductPendingReview,
+                        CorrelationId = Guid.NewGuid(),
+                        Channels = AppNotificationChannelKind.Push | AppNotificationChannelKind.InApp,
+                        Audience = AppNotificationAudienceKind.Admins,
+                        PayloadJson = JsonSerializer.Serialize(new
+                        {
+                            productId = product.Id.Value,
+                            companyId = product.CompanyId.Value,
+                            name = product.Name,
+                            slug = product.Slug
+                        })
+                    },
+                    ct);
+            }
 
             var dto = new ProductDto(
                 ProductMapper.ToListItemDto(product, 0, "out_of_stock"),

@@ -1,9 +1,11 @@
+using System.Text.Json;
 using Marketplace.Application.Catalog.Cache;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Notifications;
+using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Products.Authorization;
 using Marketplace.Application.Products.DTOs;
 using Marketplace.Application.Products.Mappings;
-using Marketplace.Application.Products.Ports;
 using Marketplace.Domain.Catalog.Entities;
 using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
@@ -19,7 +21,7 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
     private readonly IProductDetailRepository _detailRepository;
     private readonly IProductImageRepository _imageRepository;
     private readonly IAppCachePort _cache;
-    private readonly IProductSearchIndexDispatcher _searchIndexDispatcher;
+    private readonly IAppNotificationScheduler _appNotifications;
 
     public CreateProductCommandHandler(
         IProductAccessService access,
@@ -27,14 +29,14 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
         IProductDetailRepository detailRepository,
         IProductImageRepository imageRepository,
         IAppCachePort cache,
-        IProductSearchIndexDispatcher searchIndexDispatcher)
+        IAppNotificationScheduler appNotifications)
     {
         _access = access;
         _productRepository = productRepository;
         _detailRepository = detailRepository;
         _imageRepository = imageRepository;
         _cache = cache;
-        _searchIndexDispatcher = searchIndexDispatcher;
+        _appNotifications = appNotifications;
     }
 
     public async Task<Result<ProductDto>> Handle(CreateProductCommand request, CancellationToken ct)
@@ -56,7 +58,7 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
                 minStock: request.MinStock,
                 categoryId: CategoryId.From(request.CategoryId),
                 hasVariants: request.HasVariants);
-            product.Activate();
+            product.SubmitForModeration(request.ActorUserId);
 
             await _productRepository.AddAsync(product, ct);
             product = await _productRepository.GetBySlugAsync(CompanyId.From(request.CompanyId), request.Slug, ct)
@@ -99,7 +101,23 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
 
             await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductDetailPrefix + product.Slug, ct);
-            await _searchIndexDispatcher.EnqueueUpsertProductAsync(product.Id.Value, ct);
+
+            await _appNotifications.ScheduleAsync(
+                new AppNotificationRequest
+                {
+                    TemplateKey = AppNotificationTemplateKeys.AdminProductPendingReview,
+                    CorrelationId = AppNotificationCorrelationIds.ProductPendingReviewQueue(product.Id.Value),
+                    Channels = AppNotificationChannelKind.Push | AppNotificationChannelKind.InApp,
+                    Audience = AppNotificationAudienceKind.Admins,
+                    PayloadJson = JsonSerializer.Serialize(new
+                    {
+                        productId = product.Id.Value,
+                        companyId = product.CompanyId.Value,
+                        name = product.Name,
+                        slug = product.Slug
+                    })
+                },
+                ct);
 
             var dto = new ProductDto(
                 ProductMapper.ToListItemDto(product, 0, "out_of_stock"),
