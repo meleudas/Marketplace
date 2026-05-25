@@ -38,6 +38,9 @@ public sealed class InfrastructureOutboxEventProcessorTests
             null,
             0,
             null,
+            null,
+            null,
+            null,
             null);
 
         await processor.ProcessAsync(message, CancellationToken.None);
@@ -80,6 +83,8 @@ public sealed class InfrastructureOutboxEventProcessorTests
     private sealed class StubOrderCacheInvalidation : IOrderCacheInvalidationService
     {
         public Task<long> GetListVersionAsync(string scope, Guid? actorUserId, Guid? companyId, CancellationToken ct = default) => Task.FromResult(1L);
+        public Task TrackDetailKeyAsync(long orderId, string cacheKey, TimeSpan ttl, CancellationToken ct = default) => Task.CompletedTask;
+        public Task TrackListKeyAsync(string scope, Guid? actorUserId, Guid? companyId, string cacheKey, TimeSpan ttl, CancellationToken ct = default) => Task.CompletedTask;
         public Task InvalidateOrderAsync(long orderId, Guid customerId, Guid companyId, CancellationToken ct = default) => Task.CompletedTask;
     }
 

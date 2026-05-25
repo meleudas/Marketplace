@@ -35,7 +35,9 @@ public sealed class OutboxRepository : IOutboxWriter
     {
         var rows = await _context.OutboxMessages
             .AsNoTracking()
-            .Where(x => x.ProcessedAtUtc == null && (x.NextAttemptAtUtc == null || x.NextAttemptAtUtc <= utcNow))
+            .Where(x => x.ProcessedAtUtc == null
+                        && x.DeadLetteredAtUtc == null
+                        && (x.NextAttemptAtUtc == null || x.NextAttemptAtUtc <= utcNow))
             .OrderBy(x => x.OccurredAtUtc)
             .Take(Math.Max(1, batchSize))
             .ToListAsync(ct);
@@ -51,7 +53,10 @@ public sealed class OutboxRepository : IOutboxWriter
                 x.ProcessedAtUtc,
                 x.Attempts,
                 x.LastError,
-                x.NextAttemptAtUtc))
+                x.NextAttemptAtUtc,
+                x.DeadLetteredAtUtc,
+                x.DeadLetterReason,
+                x.DeadLetterCategory))
             .ToList();
     }
 
@@ -63,6 +68,9 @@ public sealed class OutboxRepository : IOutboxWriter
 
         row.ProcessedAtUtc = DateTime.UtcNow;
         row.LastError = null;
+        row.DeadLetteredAtUtc = null;
+        row.DeadLetterReason = null;
+        row.DeadLetterCategory = null;
         await _context.SaveChangesAsync(ct);
     }
 
@@ -75,6 +83,35 @@ public sealed class OutboxRepository : IOutboxWriter
         row.Attempts += 1;
         row.LastError = error.Length > 2000 ? error[..2000] : error;
         row.NextAttemptAtUtc = nextAttemptAtUtc;
+        await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task MarkDeadLetterAsync(Guid id, string reason, string category, CancellationToken ct = default)
+    {
+        var row = await _context.OutboxMessages.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (row is null)
+            return;
+
+        row.Attempts += 1;
+        row.DeadLetteredAtUtc = DateTime.UtcNow;
+        row.DeadLetterReason = reason.Length > 2000 ? reason[..2000] : reason;
+        row.DeadLetterCategory = category.Length > 64 ? category[..64] : category;
+        row.NextAttemptAtUtc = null;
+        await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task RequeueDeadLetterAsync(Guid id, CancellationToken ct = default)
+    {
+        var row = await _context.OutboxMessages.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (row is null)
+            return;
+
+        row.DeadLetteredAtUtc = null;
+        row.DeadLetterReason = null;
+        row.DeadLetterCategory = null;
+        row.LastError = null;
+        row.NextAttemptAtUtc = DateTime.UtcNow;
+        row.ProcessedAtUtc = null;
         await _context.SaveChangesAsync(ct);
     }
 }

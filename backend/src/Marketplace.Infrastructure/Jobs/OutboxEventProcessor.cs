@@ -52,6 +52,8 @@ public sealed class OutboxEventProcessor : IOutboxEventProcessor
             case "InventoryFailed":
                 await MarkInventoryEventAsSeenAsync(message, ct);
                 break;
+            default:
+                throw new PermanentOutboxException($"Unsupported outbox event type: {message.EventType}");
         }
     }
 

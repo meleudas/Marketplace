@@ -6,4 +6,6 @@ public interface IOutboxWriter
     Task<IReadOnlyList<OutboxMessage>> ListPendingAsync(int batchSize, DateTime utcNow, CancellationToken ct = default);
     Task MarkProcessedAsync(Guid id, CancellationToken ct = default);
     Task MarkFailedAsync(Guid id, string error, DateTime nextAttemptAtUtc, CancellationToken ct = default);
+    Task MarkDeadLetterAsync(Guid id, string reason, string category, CancellationToken ct = default);
+    Task RequeueDeadLetterAsync(Guid id, CancellationToken ct = default);
 }

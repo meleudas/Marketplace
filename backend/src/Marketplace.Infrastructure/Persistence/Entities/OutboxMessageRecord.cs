@@ -12,4 +12,7 @@ public sealed class OutboxMessageRecord
     public int Attempts { get; set; }
     public string? LastError { get; set; }
     public DateTime? NextAttemptAtUtc { get; set; }
+    public DateTime? DeadLetteredAtUtc { get; set; }
+    public string? DeadLetterReason { get; set; }
+    public string? DeadLetterCategory { get; set; }
 }

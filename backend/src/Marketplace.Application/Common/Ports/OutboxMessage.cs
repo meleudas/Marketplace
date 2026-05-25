@@ -10,4 +10,7 @@ public sealed record OutboxMessage(
     DateTime? ProcessedAtUtc,
     int Attempts,
     string? LastError,
-    DateTime? NextAttemptAtUtc);
+    DateTime? NextAttemptAtUtc,
+    DateTime? DeadLetteredAtUtc,
+    string? DeadLetterReason,
+    string? DeadLetterCategory);

@@ -15,7 +15,10 @@ public sealed class OutboxMessageConfiguration : IEntityTypeConfiguration<Outbox
         builder.Property(x => x.EventType).HasMaxLength(256).IsRequired();
         builder.Property(x => x.Payload).IsRequired();
         builder.Property(x => x.LastError).HasMaxLength(2000);
+        builder.Property(x => x.DeadLetterReason).HasMaxLength(2000);
+        builder.Property(x => x.DeadLetterCategory).HasMaxLength(64);
         builder.HasIndex(x => new { x.ProcessedAtUtc, x.NextAttemptAtUtc });
+        builder.HasIndex(x => x.DeadLetteredAtUtc);
         builder.HasIndex(x => x.OccurredAtUtc);
     }
 }
