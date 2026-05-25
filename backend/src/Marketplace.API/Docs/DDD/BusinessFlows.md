@@ -84,3 +84,15 @@
 2. Користувач з роллю **Admin** може заходити в **`/admin/*`** і обходити перевірки членства в **будь-якій** компанії для внутрішніх company-scoped API.
 
 **Контексти:** [IdentityAndAccess](IdentityAndAccess.md), [RoleAccessMatrix](RoleAccessMatrix.md).
+
+---
+
+## 8. Web Push (користувач і адмін)
+
+1. Клієнт (після логіну) за потреби викликає **`GET /web-push/vapid-public-key`** — отримує публічний VAPID-ключ і `subject` для `PushManager.subscribe` у Service Worker.
+2. **`POST /me/web-push/subscriptions`** зберігає `endpoint` + ключі в `push_subscriptions` з прапорцями аудиторії: **користувацькі** нотифікації (`includeUserChannel`) і/або **адмінські** (`includeAdminChannel` лише якщо JWT має глобальну роль **Admin**).
+3. Після успішного **`POST /me/cart/checkout`** для кожного створеного замовлення в чергу Hangfire ставиться застосункова нотифікація **`AdminNewOrder`** — отримують лише підписки з адмін-прапорцем.
+4. Після **`POST /orders/{orderId}/status`** у статуси **`Shipped`** або **`Delivered`** ставиться в чергу **`UserOrderStatus`** для **покупця** (`customerId`).
+5. Реальна відправка Web Push залежить від `WebPush:Enabled` і наявності VAPID-ключів; окремий канал **in-app** у джобі поки no-op (зарезервовано під майбутню таблицю нотифікацій).
+
+**HTTP:** [Endpoints/PushNotifications.md](../Endpoints/PushNotifications.md). **Контексти:** [IdentityAndAccess](IdentityAndAccess.md), [Orders](../Endpoints/Orders.md) (checkout / статус замовлення).

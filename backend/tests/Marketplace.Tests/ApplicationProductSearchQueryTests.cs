@@ -120,6 +120,9 @@ public class ApplicationProductSearchQueryTests
         public Task<IReadOnlyList<Product>> ListActiveAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Product>>(_items.Values.Where(x => x.Status == ProductStatus.Active && !x.IsDeleted).ToList());
 
+        public Task<IReadOnlyList<Product>> ListPendingReviewAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Product>>(_items.Values.Where(x => x.Status == ProductStatus.PendingReview && !x.IsDeleted).ToList());
+
         public Task AddAsync(Product product, CancellationToken ct = default)
         {
             Seed(product);

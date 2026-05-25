@@ -13,6 +13,8 @@
 
 Операції **`WriteStock`**: створення/оновлення/деактивація складу, receive/ship/adjust/transfer, reserve, release reservation.
 
+Після **receive**, **release reservation**, **adjust** та **transfer** (оновлення залишків) бекенд може поставити в чергу застосункові нотифікації «товар знову в наявності» для користувачів з `cart_stock_watches` (див. [EventCatalog.md](../Notifications/EventCatalog.md)); це **не** auth-черга `INotificationDispatcher`, а `IAppNotificationScheduler`.
+
 ---
 
 ## Склади

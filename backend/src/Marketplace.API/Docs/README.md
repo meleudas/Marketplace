@@ -6,8 +6,9 @@
 
 | Розділ | Зміст |
 |--------|--------|
-| [Endpoints — довідник по маршрутах](Endpoints/README.md) | Усі endpoint-и: що приймають, що повертають, авторизація, side effects, помилки |
+| [Endpoints — довідник по маршрутах](Endpoints/README.md) | Усі endpoint-и (у т.ч. [Push / Web Push](Endpoints/PushNotifications.md)): що приймають, що повертають, авторизація, side effects, помилки |
 | [ControllerModels — приклади JSON body](ControllerModels/README.md) | Швидкі зразки тіл запитів для Postman/curl |
+| [Notifications — нотифікації](Notifications/README.md) | In-app, Web Push / SW, email, Telegram: архітектура, канали, події, ролі, безпека (реалізовано vs план) |
 | [DDD — контексти та логіка](DDD/README.md) | Bounded contexts, зв’язки сутностей, потоки, кеш, ролі (огляд) |
 | [Матриця доступів за ролями](DDD/RoleAccessMatrix.md) | Хто що може в API |
 | [Тестові сутності та сценарії](DDD/TestEntitiesAndScenarios.md) | Які дані/ролі потрібні для перевірки |

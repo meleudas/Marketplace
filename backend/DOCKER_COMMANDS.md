@@ -201,13 +201,15 @@ docker compose --profile tools run --rm db-seed
 ```
 
 Скрипт очищає і наповнює узгоджені дані для:
-- `AspNetUsers` / `AspNetRoles` / `AspNetUserRoles`
-- `marketplace_users`
-- `categories`
-- `companies`
-- `company_members` (ролі в **Tech Store** та власник **Home Comfort**)
-- `products`, `product_details`, `product_images`
-- `warehouses`, `warehouse_stocks`, `stock_movements`, `inventory_reservations` (демо стоку та резерву)
+- `AspNetUsers` / `AspNetRoles` / `AspNetUserRoles` (у т.ч. `NotifyAppByEmail`, `NotifyAppByTelegram`, Telegram для admin/seller/moderator)
+- `marketplace_users`, `refresh_tokens`
+- `categories`, `companies`, `company_members`, `company_legal_profiles`, `company_contracts`, `company_commission_rates`
+- `products` (active + `PendingReview` + draft/rejected), `product_details`, `product_images`
+- `warehouses`, `warehouse_stocks`, `stock_movements`, `inventory_reservations`
+- `carts`, `cart_items`, `cart_stock_watches`, `favorites`
+- `orders`, `order_items`, `order_addresses`, `order_status_history`, `payments`, `refunds`
+- `product_reviews`, `company_reviews`, `review_replies`
+- `notifications` (in-app), `push_subscriptions`, `outbox_messages`, `inbox_messages`, `http_idempotency_requests`
 
 Пароль для **всіх** тестових акаунтів: **`Admin123!`**
 
@@ -223,5 +225,11 @@ docker compose --profile tools run --rm db-seed
 | `support@marketplace.test` | Buyer | Tech Store — **Support** |
 | `logistics@marketplace.test` | Buyer | Tech Store — **Logistics** (інвентар write) |
 
-Після seed для **Docker** (uuid-компанії): **Tech Store** `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa`, **Home Comfort** `bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb`. Публічні товари: `seed-phone-alpha`, `seed-laptop-beta`, `seed-earbuds-gamma`, `seed-kettle-home`.
+Після seed для **Docker** (uuid-компанії): **Tech Store** `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa`, **Home Comfort** `bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb`.
+
+Товари: `seed-phone-alpha`, `seed-laptop-beta`, `seed-earbuds-gamma`, `seed-kettle-home`, `seed-watch-pending` (модерація), `seed-tablet-rejected` (чернетка).
+
+Замовлення: `ORD-SEED-0001` (admin, Processing), `ORD-SEED-0002` (buyer, Shipped), `ORD-SEED-0003` (buyer, Delivered).
+
+In-app: `GET /me/in-app-notifications` під `buyer@` / `admin@` / `moderator@` — є приклади прочитаних і непрочитаних.
 

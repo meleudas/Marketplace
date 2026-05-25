@@ -9,8 +9,12 @@ using Marketplace.Application.Reviews.Authorization;
 using Marketplace.Application.Reviews.Services;
 using Marketplace.Application.Users.Services;
 using Marketplace.Application.Payments.Services;
+using Marketplace.Application.Carts.Services;
+using Marketplace.Application.Inventory.Services;
+using Marketplace.Application.Notifications.Ports;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 public static class DependencyInjection
 {
@@ -39,6 +43,8 @@ public static class DependencyInjection
         services.AddScoped<IReviewPurchaseVerificationService, ReviewPurchaseVerificationService>();
         services.AddScoped<IReviewRatingAggregationService, ReviewRatingAggregationService>();
         services.AddScoped<IOrderPaymentStateApplier, OrderPaymentStateApplier>();
+        services.AddScoped<ICartStockWatchSyncService, CartStockWatchSyncService>();
+        services.AddScoped<IRestockAvailabilityNotifier, RestockAvailabilityNotifier>();
 
         return services;
     }

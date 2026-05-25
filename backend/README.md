@@ -1,6 +1,6 @@
 # Marketplace API
 
-Backend for a marketplace platform built on .NET 10 with ASP.NET Core Web API, DDD/Hexagonal architecture, PostgreSQL, Redis, JWT, refresh tokens, Google OAuth2 for SPA flows, SendGrid email delivery, and email-based 2FA.
+Backend for a marketplace platform built on .NET 10 with ASP.NET Core Web API, DDD/Hexagonal architecture, PostgreSQL, Redis, JWT, refresh tokens, Google OAuth2 for SPA flows, SendGrid email delivery, email-based 2FA, Hangfire background jobs, and optional **Web Push** (VAPID) for in-browser notifications.
 
 ## Tech stack
 
@@ -12,6 +12,8 @@ Backend for a marketplace platform built on .NET 10 with ASP.NET Core Web API, D
 - Docker / Docker Compose
 - Scalar + Swagger UI (OpenAPI documentation)
 - SendGrid (transactional email)
+- Hangfire (background jobs; PostgreSQL or in-memory storage)
+- Web Push / VAPID (optional; `Lib.Net.Http.WebPush`)
 
 ## Project structure
 
@@ -50,6 +52,10 @@ Required variables:
 - `FRONTEND__BASEURL` (e.g. `http://localhost:3000`)
 - `CORS__ALLOWEDORIGINS__0` (allowed SPA origin, usually same as `FRONTEND__BASEURL`)
 - `JWT__SECRETKEY` (minimum 32 chars)
+
+Optional (see **Web Push** below):
+
+- `WEBPUSH__ENABLED`, `WEBPUSH__SUBJECT`, `WEBPUSH__PUBLICKEY`, `WEBPUSH__PRIVATEKEY`
 
 > `.env` is ignored by git. Keep secrets there only.
 
@@ -153,6 +159,47 @@ When 2FA is enabled, login requires `twoFactorCode` in request body:
   "twoFactorCode": "123456"
 }
 ```
+
+## Web Push (browser notifications)
+
+Push delivery is **separate** from auth email/Telegram (`INotificationDispatcher`). Application events enqueue **Hangfire** jobs (`AppNotificationJobs`), which run registered **`INotificationChannel`** implementations (Web Push + no-op in-app stub for future use).
+
+### Configuration (`appsettings` / `.env`)
+
+| Variable | Meaning |
+|----------|---------|
+| `WEBPUSH__ENABLED` | When `true`, the server will send Web Push **if** VAPID keys are set. When `false` or keys missing, the Web Push channel skips network calls (Hangfire jobs may still run for other channels). |
+| `WEBPUSH__SUBJECT` | VAPID *subject* string shown to push providers, usually `mailto:you@domain` or `https://your-app.example`. The sample `mailto:dev@localhost` is fine for **local development**; for **production**, use a real contact URL or mailbox you control. |
+| `WEBPUSH__PUBLICKEY` / `WEBPUSH__PRIVATEKEY` | VAPID key pair (keep the private key secret). |
+
+Generate keys (Node.js):
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+On Windows you can run [`scripts/generate-vapid-keys.ps1`](scripts/generate-vapid-keys.ps1) from the `backend` folder (same `npx` command, plus reminders).
+
+Copy the printed **Public Key** and **Private Key** into `WEBPUSH__PUBLICKEY` and `WEBPUSH__PRIVATEKEY`, set `WEBPUSH__ENABLED=true`, then restart the API.
+
+**Staging / CI:** configure the same variables as encrypted secrets (for example `WEBPUSH__ENABLED`, `WEBPUSH__SUBJECT`, `WEBPUSH__PUBLICKEY`, `WEBPUSH__PRIVATEKEY`). Never commit real private keys to the repository.
+
+`FRONTEND__BASEURL` is used to build deep links inside notification payloads (order links in the SPA).
+
+### HTTP API
+
+- `GET /web-push/vapid-public-key` — public key + subject for `applicationServerKey` in the browser (no auth).
+- `POST /me/web-push/subscriptions` — register or update the current user’s subscription (JWT). Optional body flags: `includeUserChannel` (default `true`), `includeAdminChannel` (only honored if the user has the **Admin** role).
+- `DELETE /me/web-push/subscriptions?endpoint=...` — remove subscription for the current user.
+- `GET /me/in-app-notifications` — paginated in-app notification feed; `PATCH /me/in-app-notifications/{id}/read` — mark as read.
+
+Apply EF migrations so table `push_subscriptions` exists (migration **`20260510175257_AddPushSubscriptions`**; see `InitializeDatabaseAsync` in Development, or run `dotnet ef database update` from the `backend` folder):
+
+```bash
+dotnet ef database update --project src/Marketplace.Infrastructure/Marketplace.Infrastructure.csproj --startup-project src/Marketplace.API/Marketplace.API.csproj
+```
+
+Confirm with `dotnet ef migrations list` (same `--project` / `--startup-project`) that the migration is applied when the database is reachable.
 
 ## Google OAuth setup checklist
 

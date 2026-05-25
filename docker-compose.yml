@@ -163,6 +163,8 @@ volumes:
   minio_data:
 
 networks:
+  # Фіксоване ім'я мережі: без нього Compose створює marketplace_marketplace, а старі
+  # контейнери (postgres, redis, …) можуть лишитися на marketplace_net — тоді api не резолвить postgres.
   marketplace:
+    name: marketplace_net
     driver: bridge
-

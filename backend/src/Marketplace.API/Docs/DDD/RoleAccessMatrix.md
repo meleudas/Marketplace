@@ -8,12 +8,18 @@
 |------|-------------------|--------|
 | **Buyer** | Покупець | Публічний каталог; автентифіковані `/users/me` тощо |
 | **Seller** | Продавець (глобальний маркер) | Як buyer + залежить від **компанійного** членства для B2B-операцій |
-| **Moderator** | Модерація (зарезервовано продуктом) | За замовчуванням ті самі ендпоінти, що й звичайний user, якщо немає окремих політик |
+| **Moderator** | Модерація відгуків і товарів | Як buyer + **`/admin/products/*`** (разом з `Admin`); інші `/admin/*` з `AdminCatalogController` — лише у **`Admin`** |
 | **Admin** | Адміністратор платформи | **Повний доступ** до `/admin/*`; **bypass** перевірок членства компанії для `/companies/{id}/products`, `/companies/{id}/inventory/*`, `/companies/{id}/members/*`; `PATCH /users/{id}/role` |
+
+### Web Push підписки (`/web-push`, `/me/web-push`)
+
+- **`GET /web-push/vapid-public-key`** — без авторизації (публічний VAPID-ключ).
+- **`POST /me/web-push/subscriptions`** / **`DELETE /me/web-push/subscriptions`** — будь-який автентифікований користувач; прапорець **`includeAdminChannel`** застосовується, якщо в JWT є роль **`Admin`** або **`Moderator`** ([Endpoints/PushNotifications.md](../Endpoints/PushNotifications.md)).
+- **`GET /me/in-app-notifications`**, **`PATCH /me/in-app-notifications/{id}/read`** — in-app стрічка ([Endpoints/MeNotifications.md](../Endpoints/MeNotifications.md)).
 
 ### Явні адмін-маршрути
 
-- Усі **`/admin/*`** — тільки **`Admin`** ([Endpoints/AdminCatalog.md](../Endpoints/AdminCatalog.md)).
+- Більшість **`/admin/*`** ([Endpoints/AdminCatalog.md](../Endpoints/AdminCatalog.md)) — лише **`Admin`**. Виняток: модерація товарів **`/admin/products/*`** — **`Admin`** або **`Moderator`** ([Endpoints/AdminProducts.md](../Endpoints/AdminProducts.md)).
 
 ### Зміна глобальної ролі
 

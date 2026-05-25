@@ -5,6 +5,7 @@ using Marketplace.Infrastructure.External.Email;
 using Marketplace.Infrastructure.Jobs;
 using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -15,9 +16,7 @@ builder.Services.AddMarketplaceApi(builder.Configuration);
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
-{
-    await Marketplace.Infrastructure.DependencyInjection.InitializeDatabaseAsync(app.Services);
-}
+    await InitializeDevelopmentDatabaseWithRetriesAsync(app.Services, app.Logger);
 
 app.MapOpenApi("/openapi/{documentName}.json");
 app.MapScalarApiReference(options =>
@@ -55,6 +54,10 @@ RecurringJob.AddOrUpdate<MediaCleanupJobs>(
     "media-cleanup-orphans",
     job => job.CleanupOrphansAsync(default),
     Cron.Hourly);
+RecurringJob.AddOrUpdate<AppNotificationJobs>(
+    "app-notifications-prune-expired-inapp",
+    job => job.PruneExpiredInAppNotificationsAsync(default),
+    Cron.Daily(3));
 
 app.MapControllers();
 app.MapPrometheusScrapingEndpoint("/metrics");
@@ -124,6 +127,75 @@ app.MapGet("/health/liqpay", async (ILiqPayPort port, CancellationToken ct) =>
     .WithTags("Health");
 
 app.Run();
+
+/// <summary>
+/// Docker Desktop інколи стартує контейнер API до того, як вбудований DNS (127.0.0.11) стабільно резолвить
+/// імена сервісів — тоді перша міграція падає з "Name or service not known" і процес завершується (часто з кодом 139).
+/// </summary>
+static async Task InitializeDevelopmentDatabaseWithRetriesAsync(IServiceProvider services, ILogger logger)
+{
+    const int maxAttempts = 20;
+    var delay = TimeSpan.FromSeconds(2);
+
+    Exception? lastException = null;
+
+    for (var attempt = 1; attempt <= maxAttempts; attempt++)
+    {
+        try
+        {
+            await Marketplace.Infrastructure.DependencyInjection.InitializeDatabaseAsync(services);
+            return;
+        }
+        catch (Exception ex) when (IsTransientDockerNetworkFailure(ex))
+        {
+            lastException = ex;
+            if (attempt == maxAttempts)
+                break;
+
+            logger.LogWarning(ex,
+                "Database migrate attempt {Attempt}/{Max} failed (transient network/DNS); retrying in {Delay}s.",
+                attempt, maxAttempts, delay.TotalSeconds);
+            await Task.Delay(delay);
+        }
+    }
+
+    throw new InvalidOperationException(
+        $"Database migration failed after {maxAttempts} attempts. " +
+        "If this runs in Docker, ensure the API container is on the same Compose network as postgres " +
+        "(service hostname 'postgres'). Try: docker compose down && docker compose up --build.",
+        lastException);
+}
+
+static bool IsTransientDockerNetworkFailure(Exception ex)
+{
+    for (var e = ex; e is not null; e = e.InnerException)
+    {
+        if (e is SocketException se)
+        {
+            if (se.SocketErrorCode is SocketError.HostNotFound
+                or SocketError.TryAgain
+                or SocketError.NoRecovery
+                or SocketError.ConnectionRefused)
+                return true;
+        }
+
+        var msg = e.Message;
+        if (msg.Contains("Name or service not known", StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (msg.Contains("nodename nor servname", StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (msg.Contains("No such host is known", StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (msg.Contains("Could not resolve host", StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (msg.Contains("server misbehaving", StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (msg.Contains("Connection refused", StringComparison.OrdinalIgnoreCase))
+            return true;
+    }
+
+    return false;
+}
 
 static object BuildKeySnapshot(string value) => new
 {

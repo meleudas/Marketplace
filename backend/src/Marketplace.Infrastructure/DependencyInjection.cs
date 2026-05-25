@@ -1,7 +1,9 @@
 using Hangfire;
 using Hangfire.MemoryStorage;
+using Hangfire.PostgreSql;
 using Elastic.Clients.Elasticsearch;
 using Marketplace.Application.Auth.Ports;
+using Marketplace.Application.Carts.Ports;
 using Marketplace.Application.Common.Options;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Products.Ports;
@@ -28,7 +30,10 @@ using Marketplace.Infrastructure.Identity;
 using Marketplace.Infrastructure.Identity.Entities;
 using Marketplace.Infrastructure.Identity.Managers;
 using Marketplace.Infrastructure.Identity.Services;
+using Lib.Net.Http.WebPush;
+using Marketplace.Application.Notifications.Ports;
 using Marketplace.Infrastructure.Jobs;
+using Marketplace.Infrastructure.Notifications;
 using Marketplace.Infrastructure.Persistence;
 using Marketplace.Infrastructure.Persistence.Interceptors;
 using Marketplace.Infrastructure.Persistence.Repositories;
@@ -36,8 +41,10 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Marketplace.Infrastructure;
 
@@ -56,6 +63,7 @@ public static class DependencyInjection
         services.Configure<ElasticsearchOptions>(configuration.GetSection(ElasticsearchOptions.SectionName));
         services.Configure<LiqPayOptions>(configuration.GetSection(LiqPayOptions.SectionName));
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
+        services.Configure<WebPushOptions>(configuration.GetSection(WebPushOptions.SectionName));
 
         var connectionString = configuration.GetConnectionString("Database")
             ?? throw new InvalidOperationException("Connection string 'Database' is not configured.");
@@ -66,6 +74,7 @@ public static class DependencyInjection
         services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
             options.UseNpgsql(connectionString)
+                .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
                 .AddInterceptors(
                     sp.GetRequiredService<SoftDeleteInterceptor>(),
                     sp.GetRequiredService<AuditableEntityInterceptor>());
@@ -136,9 +145,14 @@ public static class DependencyInjection
         }
 
         services.AddHangfire(config =>
+        {
             config.UseSimpleAssemblyNameTypeSerializer()
-                .UseRecommendedSerializerSettings()
-                .UseMemoryStorage());
+                .UseRecommendedSerializerSettings();
+            if (!string.IsNullOrWhiteSpace(connectionString))
+                config.UsePostgreSqlStorage(opt => opt.UseNpgsqlConnection(connectionString));
+            else
+                config.UseMemoryStorage();
+        });
         services.AddHangfireServer();
 
         services.AddScoped<IdentityUserService>();
@@ -146,6 +160,21 @@ public static class DependencyInjection
         services.AddScoped<IAuthenticationPort, IdentityAuthService>();
         services.AddScoped<INotificationDispatcher, HangfireNotificationDispatcher>();
         services.AddScoped<NotificationJobs>();
+        services.AddSingleton<PushServiceClient>();
+        services.AddScoped<IPushDeliveryClient, LibWebPushDeliveryClient>();
+        services.AddScoped<IPushSubscriptionRepository, PushSubscriptionRepository>();
+        services.Configure<AppNotificationOptions>(configuration.GetSection(AppNotificationOptions.SectionName));
+        services.AddScoped<AppNotificationPayloadBuilder>();
+        services.AddScoped<IAppNotificationUserContactReader, AppNotificationUserDirectory>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<INotificationChannel, WebPushNotificationChannel>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<INotificationChannel, InAppNotificationChannel>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<INotificationChannel, EmailNotificationChannel>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<INotificationChannel, TelegramAppChannel>());
+        services.AddScoped<IInAppNotificationRepository, InAppNotificationRepository>();
+        services.AddScoped<IAdminNotificationRecipientIds, AdminNotificationRecipientIds>();
+        services.AddScoped<ICompanyOrderNotificationRecipientIds, CompanyOrderNotificationRecipientIds>();
+        services.AddScoped<IAppNotificationScheduler, HangfireAppNotificationScheduler>();
+        services.AddScoped<AppNotificationJobs>();
         services.AddScoped<InventoryJobs>();
         services.AddScoped<SearchIndexJobs>();
         services.AddScoped<PaymentJobs>();
@@ -156,6 +185,8 @@ public static class DependencyInjection
         services.AddScoped<IAppCachePort, AppCachePort>();
         services.AddScoped<IOutboxWriter, OutboxRepository>();
         services.AddScoped<IInboxDeduplicator, InboxDeduplicator>();
+        services.AddScoped<IHttpIdempotencyStore, HttpIdempotencyStore>();
+        services.AddScoped<IAppTransactionPort, AppTransactionPort>();
         services.AddHttpClient<ILiqPayPort, LiqPayClient>();
         services.AddSingleton(sp =>
         {
@@ -182,6 +213,7 @@ public static class DependencyInjection
         services.AddScoped<IProductImageRepository, ProductImageRepository>();
         services.AddScoped<ICartRepository, CartRepository>();
         services.AddScoped<ICartItemRepository, CartItemRepository>();
+        services.AddScoped<ICartStockWatchRepository, CartStockWatchRepository>();
         services.AddScoped<IFavoriteRepository, FavoriteRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IOrderStatusHistoryRepository, OrderStatusHistoryRepository>();

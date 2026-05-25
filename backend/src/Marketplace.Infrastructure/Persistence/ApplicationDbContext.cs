@@ -31,6 +31,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<ProductImageRecord> ProductImages => Set<ProductImageRecord>();
     public DbSet<CartRecord> Carts => Set<CartRecord>();
     public DbSet<CartItemRecord> CartItems => Set<CartItemRecord>();
+    public DbSet<CartStockWatchRecord> CartStockWatches => Set<CartStockWatchRecord>();
     public DbSet<FavoriteRecord> Favorites => Set<FavoriteRecord>();
     public DbSet<OrderRecord> Orders => Set<OrderRecord>();
     public DbSet<OrderStatusHistoryRecord> OrderStatusHistory => Set<OrderStatusHistoryRecord>();
@@ -40,9 +41,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<RefundRecord> Refunds => Set<RefundRecord>();
     public DbSet<OutboxMessageRecord> OutboxMessages => Set<OutboxMessageRecord>();
     public DbSet<InboxMessageRecord> InboxMessages => Set<InboxMessageRecord>();
+    public DbSet<HttpIdempotencyRequestRecord> HttpIdempotencyRequests => Set<HttpIdempotencyRequestRecord>();
     public DbSet<ProductReviewRecord> ProductReviews => Set<ProductReviewRecord>();
     public DbSet<CompanyReviewRecord> CompanyReviews => Set<CompanyReviewRecord>();
     public DbSet<ReviewReplyRecord> ReviewReplies => Set<ReviewReplyRecord>();
+    public DbSet<PushSubscriptionRecord> PushSubscriptions => Set<PushSubscriptionRecord>();
+    public DbSet<NotificationRecord> Notifications => Set<NotificationRecord>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

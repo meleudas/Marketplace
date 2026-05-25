@@ -19,7 +19,7 @@
 
 ## HTTP API
 
-Див. [Endpoints/Auth.md](../Endpoints/Auth.md), [Endpoints/ExternalAuth.md](../Endpoints/ExternalAuth.md), [Endpoints/Account.md](../Endpoints/Account.md), [Endpoints/Users.md](../Endpoints/Users.md).
+Див. [Endpoints/Auth.md](../Endpoints/Auth.md), [Endpoints/ExternalAuth.md](../Endpoints/ExternalAuth.md), [Endpoints/Account.md](../Endpoints/Account.md), [Endpoints/Users.md](../Endpoints/Users.md), [Endpoints/PushNotifications.md](../Endpoints/PushNotifications.md) (Web Push підписки за JWT-користувачем).
 
 ## Важливі політики
 
@@ -32,4 +32,5 @@
 - `Marketplace.API/Controllers/ExternalAuthController.cs`
 - `Marketplace.API/Controllers/AccountController.cs`
 - `Marketplace.API/Controllers/UsersController.cs`
+- `Marketplace.API/Controllers/PushNotificationsController.cs`
 - `Marketplace.Domain/Users/Enums/UserRole.cs`

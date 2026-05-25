@@ -24,5 +24,6 @@
 | [CompanyMembersController.md](CompanyMembersController.md) | [Endpoints/CompanyMembers.md](../Endpoints/CompanyMembers.md) |
 | [PaymentsIntegrationsController.md](PaymentsIntegrationsController.md) | [Endpoints/PaymentsIntegrations.md](../Endpoints/PaymentsIntegrations.md) |
 | [TelegramIntegrationsController.md](TelegramIntegrationsController.md) | [Endpoints/TelegramIntegrations.md](../Endpoints/TelegramIntegrations.md) |
+| [PushNotificationsController.md](PushNotificationsController.md) | [Endpoints/PushNotifications.md](../Endpoints/PushNotifications.md) |
 
 Шлях до папки: `backend/src/Marketplace.API/Docs/ControllerModels`

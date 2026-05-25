@@ -12,9 +12,13 @@
 | **Tech Store** | `CompanyId` = `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa`, slug `tech-store` |
 | **Home Comfort** | `CompanyId` = `bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb`, slug `home-comfort` (також **approved**) |
 | **Категорії** | `1` Electronics, `2` Smartphones (батько 1), `3` Home |
-| **Товари (slug для `/catalog/products/{slug}`)** | `seed-phone-alpha`, `seed-laptop-beta`, `seed-earbuds-gamma`, `seed-kettle-home` |
+| **Товари (slug)** | `seed-phone-alpha`, `seed-laptop-beta`, `seed-earbuds-gamma`, `seed-kettle-home`, `seed-watch-pending` (PendingReview), `seed-tablet-rejected` (Draft) |
 | **Склади** | Tech: warehouse `1` MAIN-KYIV, `2` SEC-LVIV; Home: `3` HOME-LVIV |
 | **Резерв (демо)** | `SEED-RES-DEMO` на товар 1 (склад 1), 5 од. |
+| **Кошик buyer@** | Товари 1–3; **watch** на laptop (product 2, склад 0 — restock demo) |
+| **Замовлення** | `ORD-SEED-0001` … `0003` + `order_status_history` |
+| **In-app (`notifications`)** | 7 рядків (order, restock, admin, moderation, company) — `GET /me/in-app-notifications` |
+| **Web Push (`push_subscriptions`)** | buyer / admin / moderator — demo endpoints |
 
 Детальний список логінів — у [backend/DOCKER_COMMANDS.md](../../../../DOCKER_COMMANDS.md) (розділ про seed).
 
@@ -33,6 +37,13 @@
 | `user@marketplace.test` | User | — | `UserName` у Identity: **plainuser** |
 
 ## Покрокові сценарії (happy path)
+
+### Restock (кошик → прихід на склад)
+
+1. Під `buyer@marketplace.test`: додати в кошик кількість товару **більшу**, ніж поточний сукупний `availableQty` (перевірка як при checkout) — у БД з’являється рядок `cart_stock_watches` для пари `(user_id, product_id)`.
+2. Під `seller@marketplace.test` (Owner/Manager з `WriteStock`): `POST .../inventory/receive` для того ж `productId`, щоб сума `Available` по компанії стала **> 0** (була 0).
+3. Очікування: для покупця ставляться застосункові нотифікації (`CartProductBackInStock`) через `IAppNotificationScheduler` / Hangfire — Push + In-app за наявності підписок; повтор того ж сценарію протягом **24 год** не дублює сповіщення (поле `LastNotifiedAtUtc`).
+4. Checkout або очищення кошика — watch для користувача видаляються (`DeleteAllForUserAsync` / `SyncWatch`).
 
 ### A. Вітрина після seed
 

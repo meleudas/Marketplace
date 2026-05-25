@@ -20,17 +20,20 @@
 | [Account.md](Account.md) | `/account` |
 | [Users.md](Users.md) | `/users` |
 | [AdminCatalog.md](AdminCatalog.md) | `/admin` |
+| [AdminProducts.md](AdminProducts.md) | `/admin/products` |
 | [Catalog.md](Catalog.md) | `/catalog` |
 | [Products.md](Products.md) | `/companies/{companyId}/products` |
 | [Inventory.md](Inventory.md) | `/companies/{companyId}` (склади та інвентар) |
 | [CompanyMembers.md](CompanyMembers.md) | `/companies/{companyId}/members` |
 | [Cart.md](Cart.md) | `/me/cart` |
 | [Favorites.md](Favorites.md) | `/me/favorites` |
+| [MeNotifications.md](MeNotifications.md) | `/me/in-app-notifications` |
 | [Reviews.md](Reviews.md) | `/products/*/reviews`, `/companies/*/reviews`, `/reviews/*`, `/admin/reviews/*` |
 | [AdminPayments.md](AdminPayments.md) | `/admin/payments` |
 | [Orders.md](Orders.md) | `/me/orders`, `/companies/{companyId}/orders`, `/admin/orders`, `/orders/{orderId}/*` |
 | [PaymentsIntegrations.md](PaymentsIntegrations.md) | `/integrations/liqpay` |
-| [TelegramIntegrations.md](TelegramIntegrations.md) | `/integrations/telegram` 
+| [TelegramIntegrations.md](TelegramIntegrations.md) | `/integrations/telegram` |
+| [PushNotifications.md](PushNotifications.md) | `/web-push`, `/me/web-push` |
 
 ## Системні маршрути (не з контролерів, `Program.cs`)
 

@@ -1,4 +1,6 @@
 using System;
+using Marketplace.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -6,6 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace Marketplace.Infrastructure.Persistence.Migrations
 {
+    [DbContext(typeof(ApplicationDbContext))]
+    [Migration("20260417120000_AddCompanyContractsAndCommissions")]
     public partial class AddCompanyContractsAndCommissions : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
