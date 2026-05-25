@@ -1,5 +1,8 @@
 using Marketplace.Application.Carts.Commands.CheckoutCart;
+using Marketplace.Application.Carts.Ports;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Notifications;
+using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Payments.Ports;
 using Marketplace.Domain.Cart.Entities;
@@ -57,12 +60,16 @@ public class ApplicationCheckoutCartCommandTests
             cache,
             new NoopOrderCacheInvalidationService(),
             new NoopOutboxWriter(),
-            new NoopOrderStatusHistoryWriter());
+            new NoopOrderStatusHistoryWriter(),
+            new InMemoryWarehouseStockRepository(),
+            new NoopAppNotificationScheduler(),
+            new NoopCartStockWatchRepository());
         var cmd = new CheckoutCartCommand(
             userId,
             CheckoutPaymentMethod.Card,
             new CheckoutAddressDto("Ім'я", "Прізвище", "+38000112233", "Street 1", "Kyiv", "Kyiv", "01001", "UA"),
-            "Leave at door");
+            "Leave at door",
+            "idem-key-1");
 
         var result = await handler.Handle(cmd, CancellationToken.None);
 
@@ -74,6 +81,86 @@ public class ApplicationCheckoutCartCommandTests
         Assert.Equal(2, orderAddressRepo.Items.Count);
         Assert.Empty((await cartItemRepo.ListByCartIdAsync(cart.Id, CancellationToken.None)));
         Assert.Contains($"cart:user:{userId}:active", cache.RemovedKeys);
+    }
+
+    [Fact]
+    public async Task Checkout_Schedules_AdminNewOrder_For_Each_Company_Order()
+    {
+        var userId = Guid.NewGuid();
+        var companyA = Guid.NewGuid();
+        var companyB = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        var cartRepo = new InMemoryCartRepository();
+        var cart = await cartRepo.AddAsync(Cart.Reconstitute(CartId.From(0), userId, CartStatus.Active, now, now, now, false, null));
+        var cartItemRepo = new InMemoryCartItemRepository();
+        _ = await cartItemRepo.AddAsync(CartItem.Reconstitute(CartItemId.From(0), cart.Id, ProductId.From(1), 2, new Money(100), Money.Zero, now, now, false, null));
+        _ = await cartItemRepo.AddAsync(CartItem.Reconstitute(CartItemId.From(0), cart.Id, ProductId.From(2), 1, new Money(80), Money.Zero, now, now, false, null));
+        _ = await cartItemRepo.AddAsync(CartItem.Reconstitute(CartItemId.From(0), cart.Id, ProductId.From(3), 1, new Money(50), Money.Zero, now, now, false, null));
+
+        var products = new InMemoryProductRepository();
+        products.Seed(Product.Reconstitute(ProductId.From(1), CompanyId.From(companyA), "A1", "a1", "d", new Money(100), null, 10, 0, CategoryId.From(1), ProductStatus.Active, null, 0, 0, 0, false, now, now, false, null));
+        products.Seed(Product.Reconstitute(ProductId.From(2), CompanyId.From(companyA), "A2", "a2", "d", new Money(80), null, 10, 0, CategoryId.From(1), ProductStatus.Active, null, 0, 0, 0, false, now, now, false, null));
+        products.Seed(Product.Reconstitute(ProductId.From(3), CompanyId.From(companyB), "B1", "b1", "d", new Money(50), null, 10, 0, CategoryId.From(1), ProductStatus.Active, null, 0, 0, 0, false, now, now, false, null));
+
+        var orderRepo = new InMemoryOrderRepository();
+        var orderItemRepo = new InMemoryOrderItemRepository();
+        var orderAddressRepo = new InMemoryOrderAddressRepository();
+        var cache = new SpyCachePort();
+        var spyNotifications = new SpyAppNotificationScheduler();
+
+        var handler = new CheckoutCartCommandHandler(
+            cartRepo,
+            cartItemRepo,
+            products,
+            orderRepo,
+            orderItemRepo,
+            orderAddressRepo,
+            new InMemoryPaymentRepository(),
+            new FakeLiqPayPort(),
+            cache,
+            new NoopOrderCacheInvalidationService(),
+            new NoopOutboxWriter(),
+            new NoopOrderStatusHistoryWriter(),
+            new InMemoryWarehouseStockRepository(),
+            spyNotifications,
+            new NoopCartStockWatchRepository());
+
+        var cmd = new CheckoutCartCommand(
+            userId,
+            CheckoutPaymentMethod.Card,
+            new CheckoutAddressDto("Ім'я", "Прізвище", "+38000112233", "Street 1", "Kyiv", "Kyiv", "01001", "UA"),
+            "Leave at door",
+            "idem-admin-push-1");
+
+        var result = await handler.Handle(cmd, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(4, spyNotifications.Requests.Count);
+        Assert.Equal(2, spyNotifications.Requests.Count(r => r.TemplateKey == AppNotificationTemplateKeys.AdminNewOrder));
+        Assert.Equal(2, spyNotifications.Requests.Count(r => r.TemplateKey == AppNotificationTemplateKeys.CompanyNewOrder));
+        Assert.All(
+            spyNotifications.Requests.Where(r => r.TemplateKey == AppNotificationTemplateKeys.AdminNewOrder),
+            r =>
+            {
+                Assert.Equal(AppNotificationAudienceKind.Admins, r.Audience);
+                Assert.True(r.Channels.HasFlag(AppNotificationChannelKind.Push));
+                Assert.True(r.Channels.HasFlag(AppNotificationChannelKind.InApp));
+            });
+        foreach (var r in spyNotifications.Requests.Where(r => r.TemplateKey == AppNotificationTemplateKeys.CompanyNewOrder))
+        {
+            Assert.Equal(AppNotificationAudienceKind.CompanyStakeholders, r.Audience);
+            Assert.NotNull(r.TargetCompanyId);
+            Assert.True(r.Channels.HasFlag(AppNotificationChannelKind.Push));
+            Assert.True(r.Channels.HasFlag(AppNotificationChannelKind.InApp));
+        }
+
+        var companyTargets = spyNotifications.Requests
+            .Where(r => r.TemplateKey == AppNotificationTemplateKeys.CompanyNewOrder)
+            .Select(r => r.TargetCompanyId!.Value)
+            .ToHashSet();
+        Assert.Contains(companyA, companyTargets);
+        Assert.Contains(companyB, companyTargets);
     }
 
     [Fact]
@@ -96,10 +183,13 @@ public class ApplicationCheckoutCartCommandTests
             new SpyCachePort(),
             new NoopOrderCacheInvalidationService(),
             new NoopOutboxWriter(),
-            new NoopOrderStatusHistoryWriter());
+            new NoopOrderStatusHistoryWriter(),
+            new InMemoryWarehouseStockRepository(),
+            new NoopAppNotificationScheduler(),
+            new NoopCartStockWatchRepository());
 
         var result = await handler.Handle(
-            new CheckoutCartCommand(userId, CheckoutPaymentMethod.Card, new CheckoutAddressDto("A", "B", "1", "S", "C", "ST", "P", "U"), null),
+            new CheckoutCartCommand(userId, CheckoutPaymentMethod.Card, new CheckoutAddressDto("A", "B", "1", "S", "C", "ST", "P", "U"), null, "idem-key-2"),
             CancellationToken.None);
 
         Assert.True(result.IsFailure);
@@ -184,8 +274,51 @@ public class ApplicationCheckoutCartCommandTests
         }
         public Task<IReadOnlyList<Product>> ListByCompanyAsync(CompanyId companyId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Product>>(_items.Values.Where(x => x.CompanyId == companyId).ToList());
         public Task<IReadOnlyList<Product>> ListActiveAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Product>>(_items.Values.Where(x => x.Status == ProductStatus.Active && !x.IsDeleted).ToList());
+        public Task<IReadOnlyList<Product>> ListPendingReviewAsync(CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Product>>(_items.Values.Where(x => x.Status == ProductStatus.PendingReview && !x.IsDeleted).ToList());
         public Task AddAsync(Product product, CancellationToken ct = default) { Seed(product); return Task.CompletedTask; }
         public Task UpdateAsync(Product product, CancellationToken ct = default) { Seed(product); return Task.CompletedTask; }
+    }
+
+    private sealed class InMemoryWarehouseStockRepository : Marketplace.Domain.Inventory.Repositories.IWarehouseStockRepository
+    {
+        public Task<Marketplace.Domain.Inventory.Entities.WarehouseStock?> GetByWarehouseAndProductAsync(WarehouseId warehouseId, ProductId productId, CancellationToken ct = default)
+            => Task.FromResult<Marketplace.Domain.Inventory.Entities.WarehouseStock?>(Marketplace.Domain.Inventory.Entities.WarehouseStock.Reconstitute(
+                WarehouseStockId.From(1),
+                CompanyId.From(Guid.NewGuid()),
+                warehouseId,
+                productId,
+                1000,
+                0,
+                0,
+                1,
+                DateTime.UtcNow,
+                DateTime.UtcNow,
+                false,
+                null));
+
+        public Task<IReadOnlyList<Marketplace.Domain.Inventory.Entities.WarehouseStock>> ListByCompanyAsync(CompanyId companyId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Marketplace.Domain.Inventory.Entities.WarehouseStock>>([]);
+
+        public Task<IReadOnlyList<Marketplace.Domain.Inventory.Entities.WarehouseStock>> ListByProductAsync(CompanyId companyId, ProductId productId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Marketplace.Domain.Inventory.Entities.WarehouseStock>>([
+                Marketplace.Domain.Inventory.Entities.WarehouseStock.Reconstitute(
+                    WarehouseStockId.From(1),
+                    companyId,
+                    WarehouseId.From(1),
+                    productId,
+                    1000,
+                    0,
+                    0,
+                    1,
+                    DateTime.UtcNow,
+                    DateTime.UtcNow,
+                    false,
+                    null)
+            ]);
+
+        public Task AddAsync(Marketplace.Domain.Inventory.Entities.WarehouseStock stock, CancellationToken ct = default) => Task.CompletedTask;
+        public Task UpdateAsync(Marketplace.Domain.Inventory.Entities.WarehouseStock stock, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class InMemoryOrderRepository : IOrderRepository
@@ -279,6 +412,8 @@ public class ApplicationCheckoutCartCommandTests
     private sealed class NoopOrderCacheInvalidationService : IOrderCacheInvalidationService
     {
         public Task<long> GetListVersionAsync(string scope, Guid? actorUserId, Guid? companyId, CancellationToken ct = default) => Task.FromResult(1L);
+        public Task TrackDetailKeyAsync(long orderId, string cacheKey, TimeSpan ttl, CancellationToken ct = default) => Task.CompletedTask;
+        public Task TrackListKeyAsync(string scope, Guid? actorUserId, Guid? companyId, string cacheKey, TimeSpan ttl, CancellationToken ct = default) => Task.CompletedTask;
         public Task InvalidateOrderAsync(long orderId, Guid customerId, Guid companyId, CancellationToken ct = default) => Task.CompletedTask;
     }
 
@@ -288,11 +423,41 @@ public class ApplicationCheckoutCartCommandTests
         public Task<IReadOnlyList<OutboxMessage>> ListPendingAsync(int batchSize, DateTime utcNow, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<OutboxMessage>>([]);
         public Task MarkProcessedAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
         public Task MarkFailedAsync(Guid id, string error, DateTime nextAttemptAtUtc, CancellationToken ct = default) => Task.CompletedTask;
+        public Task MarkDeadLetterAsync(Guid id, string reason, string category, CancellationToken ct = default) => Task.CompletedTask;
+        public Task RequeueDeadLetterAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class NoopOrderStatusHistoryWriter : Marketplace.Application.Orders.Services.IOrderStatusHistoryWriter
     {
         public Task WriteIfChangedAsync(Order order, OrderStatus oldStatus, Guid actorUserId, string source, string? comment = null, string? correlationId = null, CancellationToken ct = default)
             => Task.CompletedTask;
+    }
+
+    private sealed class NoopAppNotificationScheduler : IAppNotificationScheduler
+    {
+        public Task ScheduleAsync(AppNotificationRequest request, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class NoopCartStockWatchRepository : ICartStockWatchRepository
+    {
+        public Task UpsertAsync(Guid userId, long productId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteAsync(Guid userId, long productId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteAllForUserAsync(Guid userId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<IReadOnlyList<Guid>> ListUserIdsEligibleForNotifyAsync(
+            long productId, TimeSpan minIntervalSinceLastNotify, DateTime utcNow, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Guid>>([]);
+        public Task TouchLastNotifiedAsync(Guid userId, long productId, DateTime utcNow, CancellationToken ct = default) =>
+            Task.CompletedTask;
+    }
+
+    private sealed class SpyAppNotificationScheduler : IAppNotificationScheduler
+    {
+        public List<AppNotificationRequest> Requests { get; } = [];
+
+        public Task ScheduleAsync(AppNotificationRequest request, CancellationToken ct = default)
+        {
+            Requests.Add(request);
+            return Task.CompletedTask;
+        }
     }
 }

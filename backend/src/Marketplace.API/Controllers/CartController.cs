@@ -1,4 +1,5 @@
 using Marketplace.API.Extensions;
+using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Carts.Commands.AddCartItem;
 using Marketplace.Application.Carts.Commands.CheckoutCart;
 using Marketplace.Application.Carts.Commands.ClearCart;
@@ -18,10 +19,12 @@ namespace Marketplace.API.Controllers;
 public sealed class CartController : ControllerBase
 {
     private readonly ISender _sender;
+    private readonly IHttpIdempotencyStore _idempotency;
 
-    public CartController(ISender sender)
+    public CartController(ISender sender, IHttpIdempotencyStore idempotency)
     {
         _sender = sender;
+        _idempotency = idempotency;
     }
 
     [HttpGet]
@@ -74,9 +77,32 @@ public sealed class CartController : ControllerBase
     {
         if (!User.TryGetUserId(out var actorId))
             return Unauthorized();
+        if (!Request.TryGetIdempotencyKey(out var idempotencyKey))
+            return BadRequest("Idempotency-Key header is required.");
 
         if (!Enum.TryParse<CheckoutPaymentMethod>(request.PaymentMethod, true, out var paymentMethod))
             return BadRequest("Invalid paymentMethod");
+
+        var scope = $"checkout:{actorId:N}";
+        var requestHash = HttpIdempotencyExtensions.BuildRequestHash(
+            actorId.ToString("N"),
+            request.PaymentMethod,
+            request.Notes,
+            request.Address.FirstName,
+            request.Address.LastName,
+            request.Address.Phone,
+            request.Address.Street,
+            request.Address.City,
+            request.Address.State,
+            request.Address.PostalCode,
+            request.Address.Country);
+        var begin = await _idempotency.TryBeginAsync(scope, idempotencyKey, requestHash, TimeSpan.FromHours(12), ct);
+        if (begin.State == HttpIdempotencyBeginState.Completed && begin.StoredResponse is not null)
+            return this.ReplayResponse(begin.StoredResponse);
+        if (begin.State == HttpIdempotencyBeginState.InProgress)
+            return Conflict("Request with this Idempotency-Key is already in progress.");
+        if (begin.State == HttpIdempotencyBeginState.RequestMismatch)
+            return Conflict("Idempotency-Key already used with different request payload.");
 
         var command = new CheckoutCartCommand(
             actorId,
@@ -90,10 +116,14 @@ public sealed class CartController : ControllerBase
                 request.Address.State,
                 request.Address.PostalCode,
                 request.Address.Country),
-            request.Notes);
+            request.Notes,
+            idempotencyKey);
 
         var result = await _sender.Send(command, ct);
-        return result.ToActionResult();
+        var actionResult = result.ToActionResult();
+        var snapshot = actionResult.SnapshotResult();
+        await _idempotency.CompleteAsync(scope, idempotencyKey, requestHash, snapshot.StatusCode, snapshot.BodyJson, ct);
+        return actionResult;
     }
 }
 

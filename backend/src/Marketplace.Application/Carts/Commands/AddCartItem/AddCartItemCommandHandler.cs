@@ -1,6 +1,7 @@
 using Marketplace.Application.Carts.Cache;
 using Marketplace.Application.Carts.DTOs;
 using Marketplace.Application.Carts.Mappings;
+using Marketplace.Application.Carts.Services;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Domain.Cart.Entities;
 using Marketplace.Domain.Cart.Enums;
@@ -19,17 +20,20 @@ public sealed class AddCartItemCommandHandler : IRequestHandler<AddCartItemComma
     private readonly ICartItemRepository _cartItemRepository;
     private readonly IProductRepository _productRepository;
     private readonly IAppCachePort _cache;
+    private readonly ICartStockWatchSyncService _cartStockWatchSync;
 
     public AddCartItemCommandHandler(
         ICartRepository cartRepository,
         ICartItemRepository cartItemRepository,
         IProductRepository productRepository,
-        IAppCachePort cache)
+        IAppCachePort cache,
+        ICartStockWatchSyncService cartStockWatchSync)
     {
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
         _productRepository = productRepository;
         _cache = cache;
+        _cartStockWatchSync = cartStockWatchSync;
     }
 
     public async Task<Result<CartDto>> Handle(AddCartItemCommand request, CancellationToken ct)
@@ -83,6 +87,7 @@ public sealed class AddCartItemCommandHandler : IRequestHandler<AddCartItemComma
             cart = Cart.Reconstitute(cart.Id, cart.UserId, cart.Status, now, cart.CreatedAt, now, cart.IsDeleted, cart.DeletedAt);
             await _cartRepository.UpdateAsync(cart, ct);
             await _cache.RemoveAsync(CartCacheKeys.ActiveByUser(request.ActorUserId), ct);
+            await _cartStockWatchSync.SyncWatchForUserCartProductAsync(request.ActorUserId, cart.Id, product.Id, ct);
 
             var items = await _cartItemRepository.ListByCartIdAsync(cart.Id, ct);
             return Result<CartDto>.Success(CartMapping.ToDto(cart, items));

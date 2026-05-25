@@ -1,5 +1,7 @@
 using Marketplace.Application.Carts.Commands.AddCartItem;
 using Marketplace.Application.Carts.Commands.RemoveCartItem;
+using Marketplace.Application.Carts.Ports;
+using Marketplace.Application.Carts.Services;
 using Marketplace.Application.Carts.Queries.GetMyCart;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Common.Options;
@@ -12,6 +14,8 @@ using Marketplace.Domain.Catalog.Entities;
 using Marketplace.Domain.Catalog.Enums;
 using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
+using Marketplace.Domain.Inventory.Entities;
+using Marketplace.Domain.Inventory.Repositories;
 using Marketplace.Domain.Favorites.Entities;
 using Marketplace.Domain.Favorites.Repositories;
 using Microsoft.Extensions.Options;
@@ -46,7 +50,10 @@ public class ApplicationCartFavoriteHandlersTests
         productRepo.Seed(CreateActiveProduct(1001));
 
         var userId = Guid.NewGuid();
-        var handler = new AddCartItemCommandHandler(cartRepo, itemRepo, productRepo, cache);
+        var watchRepo = new NoopCartStockWatchRepository();
+        var stockRepo = new CartTestWarehouseStockRepository();
+        var sync = new CartStockWatchSyncService(itemRepo, watchRepo, productRepo, stockRepo);
+        var handler = new AddCartItemCommandHandler(cartRepo, itemRepo, productRepo, cache, sync);
 
         var first = await handler.Handle(new AddCartItemCommand(userId, 1001, 2), CancellationToken.None);
         var second = await handler.Handle(new AddCartItemCommand(userId, 1001, 3), CancellationToken.None);
@@ -112,7 +119,12 @@ public class ApplicationCartFavoriteHandlersTests
             CartItem.Reconstitute(CartItemId.From(0), cart.Id, ProductId.From(5), 1, new Money(10), Money.Zero, now, now, false, null),
             CancellationToken.None);
 
-        var handler = new RemoveCartItemCommandHandler(cartRepo, itemRepo, new NoOpCachePort());
+        var productRepo = new InMemoryProductRepository();
+        productRepo.Seed(CreateActiveProduct(5));
+        var watchRepo = new NoopCartStockWatchRepository();
+        var stockRepo = new CartTestWarehouseStockRepository();
+        var sync = new CartStockWatchSyncService(itemRepo, watchRepo, productRepo, stockRepo);
+        var handler = new RemoveCartItemCommandHandler(cartRepo, itemRepo, new NoOpCachePort(), sync);
         var result = await handler.Handle(new RemoveCartItemCommand(secondUser, item.Id.Value), CancellationToken.None);
 
         Assert.True(result.IsFailure);
@@ -337,6 +349,9 @@ public class ApplicationCartFavoriteHandlersTests
         public Task<IReadOnlyList<Product>> ListActiveAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Product>>(_items.Values.Where(x => x.Status == ProductStatus.Active && !x.IsDeleted).ToList());
 
+        public Task<IReadOnlyList<Product>> ListPendingReviewAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Product>>(_items.Values.Where(x => x.Status == ProductStatus.PendingReview && !x.IsDeleted).ToList());
+
         public Task AddAsync(Product product, CancellationToken ct = default)
         {
             Seed(product);
@@ -387,5 +402,46 @@ public class ApplicationCartFavoriteHandlersTests
             Cached.Remove(key);
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class NoopCartStockWatchRepository : ICartStockWatchRepository
+    {
+        public Task UpsertAsync(Guid userId, long productId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteAsync(Guid userId, long productId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteAllForUserAsync(Guid userId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<IReadOnlyList<Guid>> ListUserIdsEligibleForNotifyAsync(
+            long productId, TimeSpan minIntervalSinceLastNotify, DateTime utcNow, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Guid>>([]);
+        public Task TouchLastNotifiedAsync(Guid userId, long productId, DateTime utcNow, CancellationToken ct = default) =>
+            Task.CompletedTask;
+    }
+
+    private sealed class CartTestWarehouseStockRepository : IWarehouseStockRepository
+    {
+        public Task<WarehouseStock?> GetByWarehouseAndProductAsync(WarehouseId warehouseId, ProductId productId, CancellationToken ct = default) =>
+            Task.FromResult<WarehouseStock?>(null);
+
+        public Task<IReadOnlyList<WarehouseStock>> ListByCompanyAsync(CompanyId companyId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<WarehouseStock>>([]);
+
+        public Task<IReadOnlyList<WarehouseStock>> ListByProductAsync(CompanyId companyId, ProductId productId, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<WarehouseStock>>([
+                WarehouseStock.Reconstitute(
+                    WarehouseStockId.From(1),
+                    companyId,
+                    WarehouseId.From(1),
+                    productId,
+                    1000,
+                    0,
+                    0,
+                    1,
+                    DateTime.UtcNow,
+                    DateTime.UtcNow,
+                    false,
+                    null)
+            ]);
+
+        public Task AddAsync(WarehouseStock stock, CancellationToken ct = default) => Task.CompletedTask;
+        public Task UpdateAsync(WarehouseStock stock, CancellationToken ct = default) => Task.CompletedTask;
     }
 }

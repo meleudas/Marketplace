@@ -1,6 +1,7 @@
 using Marketplace.Application.Carts.Cache;
 using Marketplace.Application.Carts.DTOs;
 using Marketplace.Application.Carts.Mappings;
+using Marketplace.Application.Carts.Ports;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Domain.Cart.Entities;
 using Marketplace.Domain.Cart.Repositories;
@@ -14,12 +15,18 @@ public sealed class ClearCartCommandHandler : IRequestHandler<ClearCartCommand, 
     private readonly ICartRepository _cartRepository;
     private readonly ICartItemRepository _cartItemRepository;
     private readonly IAppCachePort _cache;
+    private readonly ICartStockWatchRepository _cartStockWatches;
 
-    public ClearCartCommandHandler(ICartRepository cartRepository, ICartItemRepository cartItemRepository, IAppCachePort cache)
+    public ClearCartCommandHandler(
+        ICartRepository cartRepository,
+        ICartItemRepository cartItemRepository,
+        IAppCachePort cache,
+        ICartStockWatchRepository cartStockWatches)
     {
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
         _cache = cache;
+        _cartStockWatches = cartStockWatches;
     }
 
     public async Task<Result<CartDto>> Handle(ClearCartCommand request, CancellationToken ct)
@@ -32,6 +39,7 @@ public sealed class ClearCartCommandHandler : IRequestHandler<ClearCartCommand, 
 
             var now = DateTime.UtcNow;
             await _cartItemRepository.SoftDeleteByCartIdAsync(cart.Id, now, ct);
+            await _cartStockWatches.DeleteAllForUserAsync(request.ActorUserId, ct);
 
             cart = Cart.Reconstitute(cart.Id, cart.UserId, cart.Status, now, cart.CreatedAt, now, cart.IsDeleted, cart.DeletedAt);
             await _cartRepository.UpdateAsync(cart, ct);

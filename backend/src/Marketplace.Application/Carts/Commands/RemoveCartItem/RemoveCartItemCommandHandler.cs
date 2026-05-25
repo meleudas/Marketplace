@@ -1,6 +1,7 @@
 using Marketplace.Application.Carts.Cache;
 using Marketplace.Application.Carts.DTOs;
 using Marketplace.Application.Carts.Mappings;
+using Marketplace.Application.Carts.Services;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Domain.Cart.Entities;
 using Marketplace.Domain.Cart.Repositories;
@@ -15,12 +16,18 @@ public sealed class RemoveCartItemCommandHandler : IRequestHandler<RemoveCartIte
     private readonly ICartRepository _cartRepository;
     private readonly ICartItemRepository _cartItemRepository;
     private readonly IAppCachePort _cache;
+    private readonly ICartStockWatchSyncService _cartStockWatchSync;
 
-    public RemoveCartItemCommandHandler(ICartRepository cartRepository, ICartItemRepository cartItemRepository, IAppCachePort cache)
+    public RemoveCartItemCommandHandler(
+        ICartRepository cartRepository,
+        ICartItemRepository cartItemRepository,
+        IAppCachePort cache,
+        ICartStockWatchSyncService cartStockWatchSync)
     {
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
         _cache = cache;
+        _cartStockWatchSync = cartStockWatchSync;
     }
 
     public async Task<Result<CartDto>> Handle(RemoveCartItemCommand request, CancellationToken ct)
@@ -41,6 +48,7 @@ public sealed class RemoveCartItemCommandHandler : IRequestHandler<RemoveCartIte
             cart = Cart.Reconstitute(cart.Id, cart.UserId, cart.Status, now, cart.CreatedAt, now, cart.IsDeleted, cart.DeletedAt);
             await _cartRepository.UpdateAsync(cart, ct);
             await _cache.RemoveAsync(CartCacheKeys.ActiveByUser(request.ActorUserId), ct);
+            await _cartStockWatchSync.SyncWatchForUserCartProductAsync(request.ActorUserId, cart.Id, item.ProductId, ct);
 
             var items = await _cartItemRepository.ListByCartIdAsync(cart.Id, ct);
             return Result<CartDto>.Success(CartMapping.ToDto(cart, items));
