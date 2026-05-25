@@ -23,6 +23,7 @@ public sealed class GetOrderByIdQueryHandler : IRequestHandler<GetOrderByIdQuery
     private readonly IOrderAccessService _access;
     private readonly IAppCachePort _cache;
     private readonly CacheTtlOptions _ttl;
+    private readonly IOrderCacheInvalidationService _cacheInvalidation;
 
     public GetOrderByIdQueryHandler(
         IOrderRepository orderRepository,
@@ -33,6 +34,7 @@ public sealed class GetOrderByIdQueryHandler : IRequestHandler<GetOrderByIdQuery
         IRefundRepository refundRepository,
         IOrderAccessService access,
         IAppCachePort cache,
+        IOrderCacheInvalidationService cacheInvalidation,
         IOptions<CacheTtlOptions> ttl)
     {
         _orderRepository = orderRepository;
@@ -43,6 +45,7 @@ public sealed class GetOrderByIdQueryHandler : IRequestHandler<GetOrderByIdQuery
         _refundRepository = refundRepository;
         _access = access;
         _cache = cache;
+        _cacheInvalidation = cacheInvalidation;
         _ttl = ttl.Value;
     }
 
@@ -138,6 +141,7 @@ public sealed class GetOrderByIdQueryHandler : IRequestHandler<GetOrderByIdQuery
                 x.ChangedAt)).ToList());
 
         await _cache.SetAsync(key, dto, _ttl.OrderDetail, ct);
+        await _cacheInvalidation.TrackDetailKeyAsync(order.Id.Value, key, _ttl.OrderDetail, ct);
         return Result<OrderDetailsDto>.Success(dto);
     }
 }

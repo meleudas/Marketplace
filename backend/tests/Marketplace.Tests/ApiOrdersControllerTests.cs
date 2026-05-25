@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Marketplace.API.Controllers;
+using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Orders.Commands.CancelOrder;
 using Marketplace.Application.Orders.Commands.UpdateOrderStatus;
 using Marketplace.Application.Orders.DTOs;
@@ -52,6 +53,7 @@ public class ApiOrdersControllerTests
         };
         var controller = BuildController(sender);
 
+        controller.ControllerContext.HttpContext.Request.Headers["Idempotency-Key"] = "test-key";
         _ = await controller.Cancel(7, CancellationToken.None);
 
         Assert.IsType<CancelOrderCommand>(sender.LastRequest);
@@ -65,13 +67,23 @@ public class ApiOrdersControllerTests
             new Claim(ClaimTypes.Role, "Admin")
         }, "test");
 
-        return new OrdersController(sender)
+        var controller = new OrdersController(sender, new StartedIdempotencyStore())
         {
             ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
             }
         };
+        return controller;
+    }
+
+    private sealed class StartedIdempotencyStore : IHttpIdempotencyStore
+    {
+        public Task<HttpIdempotencyBeginResult> TryBeginAsync(string scope, string idempotencyKey, string requestHash, TimeSpan ttl, CancellationToken ct = default)
+            => Task.FromResult(new HttpIdempotencyBeginResult(HttpIdempotencyBeginState.Started, null));
+
+        public Task CompleteAsync(string scope, string idempotencyKey, string requestHash, int statusCode, string? responseBodyJson, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 
     private sealed class RecordingSender : ISender

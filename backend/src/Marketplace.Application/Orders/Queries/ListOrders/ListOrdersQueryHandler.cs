@@ -98,6 +98,13 @@ public sealed class ListOrdersQueryHandler : IRequestHandler<ListOrdersQuery, Re
             request.PageSize);
 
         await _cache.SetAsync(key, dto, _ttl.OrdersList, ct);
+        await _cacheInvalidation.TrackListKeyAsync(
+            request.Scope.ToString(),
+            request.Scope == OrderListScope.My ? request.ActorUserId : null,
+            request.Scope == OrderListScope.Company ? request.CompanyId : null,
+            key,
+            _ttl.OrdersList,
+            ct);
         return Result<PagedOrdersDto>.Success(dto);
     }
 }

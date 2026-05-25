@@ -1,6 +1,9 @@
+using System.Linq;
 using Marketplace.Application.Inventory.Authorization;
+using Marketplace.Application.Inventory.Services;
 using Marketplace.Application.Catalog.Cache;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Common.Exceptions;
 using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Inventory.Enums;
@@ -18,6 +21,8 @@ public sealed class ReleaseReservationCommandHandler : IRequestHandler<ReleaseRe
     private readonly IProductRepository _productRepository;
     private readonly IAppCachePort _cache;
     private readonly IOutboxWriter _outbox;
+    private readonly IAppTransactionPort _tx;
+    private readonly IRestockAvailabilityNotifier _restockNotifier;
 
     public ReleaseReservationCommandHandler(
         IInventoryAccessService access,
@@ -25,7 +30,9 @@ public sealed class ReleaseReservationCommandHandler : IRequestHandler<ReleaseRe
         IWarehouseStockRepository stockRepository,
         IProductRepository productRepository,
         IAppCachePort cache,
-        IOutboxWriter outbox)
+        IOutboxWriter outbox,
+        IAppTransactionPort tx,
+        IRestockAvailabilityNotifier restockNotifier)
     {
         _access = access;
         _reservationRepository = reservationRepository;
@@ -33,6 +40,8 @@ public sealed class ReleaseReservationCommandHandler : IRequestHandler<ReleaseRe
         _productRepository = productRepository;
         _cache = cache;
         _outbox = outbox;
+        _tx = tx;
+        _restockNotifier = restockNotifier;
     }
 
     public async Task<Result> Handle(ReleaseReservationCommand request, CancellationToken ct)
@@ -49,14 +58,31 @@ public sealed class ReleaseReservationCommandHandler : IRequestHandler<ReleaseRe
             if (reservation.Status != InventoryReservationStatus.Active)
                 return Result.Success();
 
-            var stock = await _stockRepository.GetByWarehouseAndProductAsync(reservation.WarehouseId, reservation.ProductId, ct);
-            if (stock is null)
-                return Result.Failure("Stock not found");
+            var beforeRows = await _stockRepository.ListByProductAsync(companyId, reservation.ProductId, ct);
+            var beforeAvailableSum = beforeRows.Sum(x => x.Available);
 
-            stock.Release(reservation.Quantity);
-            reservation.Release();
-            await _stockRepository.UpdateAsync(stock, ct);
-            await _reservationRepository.UpdateAsync(reservation, ct);
+            for (var attempt = 0; attempt < 3; attempt++)
+            {
+                try
+                {
+                    await _tx.ExecuteAsync(async innerCt =>
+                    {
+                        var stock = await _stockRepository.GetByWarehouseAndProductAsync(reservation.WarehouseId, reservation.ProductId, innerCt);
+                        if (stock is null)
+                            throw new InvalidOperationException("Stock not found");
+
+                        stock.Release(reservation.Quantity);
+                        reservation.Release();
+                        await _stockRepository.UpdateAsync(stock, innerCt);
+                        await _reservationRepository.UpdateAsync(reservation, innerCt);
+                    }, ct);
+                    break;
+                }
+                catch (ConcurrencyConflictException) when (attempt < 2)
+                {
+                    await Task.Delay(25 * (attempt + 1), ct);
+                }
+            }
             await _outbox.AppendAsync(
                 "InventoryReservation",
                 reservation.Id.Value.ToString(),
@@ -74,6 +100,15 @@ public sealed class ReleaseReservationCommandHandler : IRequestHandler<ReleaseRe
             var product = await _productRepository.GetByIdAsync(reservation.ProductId, ct);
             if (product is not null)
                 await _cache.RemoveAsync(CatalogCacheKeys.ProductDetailPrefix + product.Slug, ct);
+
+            var afterRows = await _stockRepository.ListByProductAsync(companyId, reservation.ProductId, ct);
+            var afterAvailableSum = afterRows.Sum(x => x.Available);
+            await _restockNotifier.NotifyIfCrossedFromZeroAsync(
+                request.CompanyId,
+                reservation.ProductId.Value,
+                beforeAvailableSum,
+                afterAvailableSum,
+                ct);
 
             return Result.Success();
         }

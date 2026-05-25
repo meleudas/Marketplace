@@ -1,4 +1,5 @@
 using Marketplace.Application.Payments.Ports;
+using Hangfire;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Payments.Services;
 using Marketplace.Application.Common.Ports;
@@ -38,6 +39,7 @@ public sealed class PaymentJobs
         _historyWriter = historyWriter;
     }
 
+    [DisableConcurrentExecution(timeoutInSeconds: 300)]
     public async Task SyncPendingPaymentsAsync(CancellationToken ct = default)
     {
         using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.HangfireJobLatencyMs, new KeyValuePair<string, object?>("job", "payments-sync-pending"));

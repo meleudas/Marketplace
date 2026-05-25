@@ -1,10 +1,13 @@
 using System.Text;
+using System.Text.Json;
+using Marketplace.Application.Notifications;
 using Marketplace.Application.Payments.Commands.HandleLiqPayWebhook;
 using Marketplace.Application.Payments.Commands.RequestRefund;
 using Marketplace.Application.Payments.Commands.SyncPaymentStatus;
 using Marketplace.Application.Payments.Ports;
 using Marketplace.Application.Payments.Services;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Entities;
@@ -37,12 +40,53 @@ public class ApplicationPaymentFlowTests
             new NoopOrderCacheInvalidationService(),
             new OrderPaymentStateApplier(),
             new InMemoryOutboxWriter(),
-            new NoopOrderStatusHistoryWriter());
-        var result = await handler.Handle(new HandleLiqPayWebhookCommand(payload, "sig"), CancellationToken.None);
+            new NoopOrderStatusHistoryWriter(),
+            new NoopInboxDeduplicator(),
+            new NoopAppNotificationScheduler());
+        var result = await handler.Handle(new HandleLiqPayWebhookCommand(payload, "sig", "idem-key"), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(PaymentTransactionStatus.Completed, (await paymentRepo.GetByTransactionIdAsync("ORD-1"))!.Status);
         Assert.Equal(OrderStatus.Paid, (await orderRepo.GetByIdAsync(order.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task Webhook_Handler_Schedules_UserPaymentStatus_For_Buyer_On_Completed()
+    {
+        var paymentRepo = new InMemoryPaymentRepository();
+        var orderRepo = new InMemoryOrderRepository();
+        var customerId = Guid.NewGuid();
+        var order = await orderRepo.AddAsync(Order.Reconstitute(
+            OrderId.From(0), "ORD-WN-1", customerId, CompanyId.From(Guid.NewGuid()), OrderStatus.Pending,
+            new Money(100), new Money(100), Money.Zero, Money.Zero, Money.Zero, ShippingMethodId.From(0), CheckoutPaymentMethod.Card,
+            null, null, null, null, null, null, DateTime.UtcNow, DateTime.UtcNow, false, null));
+        _ = await paymentRepo.AddAsync(Payment.Create(PaymentId.From(0), order.Id, PaymentMethodKind.LiqPay, new Money(100), "UAH", "ORD-WN-1", PaymentTransactionStatus.Pending, JsonBlob.Empty));
+
+        var payload = Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"order_id\":\"ORD-WN-1\",\"status\":\"success\"}"));
+        var spy = new SpyAppNotificationScheduler();
+        var handler = new HandleLiqPayWebhookCommandHandler(
+            new FakeLiqPayPort(),
+            paymentRepo,
+            orderRepo,
+            new NoopOrderCacheInvalidationService(),
+            new OrderPaymentStateApplier(),
+            new InMemoryOutboxWriter(),
+            new NoopOrderStatusHistoryWriter(),
+            new NoopInboxDeduplicator(),
+            spy);
+        var result = await handler.Handle(new HandleLiqPayWebhookCommand(payload, "sig", "idem-pay-notify-1"), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(spy.Requests);
+        var req = spy.Requests[0];
+        Assert.Equal(AppNotificationTemplateKeys.UserPaymentStatus, req.TemplateKey);
+        Assert.Equal(customerId, req.TargetUserId);
+        Assert.Equal(
+            AppNotificationCorrelationIds.PaymentBuyerNotify("ORD-WN-1", PaymentTransactionStatus.Completed.ToString()),
+            req.CorrelationId);
+        using var doc = JsonDocument.Parse(req.PayloadJson);
+        Assert.Equal("Completed", doc.RootElement.GetProperty("paymentStatus").GetString());
+        Assert.Equal("Paid", doc.RootElement.GetProperty("orderStatus").GetString());
     }
 
     [Fact]
@@ -168,7 +212,32 @@ public class ApplicationPaymentFlowTests
     private sealed class NoopOrderCacheInvalidationService : IOrderCacheInvalidationService
     {
         public Task<long> GetListVersionAsync(string scope, Guid? actorUserId, Guid? companyId, CancellationToken ct = default) => Task.FromResult(1L);
+        public Task TrackDetailKeyAsync(long orderId, string cacheKey, TimeSpan ttl, CancellationToken ct = default) => Task.CompletedTask;
+        public Task TrackListKeyAsync(string scope, Guid? actorUserId, Guid? companyId, string cacheKey, TimeSpan ttl, CancellationToken ct = default) => Task.CompletedTask;
         public Task InvalidateOrderAsync(long orderId, Guid customerId, Guid companyId, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class NoopInboxDeduplicator : IInboxDeduplicator
+    {
+        public Task<bool> HasProcessedAsync(Guid messageId, string consumer, CancellationToken ct = default) => Task.FromResult(false);
+        public Task MarkProcessedAsync(Guid messageId, string consumer, string? metadata, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class SpyAppNotificationScheduler : IAppNotificationScheduler
+    {
+        public List<AppNotificationRequest> Requests { get; } = [];
+
+        public Task ScheduleAsync(AppNotificationRequest request, CancellationToken ct = default)
+        {
+            Requests.Add(request);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class NoopAppNotificationScheduler : IAppNotificationScheduler
+    {
+        public Task ScheduleAsync(AppNotificationRequest request, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 
     private sealed class InMemoryOutboxWriter : IOutboxWriter
@@ -178,6 +247,8 @@ public class ApplicationPaymentFlowTests
             => Task.FromResult<IReadOnlyList<OutboxMessage>>([]);
         public Task MarkProcessedAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
         public Task MarkFailedAsync(Guid id, string error, DateTime nextAttemptAtUtc, CancellationToken ct = default) => Task.CompletedTask;
+        public Task MarkDeadLetterAsync(Guid id, string reason, string category, CancellationToken ct = default) => Task.CompletedTask;
+        public Task RequeueDeadLetterAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class NoopOrderStatusHistoryWriter : Marketplace.Application.Orders.Services.IOrderStatusHistoryWriter

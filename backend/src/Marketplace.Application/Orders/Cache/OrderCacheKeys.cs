@@ -4,6 +4,10 @@ namespace Marketplace.Application.Orders.Cache;
 
 public static class OrderCacheKeys
 {
+    public static string DetailIndex(long orderId) => $"orders:idx:detail:{orderId}";
+    public static string ListIndex(string scope, Guid? actorUserId, Guid? companyId)
+        => $"orders:idx:list:{scope.Trim().ToLowerInvariant()}:{actorUserId}:{companyId}";
+
     public static string AdminListVersion() => "orders:list:version:admin";
     public static string CompanyListVersion(Guid companyId) => $"orders:list:version:company:{companyId}";
     public static string MyListVersion(Guid userId) => $"orders:list:version:my:{userId}";

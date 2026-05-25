@@ -6,4 +6,5 @@ namespace Marketplace.Application.Orders.Commands.CancelOrder;
 public sealed record CancelOrderCommand(
     long OrderId,
     Guid ActorUserId,
-    bool IsActorAdmin) : IRequest<Result>;
+    bool IsActorAdmin,
+    string IdempotencyKey) : IRequest<Result>;

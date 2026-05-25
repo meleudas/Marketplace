@@ -1,6 +1,7 @@
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Common.Options;
 using Marketplace.Application.Orders.Authorization;
+using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Orders.Queries.GetOrderById;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Entities;
@@ -45,6 +46,7 @@ public sealed class ApplicationGetOrderByIdTimelineTests
             new StubRefundRepo(),
             new AllowAllOrderAccessService(),
             new NullCache(),
+            new NoopOrderCacheInvalidationService(),
             Options.Create(new CacheTtlOptions()));
 
         var result = await handler.Handle(new GetOrderByIdQuery(order.Id.Value, actorId, false), CancellationToken.None);
@@ -66,6 +68,14 @@ public sealed class ApplicationGetOrderByIdTimelineTests
         public Task<T?> GetAsync<T>(string key, CancellationToken ct = default) where T : class => Task.FromResult<T?>(null);
         public Task SetAsync<T>(string key, T value, TimeSpan ttl, CancellationToken ct = default) where T : class => Task.CompletedTask;
         public Task RemoveAsync(string key, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class NoopOrderCacheInvalidationService : IOrderCacheInvalidationService
+    {
+        public Task<long> GetListVersionAsync(string scope, Guid? actorUserId, Guid? companyId, CancellationToken ct = default) => Task.FromResult(1L);
+        public Task TrackDetailKeyAsync(long orderId, string cacheKey, TimeSpan ttl, CancellationToken ct = default) => Task.CompletedTask;
+        public Task TrackListKeyAsync(string scope, Guid? actorUserId, Guid? companyId, string cacheKey, TimeSpan ttl, CancellationToken ct = default) => Task.CompletedTask;
+        public Task InvalidateOrderAsync(long orderId, Guid customerId, Guid companyId, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class StubOrderRepository : IOrderRepository

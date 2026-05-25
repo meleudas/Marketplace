@@ -1,6 +1,7 @@
 using Marketplace.Application.Inventory.Authorization;
 using Marketplace.Application.Catalog.Cache;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Common.Exceptions;
 using Marketplace.Application.Inventory.DTOs;
 using Marketplace.Application.Inventory.Mappings;
 using Marketplace.Domain.Catalog.Repositories;
@@ -20,14 +21,16 @@ public sealed class ShipStockCommandHandler : IRequestHandler<ShipStockCommand, 
     private readonly IStockMovementRepository _movementRepository;
     private readonly IProductRepository _productRepository;
     private readonly IAppCachePort _cache;
+    private readonly IAppTransactionPort _tx;
 
-    public ShipStockCommandHandler(IInventoryAccessService access, IWarehouseStockRepository stockRepository, IStockMovementRepository movementRepository, IProductRepository productRepository, IAppCachePort cache)
+    public ShipStockCommandHandler(IInventoryAccessService access, IWarehouseStockRepository stockRepository, IStockMovementRepository movementRepository, IProductRepository productRepository, IAppCachePort cache, IAppTransactionPort tx)
     {
         _access = access;
         _stockRepository = stockRepository;
         _movementRepository = movementRepository;
         _productRepository = productRepository;
         _cache = cache;
+        _tx = tx;
     }
 
     public async Task<Result<WarehouseStockDto>> Handle(ShipStockCommand request, CancellationToken ct)
@@ -39,24 +42,42 @@ public sealed class ShipStockCommandHandler : IRequestHandler<ShipStockCommand, 
             if (await _movementRepository.ExistsByOperationIdAsync(CompanyId.From(request.CompanyId), request.OperationId, ct))
                 return Result<WarehouseStockDto>.Failure("Operation already processed");
 
-            var stock = await _stockRepository.GetByWarehouseAndProductAsync(WarehouseId.From(request.WarehouseId), ProductId.From(request.ProductId), ct);
+            WarehouseStock? stock = null;
+            for (var attempt = 0; attempt < 3; attempt++)
+            {
+                try
+                {
+                    await _tx.ExecuteAsync(async innerCt =>
+                    {
+                        stock = await _stockRepository.GetByWarehouseAndProductAsync(WarehouseId.From(request.WarehouseId), ProductId.From(request.ProductId), innerCt);
+                        if (stock is null)
+                            throw new InvalidOperationException("Stock not found");
+
+                        stock.Ship(request.Quantity);
+                        await _stockRepository.UpdateAsync(stock, innerCt);
+
+                        var movement = StockMovement.Create(
+                            StockMovementId.From(0),
+                            CompanyId.From(request.CompanyId),
+                            WarehouseId.From(request.WarehouseId),
+                            ProductId.From(request.ProductId),
+                            StockMovementType.Outbound,
+                            request.Quantity,
+                            request.OperationId,
+                            request.ActorUserId,
+                            request.Reference);
+                        await _movementRepository.AddAsync(movement, innerCt);
+                    }, ct);
+                    break;
+                }
+                catch (ConcurrencyConflictException) when (attempt < 2)
+                {
+                    await Task.Delay(25 * (attempt + 1), ct);
+                }
+            }
+
             if (stock is null)
                 return Result<WarehouseStockDto>.Failure("Stock not found");
-
-            stock.Ship(request.Quantity);
-            await _stockRepository.UpdateAsync(stock, ct);
-
-            var movement = StockMovement.Create(
-                StockMovementId.From(0),
-                CompanyId.From(request.CompanyId),
-                WarehouseId.From(request.WarehouseId),
-                ProductId.From(request.ProductId),
-                StockMovementType.Outbound,
-                request.Quantity,
-                request.OperationId,
-                request.ActorUserId,
-                request.Reference);
-            await _movementRepository.AddAsync(movement, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
             var product = await _productRepository.GetByIdAsync(ProductId.From(request.ProductId), ct);
             if (product is not null)

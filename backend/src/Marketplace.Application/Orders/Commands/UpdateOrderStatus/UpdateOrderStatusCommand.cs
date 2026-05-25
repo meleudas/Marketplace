@@ -9,4 +9,5 @@ public sealed record UpdateOrderStatusCommand(
     Guid ActorUserId,
     bool IsActorAdmin,
     OrderStatus NewStatus,
-    string? TrackingNumber) : IRequest<Result>;
+    string? TrackingNumber,
+    string IdempotencyKey) : IRequest<Result>;

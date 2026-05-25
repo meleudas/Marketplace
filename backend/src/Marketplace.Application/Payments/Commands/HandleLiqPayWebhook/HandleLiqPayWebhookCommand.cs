@@ -3,4 +3,4 @@ using MediatR;
 
 namespace Marketplace.Application.Payments.Commands.HandleLiqPayWebhook;
 
-public sealed record HandleLiqPayWebhookCommand(string Data, string Signature) : IRequest<Result>;
+public sealed record HandleLiqPayWebhookCommand(string Data, string Signature, string IdempotencyKey) : IRequest<Result>;

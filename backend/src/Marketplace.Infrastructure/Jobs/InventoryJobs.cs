@@ -1,4 +1,5 @@
 using Marketplace.Domain.Inventory.Repositories;
+using Hangfire;
 
 namespace Marketplace.Infrastructure.Jobs;
 
@@ -15,6 +16,7 @@ public sealed class InventoryJobs
         _stockRepository = stockRepository;
     }
 
+    [DisableConcurrentExecution(timeoutInSeconds: 300)]
     public async Task ExpireReservationsAsync(CancellationToken ct = default)
     {
         var expired = await _reservationRepository.ListExpiredActiveAsync(DateTime.UtcNow, ct);

@@ -1,6 +1,9 @@
 using System.Text;
 using System.Text.Json;
+using System.Security.Cryptography;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Notifications;
+using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Payments.Ports;
 using Marketplace.Application.Payments.Services;
@@ -23,6 +26,8 @@ public sealed class HandleLiqPayWebhookCommandHandler : IRequestHandler<HandleLi
     private readonly IOrderPaymentStateApplier _paymentStateApplier;
     private readonly IOutboxWriter _outbox;
     private readonly IOrderStatusHistoryWriter _historyWriter;
+    private readonly IInboxDeduplicator _inbox;
+    private readonly IAppNotificationScheduler _appNotifications;
 
     public HandleLiqPayWebhookCommandHandler(
         ILiqPayPort liqPayPort,
@@ -31,7 +36,9 @@ public sealed class HandleLiqPayWebhookCommandHandler : IRequestHandler<HandleLi
         IOrderCacheInvalidationService orderCacheInvalidation,
         IOrderPaymentStateApplier paymentStateApplier,
         IOutboxWriter outbox,
-        IOrderStatusHistoryWriter historyWriter)
+        IOrderStatusHistoryWriter historyWriter,
+        IInboxDeduplicator inbox,
+        IAppNotificationScheduler appNotifications)
     {
         _liqPayPort = liqPayPort;
         _paymentRepository = paymentRepository;
@@ -40,6 +47,8 @@ public sealed class HandleLiqPayWebhookCommandHandler : IRequestHandler<HandleLi
         _paymentStateApplier = paymentStateApplier;
         _outbox = outbox;
         _historyWriter = historyWriter;
+        _inbox = inbox;
+        _appNotifications = appNotifications;
     }
 
     public async Task<Result> Handle(HandleLiqPayWebhookCommand request, CancellationToken ct)
@@ -61,6 +70,13 @@ public sealed class HandleLiqPayWebhookCommandHandler : IRequestHandler<HandleLi
                 return Result.Failure("Payment not found");
 
             var mappedStatus = MapStatus(statusRaw);
+            var messageId = BuildWebhookMessageId(transactionId, statusRaw, request.IdempotencyKey);
+            const string consumer = "liqpay-webhook";
+            if (await _inbox.HasProcessedAsync(messageId, consumer, ct))
+                return Result.Success();
+
+            if (IsStatusDowngrade(payment.Status, mappedStatus))
+                return Result.Success();
             if (payment.Status == mappedStatus)
                 return Result.Success(); // idempotent duplicate webhook
 
@@ -96,7 +112,34 @@ public sealed class HandleLiqPayWebhookCommandHandler : IRequestHandler<HandleLi
                     correlationId: transactionId,
                     ct: ct);
                 await _orderCacheInvalidation.InvalidateOrderAsync(order.Id.Value, order.CustomerId, order.CompanyId.Value, ct);
+
+                if (mappedStatus is PaymentTransactionStatus.Completed
+                    or PaymentTransactionStatus.Failed
+                    or PaymentTransactionStatus.Refunded)
+                {
+                    await _appNotifications.ScheduleAsync(
+                        new AppNotificationRequest
+                        {
+                            TemplateKey = AppNotificationTemplateKeys.UserPaymentStatus,
+                            CorrelationId = AppNotificationCorrelationIds.PaymentBuyerNotify(
+                                transactionId,
+                                mappedStatus.ToString()),
+                            Channels = AppNotificationChannelKind.Push | AppNotificationChannelKind.InApp,
+                            Audience = AppNotificationAudienceKind.User,
+                            TargetUserId = order.CustomerId,
+                            PayloadJson = JsonSerializer.Serialize(new
+                            {
+                                orderId = order.Id.Value,
+                                orderNumber = order.OrderNumber,
+                                paymentStatus = mappedStatus.ToString(),
+                                orderStatus = order.Status.ToString()
+                            })
+                        },
+                        ct);
+                }
             }
+
+            await _inbox.MarkProcessedAsync(messageId, consumer, $"transactionId={transactionId}", ct);
 
             return Result.Success();
         }
@@ -116,5 +159,26 @@ public sealed class HandleLiqPayWebhookCommandHandler : IRequestHandler<HandleLi
             "failure" => PaymentTransactionStatus.Failed,
             "error" => PaymentTransactionStatus.Failed,
             _ => PaymentTransactionStatus.Pending
+        };
+
+    private static Guid BuildWebhookMessageId(string transactionId, string? statusRaw, string idempotencyKey)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"{transactionId}|{statusRaw}|{idempotencyKey}"));
+        var guidBytes = new byte[16];
+        Array.Copy(bytes, guidBytes, 16);
+        return new Guid(guidBytes);
+    }
+
+    private static bool IsStatusDowngrade(PaymentTransactionStatus current, PaymentTransactionStatus next)
+        => Rank(next) < Rank(current);
+
+    private static int Rank(PaymentTransactionStatus status)
+        => status switch
+        {
+            PaymentTransactionStatus.Pending => 0,
+            PaymentTransactionStatus.Failed => 1,
+            PaymentTransactionStatus.Completed => 2,
+            PaymentTransactionStatus.Refunded => 3,
+            _ => 0
         };
 }

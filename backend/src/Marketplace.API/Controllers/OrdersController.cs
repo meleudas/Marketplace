@@ -1,4 +1,5 @@
 using Marketplace.API.Extensions;
+using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Orders.Commands.CancelOrder;
 using Marketplace.Application.Orders.Commands.UpdateOrderStatus;
 using Marketplace.Application.Orders.Queries.GetOrderById;
@@ -15,8 +16,13 @@ namespace Marketplace.API.Controllers;
 public sealed class OrdersController : ControllerBase
 {
     private readonly ISender _sender;
+    private readonly IHttpIdempotencyStore _idempotency;
 
-    public OrdersController(ISender sender) => _sender = sender;
+    public OrdersController(ISender sender, IHttpIdempotencyStore idempotency)
+    {
+        _sender = sender;
+        _idempotency = idempotency;
+    }
 
     [HttpGet("me/orders")]
     public async Task<IActionResult> ListMy(
@@ -143,10 +149,26 @@ public sealed class OrdersController : ControllerBase
     {
         if (!User.TryGetUserId(out var actorId))
             return Unauthorized();
+        if (!Request.TryGetIdempotencyKey(out var idempotencyKey))
+            return BadRequest("Idempotency-Key header is required.");
         if (!Enum.TryParse<OrderStatus>(request.Status, true, out var status))
             return BadRequest("Invalid status");
-        var result = await _sender.Send(new UpdateOrderStatusCommand(orderId, actorId, User.IsInRole("Admin"), status, request.TrackingNumber), ct);
-        return result.ToActionResult();
+
+        var scope = $"order-status:{orderId}:{actorId:N}";
+        var requestHash = HttpIdempotencyExtensions.BuildRequestHash(orderId.ToString(), actorId.ToString("N"), request.Status, request.TrackingNumber);
+        var begin = await _idempotency.TryBeginAsync(scope, idempotencyKey, requestHash, TimeSpan.FromHours(12), ct);
+        if (begin.State == HttpIdempotencyBeginState.Completed && begin.StoredResponse is not null)
+            return this.ReplayResponse(begin.StoredResponse);
+        if (begin.State == HttpIdempotencyBeginState.InProgress)
+            return Conflict("Request with this Idempotency-Key is already in progress.");
+        if (begin.State == HttpIdempotencyBeginState.RequestMismatch)
+            return Conflict("Idempotency-Key already used with different request payload.");
+
+        var result = await _sender.Send(new UpdateOrderStatusCommand(orderId, actorId, User.IsInRole("Admin"), status, request.TrackingNumber, idempotencyKey), ct);
+        var actionResult = result.ToActionResult();
+        var snapshot = actionResult.SnapshotResult();
+        await _idempotency.CompleteAsync(scope, idempotencyKey, requestHash, snapshot.StatusCode, snapshot.BodyJson, ct);
+        return actionResult;
     }
 
     [HttpPost("orders/{orderId:long}/cancel")]
@@ -154,8 +176,24 @@ public sealed class OrdersController : ControllerBase
     {
         if (!User.TryGetUserId(out var actorId))
             return Unauthorized();
-        var result = await _sender.Send(new CancelOrderCommand(orderId, actorId, User.IsInRole("Admin")), ct);
-        return result.ToActionResult();
+        if (!Request.TryGetIdempotencyKey(out var idempotencyKey))
+            return BadRequest("Idempotency-Key header is required.");
+
+        var scope = $"order-cancel:{orderId}:{actorId:N}";
+        var requestHash = HttpIdempotencyExtensions.BuildRequestHash(orderId.ToString(), actorId.ToString("N"));
+        var begin = await _idempotency.TryBeginAsync(scope, idempotencyKey, requestHash, TimeSpan.FromHours(12), ct);
+        if (begin.State == HttpIdempotencyBeginState.Completed && begin.StoredResponse is not null)
+            return this.ReplayResponse(begin.StoredResponse);
+        if (begin.State == HttpIdempotencyBeginState.InProgress)
+            return Conflict("Request with this Idempotency-Key is already in progress.");
+        if (begin.State == HttpIdempotencyBeginState.RequestMismatch)
+            return Conflict("Idempotency-Key already used with different request payload.");
+
+        var result = await _sender.Send(new CancelOrderCommand(orderId, actorId, User.IsInRole("Admin"), idempotencyKey), ct);
+        var actionResult = result.ToActionResult();
+        var snapshot = actionResult.SnapshotResult();
+        await _idempotency.CompleteAsync(scope, idempotencyKey, requestHash, snapshot.StatusCode, snapshot.BodyJson, ct);
+        return actionResult;
     }
 
     private static IReadOnlyList<OrderStatus>? ParseStatuses(string[]? statuses)

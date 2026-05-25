@@ -1,3 +1,5 @@
+using Marketplace.Application.Notifications;
+using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Orders.Authorization;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Orders.Services;
@@ -18,19 +20,22 @@ public sealed class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrde
     private readonly IOrderCacheInvalidationService _cacheInvalidation;
     private readonly IOutboxWriter _outbox;
     private readonly IOrderStatusHistoryWriter _historyWriter;
+    private readonly IAppNotificationScheduler _appNotifications;
 
     public UpdateOrderStatusCommandHandler(
         IOrderRepository orderRepository,
         IOrderAccessService access,
         IOrderCacheInvalidationService cacheInvalidation,
         IOutboxWriter outbox,
-        IOrderStatusHistoryWriter historyWriter)
+        IOrderStatusHistoryWriter historyWriter,
+        IAppNotificationScheduler appNotifications)
     {
         _orderRepository = orderRepository;
         _access = access;
         _cacheInvalidation = cacheInvalidation;
         _outbox = outbox;
         _historyWriter = historyWriter;
+        _appNotifications = appNotifications;
     }
 
     public async Task<Result> Handle(UpdateOrderStatusCommand request, CancellationToken ct)
@@ -83,6 +88,30 @@ public sealed class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrde
                 }),
                 ct);
             await _cacheInvalidation.InvalidateOrderAsync(order.Id.Value, order.CustomerId, order.CompanyId.Value, ct);
+
+            if (order.Status is OrderStatus.Processing or OrderStatus.Shipped or OrderStatus.Delivered)
+            {
+                await _appNotifications.ScheduleAsync(
+                    new AppNotificationRequest
+                    {
+                        TemplateKey = AppNotificationTemplateKeys.UserOrderStatus,
+                        CorrelationId = Guid.NewGuid(),
+                        Channels = AppNotificationChannelKind.Push
+                            | AppNotificationChannelKind.InApp
+                            | AppNotificationChannelKind.Email
+                            | AppNotificationChannelKind.Telegram,
+                        Audience = AppNotificationAudienceKind.User,
+                        TargetUserId = order.CustomerId,
+                        PayloadJson = JsonSerializer.Serialize(new
+                        {
+                            orderId = order.Id.Value,
+                            orderNumber = order.OrderNumber,
+                            status = order.Status.ToString()
+                        })
+                    },
+                    ct);
+            }
+
             return Result.Success();
         }
         catch (Exception ex)

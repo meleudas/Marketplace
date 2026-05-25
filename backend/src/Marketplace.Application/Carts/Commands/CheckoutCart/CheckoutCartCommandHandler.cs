@@ -1,12 +1,16 @@
 using Marketplace.Application.Carts.Cache;
 using Marketplace.Application.Carts.DTOs;
+using Marketplace.Application.Carts.Ports;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Notifications;
+using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Orders.Services;
 using Marketplace.Application.Payments.Ports;
 using Marketplace.Domain.Cart.Repositories;
 using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
+using Marketplace.Domain.Inventory.Repositories;
 using Marketplace.Domain.Orders.Entities;
 using Marketplace.Domain.Orders.Enums;
 using Marketplace.Domain.Orders.Repositories;
@@ -15,6 +19,7 @@ using Marketplace.Domain.Payments.Enums;
 using Marketplace.Domain.Payments.Repositories;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
+using System.Text.Json;
 
 namespace Marketplace.Application.Carts.Commands.CheckoutCart;
 
@@ -32,6 +37,9 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
     private readonly IOrderCacheInvalidationService _orderCacheInvalidation;
     private readonly IOutboxWriter _outbox;
     private readonly IOrderStatusHistoryWriter _historyWriter;
+    private readonly IWarehouseStockRepository _warehouseStockRepository;
+    private readonly IAppNotificationScheduler _appNotifications;
+    private readonly ICartStockWatchRepository _cartStockWatches;
 
     public CheckoutCartCommandHandler(
         ICartRepository cartRepository,
@@ -45,7 +53,10 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
         IAppCachePort cache,
         IOrderCacheInvalidationService orderCacheInvalidation,
         IOutboxWriter outbox,
-        IOrderStatusHistoryWriter historyWriter)
+        IOrderStatusHistoryWriter historyWriter,
+        IWarehouseStockRepository warehouseStockRepository,
+        IAppNotificationScheduler appNotifications,
+        ICartStockWatchRepository cartStockWatches)
     {
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
@@ -59,6 +70,9 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
         _orderCacheInvalidation = orderCacheInvalidation;
         _outbox = outbox;
         _historyWriter = historyWriter;
+        _warehouseStockRepository = warehouseStockRepository;
+        _appNotifications = appNotifications;
+        _cartStockWatches = cartStockWatches;
     }
 
     public async Task<Result<CheckoutResultDto>> Handle(CheckoutCartCommand request, CancellationToken ct)
@@ -81,6 +95,15 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
             {
                 if (!productMap.ContainsKey(item.ProductId.Value))
                     return Result<CheckoutResultDto>.Failure($"Product '{item.ProductId.Value}' not found");
+            }
+
+            foreach (var grouped in cartItems.GroupBy(x => (companyId: productMap[x.ProductId.Value].CompanyId, x.ProductId)))
+            {
+                var stocks = await _warehouseStockRepository.ListByProductAsync(grouped.Key.companyId, grouped.Key.ProductId, ct);
+                var available = stocks.Sum(x => x.Available);
+                var requested = grouped.Sum(x => x.Quantity);
+                if (available < requested)
+                    return Result<CheckoutResultDto>.Failure("Insufficient stock for checkout");
             }
 
             var now = DateTime.UtcNow;
@@ -258,9 +281,45 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
                         orderNumber = savedOrder.OrderNumber
                     }),
                     ct);
+
+                await _appNotifications.ScheduleAsync(
+                    new AppNotificationRequest
+                    {
+                        TemplateKey = AppNotificationTemplateKeys.AdminNewOrder,
+                        CorrelationId = Guid.NewGuid(),
+                        Channels = AppNotificationChannelKind.Push | AppNotificationChannelKind.InApp,
+                        Audience = AppNotificationAudienceKind.Admins,
+                        PayloadJson = JsonSerializer.Serialize(new
+                        {
+                            orderId = savedOrder.Id.Value,
+                            orderNumber = savedOrder.OrderNumber,
+                            companyId = savedOrder.CompanyId.Value
+                        })
+                    },
+                    ct);
+
+                var companyPayload = JsonSerializer.Serialize(new
+                {
+                    orderId = savedOrder.Id.Value,
+                    orderNumber = savedOrder.OrderNumber,
+                    companyId = savedOrder.CompanyId.Value
+                });
+                await _appNotifications.ScheduleAsync(
+                    new AppNotificationRequest
+                    {
+                        TemplateKey = AppNotificationTemplateKeys.CompanyNewOrder,
+                        CorrelationId = AppNotificationCorrelationIds.Deterministic(
+                            $"checkout-company|{savedOrder.Id.Value}|{savedOrder.CompanyId.Value}"),
+                        Channels = AppNotificationChannelKind.Push | AppNotificationChannelKind.InApp,
+                        Audience = AppNotificationAudienceKind.CompanyStakeholders,
+                        TargetCompanyId = savedOrder.CompanyId.Value,
+                        PayloadJson = companyPayload
+                    },
+                    ct);
             }
 
             await _cartItemRepository.SoftDeleteByCartIdAsync(cart.Id, now, ct);
+            await _cartStockWatches.DeleteAllForUserAsync(request.ActorUserId, ct);
             await _cache.RemoveAsync(CartCacheKeys.ActiveByUser(request.ActorUserId), ct);
 
             return Result<CheckoutResultDto>.Success(new CheckoutResultDto(createdOrders));

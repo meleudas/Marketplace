@@ -9,7 +9,8 @@ public sealed record CheckoutCartCommand(
     Guid ActorUserId,
     CheckoutPaymentMethod PaymentMethod,
     CheckoutAddressDto Address,
-    string? Notes) : IRequest<Result<CheckoutResultDto>>;
+    string? Notes,
+    string IdempotencyKey) : IRequest<Result<CheckoutResultDto>>;
 
 public sealed record CheckoutAddressDto(
     string FirstName,

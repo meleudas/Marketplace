@@ -1,6 +1,7 @@
 using Marketplace.Application.Inventory.Authorization;
 using Marketplace.Application.Catalog.Cache;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Common.Exceptions;
 using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Inventory.Entities;
@@ -20,6 +21,7 @@ public sealed class ReserveStockCommandHandler : IRequestHandler<ReserveStockCom
     private readonly IProductRepository _productRepository;
     private readonly IAppCachePort _cache;
     private readonly IOutboxWriter _outbox;
+    private readonly IAppTransactionPort _tx;
 
     public ReserveStockCommandHandler(
         IInventoryAccessService access,
@@ -28,7 +30,8 @@ public sealed class ReserveStockCommandHandler : IRequestHandler<ReserveStockCom
         IStockMovementRepository movementRepository,
         IProductRepository productRepository,
         IAppCachePort cache,
-        IOutboxWriter outbox)
+        IOutboxWriter outbox,
+        IAppTransactionPort tx)
     {
         _access = access;
         _stockRepository = stockRepository;
@@ -37,6 +40,7 @@ public sealed class ReserveStockCommandHandler : IRequestHandler<ReserveStockCom
         _productRepository = productRepository;
         _cache = cache;
         _outbox = outbox;
+        _tx = tx;
     }
 
     public async Task<Result> Handle(ReserveStockCommand request, CancellationToken ct)
@@ -51,36 +55,55 @@ public sealed class ReserveStockCommandHandler : IRequestHandler<ReserveStockCom
             if (existing is not null && existing.Status == InventoryReservationStatus.Active)
                 return Result.Success();
 
-            var stock = await _stockRepository.GetByWarehouseAndProductAsync(WarehouseId.From(request.WarehouseId), ProductId.From(request.ProductId), ct);
-            if (stock is null)
+            InventoryReservation? reservation = null;
+            for (var attempt = 0; attempt < 3; attempt++)
+            {
+                try
+                {
+                    await _tx.ExecuteAsync(async innerCt =>
+                    {
+                        var stock = await _stockRepository.GetByWarehouseAndProductAsync(WarehouseId.From(request.WarehouseId), ProductId.From(request.ProductId), innerCt);
+                        if (stock is null)
+                            throw new InvalidOperationException("Stock not found");
+
+                        stock.Reserve(request.Quantity);
+                        await _stockRepository.UpdateAsync(stock, innerCt);
+
+                        reservation = InventoryReservation.Create(
+                            InventoryReservationId.From(0),
+                            companyId,
+                            WarehouseId.From(request.WarehouseId),
+                            ProductId.From(request.ProductId),
+                            request.ReservationCode,
+                            request.Quantity,
+                            DateTime.UtcNow.AddMinutes(Math.Clamp(request.TtlMinutes, 1, 120)),
+                            request.Reference);
+                        await _reservationRepository.AddAsync(reservation, innerCt);
+
+                        await _movementRepository.AddAsync(
+                            StockMovement.Create(
+                                StockMovementId.From(0),
+                                companyId,
+                                WarehouseId.From(request.WarehouseId),
+                                ProductId.From(request.ProductId),
+                                StockMovementType.Reserve,
+                                request.Quantity,
+                                $"reserve:{request.ReservationCode}",
+                                request.ActorUserId,
+                                reference: request.Reference),
+                            innerCt);
+                    }, ct);
+                    break;
+                }
+                catch (ConcurrencyConflictException) when (attempt < 2)
+                {
+                    await Task.Delay(25 * (attempt + 1), ct);
+                }
+            }
+
+            if (reservation is null)
                 return Result.Failure("Stock not found");
 
-            stock.Reserve(request.Quantity);
-            await _stockRepository.UpdateAsync(stock, ct);
-
-            var reservation = InventoryReservation.Create(
-                InventoryReservationId.From(0),
-                companyId,
-                WarehouseId.From(request.WarehouseId),
-                ProductId.From(request.ProductId),
-                request.ReservationCode,
-                request.Quantity,
-                DateTime.UtcNow.AddMinutes(Math.Clamp(request.TtlMinutes, 1, 120)),
-                request.Reference);
-            await _reservationRepository.AddAsync(reservation, ct);
-
-            await _movementRepository.AddAsync(
-                StockMovement.Create(
-                    StockMovementId.From(0),
-                    companyId,
-                    WarehouseId.From(request.WarehouseId),
-                    ProductId.From(request.ProductId),
-                    StockMovementType.Reserve,
-                    request.Quantity,
-                    $"reserve:{request.ReservationCode}",
-                    request.ActorUserId,
-                    reference: request.Reference),
-                ct);
             await _outbox.AppendAsync(
                 "InventoryReservation",
                 reservation.Id.Value.ToString(),
