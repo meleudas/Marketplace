@@ -11,6 +11,8 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
         builder.Property(x => x.IsDeleted).HasDefaultValue(false);
         builder.Property(x => x.TelegramChatId).HasMaxLength(64);
         builder.Property(x => x.TelegramTwoFactorEnabled).HasDefaultValue(false);
+        builder.Property(x => x.NotifyAppByEmail).HasDefaultValue(true);
+        builder.Property(x => x.NotifyAppByTelegram).HasDefaultValue(true);
         builder.HasQueryFilter(u => !u.IsDeleted);
     }
 }

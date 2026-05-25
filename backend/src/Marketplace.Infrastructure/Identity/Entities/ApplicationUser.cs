@@ -8,4 +8,10 @@ public class ApplicationUser : IdentityUser<Guid>
     public string? TelegramChatId { get; set; }
     public bool TelegramTwoFactorEnabled { get; set; }
     public DateTime? TelegramLinkedAtUtc { get; set; }
+
+    /// <summary>Транзакційні застосункові листи (не маркетинг).</summary>
+    public bool NotifyAppByEmail { get; set; } = true;
+
+    /// <summary>Повідомлення маркетплейсу в Telegram (окремо від 2FA).</summary>
+    public bool NotifyAppByTelegram { get; set; } = true;
 }
