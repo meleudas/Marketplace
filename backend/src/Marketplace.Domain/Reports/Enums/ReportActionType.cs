@@ -1,10 +1,10 @@
 namespace Marketplace.Domain.Reports.Enums;
 
-public enum ReportStatus : short
+public enum ReportActionType : short
 {
-    New = 0,
-    InReview = 1,
-    Actioned = 2,
+    Created = 0,
+    Assigned = 1,
+    Resolved = 2,
     Rejected = 3,
     Escalated = 4,
     Closed = 5
