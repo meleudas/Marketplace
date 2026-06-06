@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using Marketplace.Application.Auth.Options;
 using Marketplace.Application.Auth.Ports;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

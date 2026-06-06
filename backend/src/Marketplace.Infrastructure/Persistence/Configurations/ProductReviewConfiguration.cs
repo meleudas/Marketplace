@@ -21,7 +21,9 @@ public sealed class ProductReviewConfiguration : IEntityTypeConfiguration<Produc
         builder.Property(x => x.IsDeleted).HasDefaultValue(false);
 
         builder.HasIndex(x => new { x.ProductId, x.Status });
-        builder.HasIndex(x => new { x.ProductId, x.UserId }).IsUnique();
+        builder.HasIndex(x => new { x.ProductId, x.UserId })
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

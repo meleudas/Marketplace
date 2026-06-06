@@ -1,6 +1,7 @@
 using System.Net;
 using Lib.Net.Http.WebPush;
 using Lib.Net.Http.WebPush.Authentication;
+using Marketplace.Application.Notifications;
 using Marketplace.Application.Notifications.Ports;
 using Microsoft.Extensions.Options;
 

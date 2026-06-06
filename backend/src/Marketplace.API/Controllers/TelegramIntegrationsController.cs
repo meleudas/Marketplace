@@ -1,9 +1,10 @@
 using Marketplace.Application.Auth.Commands.TwoFactor.LinkTelegramAccount;
+using Marketplace.Application.Auth.DTOs;
+using Marketplace.Application.Auth.Options;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using Marketplace.Infrastructure.External.Telegram;
 
 namespace Marketplace.API.Controllers;
 
@@ -14,16 +15,21 @@ public sealed class TelegramIntegrationsController : ControllerBase
 {
     private readonly ISender _sender;
     private readonly TelegramOptions _options;
+    private readonly IWebHostEnvironment _environment;
 
-    public TelegramIntegrationsController(ISender sender, IOptions<TelegramOptions> options)
+    public TelegramIntegrationsController(ISender sender, IOptions<TelegramOptions> options, IWebHostEnvironment environment)
     {
         _sender = sender;
         _options = options.Value;
+        _environment = environment;
     }
 
     [HttpPost("webhook")]
-    public async Task<IActionResult> Webhook([FromBody] TelegramUpdate update, CancellationToken ct)
+    public async Task<IActionResult> Webhook([FromBody] TelegramUpdateDto update, CancellationToken ct)
     {
+        if (!_environment.IsDevelopment() && string.IsNullOrWhiteSpace(_options.WebhookSecret))
+            return StatusCode(StatusCodes.Status503ServiceUnavailable);
+
         if (!string.IsNullOrWhiteSpace(_options.WebhookSecret))
         {
             var header = Request.Headers["X-Telegram-Bot-Api-Secret-Token"].ToString();
@@ -47,7 +53,3 @@ public sealed class TelegramIntegrationsController : ControllerBase
         return result.IsSuccess ? Ok() : BadRequest();
     }
 }
-
-public sealed record TelegramUpdate(TelegramMessage? Message);
-public sealed record TelegramMessage(TelegramChat? Chat, string? Text);
-public sealed record TelegramChat(long Id);

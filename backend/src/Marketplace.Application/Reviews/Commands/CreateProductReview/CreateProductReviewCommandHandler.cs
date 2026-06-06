@@ -64,7 +64,19 @@ public sealed class CreateProductReviewCommandHandler : IRequestHandler<CreatePr
                 true,
                 OrderId.From(orderId.Value));
 
-            var saved = await _productReviewRepository.AddAsync(review, ct);
+            ProductReview saved;
+            try
+            {
+                saved = await _productReviewRepository.AddAsync(review, ct);
+            }
+            catch
+            {
+                // Concurrent create can win the race between exists-check and insert.
+                var concurrent = await _productReviewRepository.GetByProductAndUserAsync(productId, request.ActorUserId, ct);
+                if (concurrent is not null)
+                    return Result.Failure<ReviewDto>("Review already exists");
+                throw;
+            }
             await _ratingAggregationService.RecalculateProductAsync(productId, ct);
             await InvalidateProductCachesAsync(product, ct);
             return Result.Success(ReviewMapper.ToDto(saved, null));

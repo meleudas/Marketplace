@@ -37,6 +37,8 @@ public sealed class UpdateOwnCompanyReviewCommandHandler : IRequestHandler<Updat
             var review = await _companyReviewRepository.GetByIdAsync(CompanyReviewId.From(request.ReviewId), ct);
             if (review is null)
                 return Result.Failure<ReviewDto>("Review not found");
+            if (review.CompanyId.Value != request.CompanyId)
+                return Result.Failure<ReviewDto>("Review not found");
             if (review.UserId != request.ActorUserId)
                 return Result.Failure<ReviewDto>("Forbidden");
 

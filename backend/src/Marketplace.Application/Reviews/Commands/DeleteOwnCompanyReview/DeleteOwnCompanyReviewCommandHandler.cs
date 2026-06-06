@@ -30,6 +30,8 @@ public sealed class DeleteOwnCompanyReviewCommandHandler : IRequestHandler<Delet
         var review = await _companyReviewRepository.GetByIdAsync(CompanyReviewId.From(request.ReviewId), ct);
         if (review is null)
             return Result.Failure("Review not found");
+        if (review.CompanyId.Value != request.CompanyId)
+            return Result.Failure("Review not found");
         if (review.UserId != request.ActorUserId)
             return Result.Failure("Forbidden");
 

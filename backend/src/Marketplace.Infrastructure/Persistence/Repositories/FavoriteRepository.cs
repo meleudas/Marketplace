@@ -20,6 +20,15 @@ public sealed class FavoriteRepository : IFavoriteRepository
         return row is null ? null : ToDomain(row);
     }
 
+    public async Task<Favorite?> GetByUserAndProductIncludingDeletedAsync(Guid userId, ProductId productId, CancellationToken ct = default)
+    {
+        var row = await _context.Favorites
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.UserId == userId && x.ProductId == productId.Value, ct);
+        return row is null ? null : ToDomain(row);
+    }
+
     public async Task<IReadOnlyList<Favorite>> ListByUserIdAsync(Guid userId, CancellationToken ct = default)
     {
         var rows = await _context.Favorites
@@ -34,8 +43,32 @@ public sealed class FavoriteRepository : IFavoriteRepository
     {
         var row = ToRecord(favorite);
         await _context.Favorites.AddAsync(row, ct);
-        await _context.SaveChangesAsync(ct);
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.Message.Contains("IX_favorites_UserId_ProductId", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Active favorite already exists.", ex);
+        }
         return ToDomain(row);
+    }
+
+    public async Task ReactivateAsync(FavoriteId id, DateTime utcNow, Money? priceAtAdd, CancellationToken ct = default)
+    {
+        var row = await _context.Favorites
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == id.Value, ct);
+        if (row is null)
+            return;
+
+        row.AddedAt = utcNow;
+        row.PriceAtAdd = priceAtAdd?.Amount;
+        row.IsAvailable = true;
+        row.IsDeleted = false;
+        row.DeletedAt = null;
+        row.UpdatedAt = utcNow;
+        await _context.SaveChangesAsync(ct);
     }
 
     public async Task SoftDeleteAsync(FavoriteId id, DateTime utcNow, CancellationToken ct = default)

@@ -1,15 +1,15 @@
-namespace Marketplace.Infrastructure.External.Storage;
+namespace Marketplace.Application.Common.Options;
 
 public sealed class StorageOptions
 {
     public const string SectionName = "Storage";
 
-    public bool Enabled { get; set; } = false;
+    public bool Enabled { get; set; }
     public string Endpoint { get; set; } = "localhost:9000";
     public string AccessKey { get; set; } = "minioadmin";
     public string SecretKey { get; set; } = "minioadmin";
     public string Bucket { get; set; } = "marketplace-media";
-    public bool UseSsl { get; set; } = false;
+    public bool UseSsl { get; set; }
     public string PublicBaseUrl { get; set; } = "http://localhost:9000";
     public int PresignedGetTtlMinutes { get; set; } = 60;
     public long MaxUploadBytes { get; set; } = 10 * 1024 * 1024;

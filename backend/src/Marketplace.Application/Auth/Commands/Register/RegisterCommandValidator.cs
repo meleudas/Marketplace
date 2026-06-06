@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 
 
 namespace Marketplace.Application.Auth.Commands.Register

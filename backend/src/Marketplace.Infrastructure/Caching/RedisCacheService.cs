@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
-using Marketplace.Infrastructure.Observability;
+using Marketplace.Application.Common.Observability;
 
 namespace Marketplace.Infrastructure.Caching;
 

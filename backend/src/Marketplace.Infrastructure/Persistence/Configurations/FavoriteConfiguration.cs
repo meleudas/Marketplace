@@ -17,7 +17,7 @@ public sealed class FavoriteConfiguration : IEntityTypeConfiguration<FavoriteRec
 
         builder.HasIndex(x => x.UserId);
         builder.HasIndex(x => x.ProductId);
-        builder.HasIndex(x => new { x.UserId, x.ProductId }).IsUnique();
+        builder.HasIndex(x => new { x.UserId, x.ProductId }).IsUnique().HasFilter("\"IsDeleted\" = false");
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

@@ -1,4 +1,4 @@
-﻿using Marketplace.Domain.Common.Models;
+using Marketplace.Domain.Common.Models;
 
 namespace Marketplace.Domain.Users.ValueObjects
 {

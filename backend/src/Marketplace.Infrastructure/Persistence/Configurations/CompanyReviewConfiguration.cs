@@ -17,7 +17,9 @@ public sealed class CompanyReviewConfiguration : IEntityTypeConfiguration<Compan
         builder.Property(x => x.IsDeleted).HasDefaultValue(false);
 
         builder.HasIndex(x => new { x.CompanyId, x.Status });
-        builder.HasIndex(x => new { x.CompanyId, x.UserId }).IsUnique();
+        builder.HasIndex(x => new { x.CompanyId, x.UserId })
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

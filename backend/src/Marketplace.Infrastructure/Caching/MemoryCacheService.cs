@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Caching.Memory;
-using Marketplace.Infrastructure.Observability;
+using Marketplace.Application.Common.Observability;
 
 namespace Marketplace.Infrastructure.Caching;
 

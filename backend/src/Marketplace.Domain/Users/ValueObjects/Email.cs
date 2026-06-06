@@ -1,4 +1,4 @@
-﻿using Marketplace.Domain.Common.Exceptions;
+using Marketplace.Domain.Common.Exceptions;
 using Marketplace.Domain.Common.Models;
 using System;
 using System.Collections.Generic;

@@ -38,9 +38,9 @@ public sealed class GetMyFavoritesQueryHandler : IRequestHandler<GetMyFavoritesQ
             await _cache.SetAsync(cacheKey, dto, _ttl.Favorites, ct);
             return Result<IReadOnlyList<FavoriteItemDto>>.Success(dto);
         }
-        catch (Exception ex)
+        catch
         {
-            return Result<IReadOnlyList<FavoriteItemDto>>.Failure($"Failed to get favorites: {ex.Message}");
+            return Result<IReadOnlyList<FavoriteItemDto>>.Failure("Failed to get favorites");
         }
     }
 }

@@ -1,4 +1,4 @@
-namespace Marketplace.Infrastructure;
+namespace Marketplace.Application.Notifications;
 
 public sealed class WebPushOptions
 {

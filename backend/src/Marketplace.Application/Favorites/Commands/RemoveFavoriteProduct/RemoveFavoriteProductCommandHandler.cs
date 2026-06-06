@@ -30,9 +30,9 @@ public sealed class RemoveFavoriteProductCommandHandler : IRequestHandler<Remove
             await _cache.RemoveAsync(FavoritesCacheKeys.ListByUser(request.ActorUserId), ct);
             return Result<bool>.Success(true);
         }
-        catch (Exception ex)
+        catch
         {
-            return Result<bool>.Failure($"Failed to remove favorite: {ex.Message}");
+            return Result<bool>.Failure("Failed to remove favorite");
         }
     }
 }

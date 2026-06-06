@@ -5,6 +5,7 @@ using MediatR;
 namespace Marketplace.Application.Reviews.Commands.UpdateOwnCompanyReview;
 
 public sealed record UpdateOwnCompanyReviewCommand(
+    Guid CompanyId,
     long ReviewId,
     Guid ActorUserId,
     decimal OverallRating,

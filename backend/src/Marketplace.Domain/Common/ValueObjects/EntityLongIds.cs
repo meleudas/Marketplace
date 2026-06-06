@@ -93,6 +93,30 @@ public sealed record UserAddressId : ValueObject
     protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
 }
 
+public sealed record ShipmentId : ValueObject
+{
+    public long Value { get; }
+    private ShipmentId(long value) => Value = value;
+    public static ShipmentId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
+public sealed record ShippingQuoteId : ValueObject
+{
+    public long Value { get; }
+    private ShippingQuoteId(long value) => Value = value;
+    public static ShippingQuoteId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
+public sealed record ShippingEventId : ValueObject
+{
+    public long Value { get; }
+    private ShippingEventId(long value) => Value = value;
+    public static ShippingEventId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
 public sealed record PaymentId : ValueObject
 {
     public long Value { get; }
@@ -122,6 +146,22 @@ public sealed record OrderCouponId : ValueObject
     public long Value { get; }
     private OrderCouponId(long value) => Value = value;
     public static OrderCouponId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
+public sealed record CouponUsageId : ValueObject
+{
+    public long Value { get; }
+    private CouponUsageId(long value) => Value = value;
+    public static CouponUsageId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
+public sealed record CartCouponLinkId : ValueObject
+{
+    public long Value { get; }
+    private CartCouponLinkId(long value) => Value = value;
+    public static CartCouponLinkId From(long value) => new(value);
     protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
 }
 

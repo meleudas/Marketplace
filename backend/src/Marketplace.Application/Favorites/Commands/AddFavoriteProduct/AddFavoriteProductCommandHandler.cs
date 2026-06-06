@@ -28,11 +28,12 @@ public sealed class AddFavoriteProductCommandHandler : IRequestHandler<AddFavori
     {
         try
         {
-            var product = await _productRepository.GetByIdAsync(ProductId.From(request.ProductId), ct);
+            var productId = ProductId.From(request.ProductId);
+            var product = await _productRepository.GetByIdAsync(productId, ct);
             if (product is null || product.Status != ProductStatus.Active || product.IsDeleted)
                 return Result<FavoriteItemDto>.Failure("Product not found");
 
-            var existing = await _favoriteRepository.GetByUserAndProductAsync(request.ActorUserId, product.Id, ct);
+            var existing = await _favoriteRepository.GetByUserAndProductAsync(request.ActorUserId, productId, ct);
             if (existing is not null)
             {
                 return Result<FavoriteItemDto>.Success(
@@ -40,28 +41,52 @@ public sealed class AddFavoriteProductCommandHandler : IRequestHandler<AddFavori
             }
 
             var now = DateTime.UtcNow;
-            var favorite = Favorite.Reconstitute(
+            var deleted = await _favoriteRepository.GetByUserAndProductIncludingDeletedAsync(request.ActorUserId, productId, ct);
+            if (deleted is not null && deleted.IsDeleted)
+            {
+                await _favoriteRepository.ReactivateAsync(deleted.Id, now, product.Price, ct);
+                await _cache.RemoveAsync(FavoritesCacheKeys.ListByUser(request.ActorUserId), ct);
+                var restored = await _favoriteRepository.GetByUserAndProductAsync(request.ActorUserId, productId, ct);
+                if (restored is not null)
+                {
+                    return Result<FavoriteItemDto>.Success(
+                        new FavoriteItemDto(restored.Id.Value, restored.ProductId.Value, restored.AddedAt, restored.PriceAtAdd?.Amount, restored.IsAvailable));
+                }
+            }
+
+            var favorite = Favorite.Create(
                 FavoriteId.From(0),
                 request.ActorUserId,
-                product.Id,
+                productId,
                 now,
                 product.Price,
                 true,
                 JsonBlob.Empty,
-                null,
-                now,
-                now,
-                false,
                 null);
 
-            favorite = await _favoriteRepository.AddAsync(favorite, ct);
+            try
+            {
+                favorite = await _favoriteRepository.AddAsync(favorite, ct);
+            }
+            catch (InvalidOperationException)
+            {
+                // Concurrent add can hit unique index; treat as idempotent success.
+                var concurrent = await _favoriteRepository.GetByUserAndProductAsync(request.ActorUserId, productId, ct);
+                if (concurrent is null)
+                    return Result<FavoriteItemDto>.Failure("Failed to add favorite");
+
+                await _cache.RemoveAsync(FavoritesCacheKeys.ListByUser(request.ActorUserId), ct);
+                return Result<FavoriteItemDto>.Success(
+                    new FavoriteItemDto(concurrent.Id.Value, concurrent.ProductId.Value, concurrent.AddedAt, concurrent.PriceAtAdd?.Amount, concurrent.IsAvailable));
+            }
+
             await _cache.RemoveAsync(FavoritesCacheKeys.ListByUser(request.ActorUserId), ct);
             return Result<FavoriteItemDto>.Success(
                 new FavoriteItemDto(favorite.Id.Value, favorite.ProductId.Value, favorite.AddedAt, favorite.PriceAtAdd?.Amount, favorite.IsAvailable));
         }
-        catch (Exception ex)
+        catch
         {
-            return Result<FavoriteItemDto>.Failure($"Failed to add favorite: {ex.Message}");
+            return Result<FavoriteItemDto>.Failure("Failed to add favorite");
         }
     }
 }

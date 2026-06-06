@@ -4,6 +4,8 @@ using Minio;
 using Minio.DataModel.Args;
 using Minio.DataModel;
 
+using Marketplace.Application.Common.Options;
+
 namespace Marketplace.Infrastructure.External.Storage;
 
 public sealed class MinioObjectStorage : IObjectStorage
