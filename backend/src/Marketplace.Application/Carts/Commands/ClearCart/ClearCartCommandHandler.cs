@@ -2,6 +2,7 @@ using Marketplace.Application.Carts.Cache;
 using Marketplace.Application.Carts.DTOs;
 using Marketplace.Application.Carts.Mappings;
 using Marketplace.Application.Carts.Ports;
+using Marketplace.Application.Common.Observability;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Domain.Cart.Entities;
 using Marketplace.Domain.Cart.Repositories;
@@ -31,6 +32,9 @@ public sealed class ClearCartCommandHandler : IRequestHandler<ClearCartCommand, 
 
     public async Task<Result<CartDto>> Handle(ClearCartCommand request, CancellationToken ct)
     {
+        using var activity = MarketplaceTelemetry.StartActivity("cart.mutate");
+        activity?.SetTag("operation", "clear");
+
         try
         {
             var cart = await _cartRepository.GetActiveByUserIdAsync(request.ActorUserId, ct);

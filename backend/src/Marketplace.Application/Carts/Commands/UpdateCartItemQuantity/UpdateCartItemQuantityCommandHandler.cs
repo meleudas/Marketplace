@@ -2,6 +2,7 @@ using Marketplace.Application.Carts.Cache;
 using Marketplace.Application.Carts.DTOs;
 using Marketplace.Application.Carts.Mappings;
 using Marketplace.Application.Carts.Services;
+using Marketplace.Application.Common.Observability;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Domain.Cart.Entities;
 using Marketplace.Domain.Cart.Repositories;
@@ -32,8 +33,14 @@ public sealed class UpdateCartItemQuantityCommandHandler : IRequestHandler<Updat
 
     public async Task<Result<CartDto>> Handle(UpdateCartItemQuantityCommand request, CancellationToken ct)
     {
+        using var activity = MarketplaceTelemetry.StartActivity("cart.mutate");
+        activity?.SetTag("operation", "update_quantity");
+
         try
         {
+            if (request.Quantity <= 0)
+                return Result<CartDto>.Failure("Quantity must be greater than zero");
+
             var cart = await _cartRepository.GetActiveByUserIdAsync(request.ActorUserId, ct);
             if (cart is null)
                 return Result<CartDto>.Failure("Cart not found");

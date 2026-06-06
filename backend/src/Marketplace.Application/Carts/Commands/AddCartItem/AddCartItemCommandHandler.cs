@@ -2,6 +2,7 @@ using Marketplace.Application.Carts.Cache;
 using Marketplace.Application.Carts.DTOs;
 using Marketplace.Application.Carts.Mappings;
 using Marketplace.Application.Carts.Services;
+using Marketplace.Application.Common.Observability;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Domain.Cart.Entities;
 using Marketplace.Domain.Cart.Enums;
@@ -38,8 +39,14 @@ public sealed class AddCartItemCommandHandler : IRequestHandler<AddCartItemComma
 
     public async Task<Result<CartDto>> Handle(AddCartItemCommand request, CancellationToken ct)
     {
+        using var activity = MarketplaceTelemetry.StartActivity("cart.mutate");
+        activity?.SetTag("operation", "add_item");
+
         try
         {
+            if (request.Quantity <= 0)
+                return Result<CartDto>.Failure("Quantity must be greater than zero");
+
             var product = await _productRepository.GetByIdAsync(ProductId.From(request.ProductId), ct);
             if (product is null || product.Status != ProductStatus.Active || product.IsDeleted)
                 return Result<CartDto>.Failure("Product not found");
@@ -70,6 +77,8 @@ public sealed class AddCartItemCommandHandler : IRequestHandler<AddCartItemComma
             }
             else
             {
+                if (existingItem.Quantity > int.MaxValue - request.Quantity)
+                    return Result<CartDto>.Failure("Quantity overflow");
                 var updated = CartItem.Reconstitute(
                     existingItem.Id,
                     existingItem.CartId,

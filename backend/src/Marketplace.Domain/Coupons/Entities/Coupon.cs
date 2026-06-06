@@ -23,6 +23,70 @@ public sealed class Coupon : AuditableSoftDeleteAggregateRoot<CouponId>
     public JsonBlob? ApplicableCompanies { get; private set; }
     public bool IsActive { get; private set; }
 
+    public bool IsValidAt(DateTime utcNow)
+    {
+        if (!IsActive || IsDeleted)
+            return false;
+        if (StartsAt.HasValue && utcNow < StartsAt.Value)
+            return false;
+        if (ExpiresAt.HasValue && utcNow > ExpiresAt.Value)
+            return false;
+        return true;
+    }
+
+    public bool IsUsageAvailableFor(Guid userId, int userUsageCount)
+    {
+        _ = userId;
+        if (UsageLimit.HasValue && UsageCount >= UsageLimit.Value)
+            return false;
+        if (UserUsageLimit > 0 && userUsageCount >= UserUsageLimit)
+            return false;
+        return true;
+    }
+
+    public bool IsEligibleForSubtotal(Money subtotal)
+        => MinOrderAmount is null || subtotal.Amount >= MinOrderAmount.Amount;
+
+    public Money CalculateDiscount(Money subtotal)
+    {
+        if (subtotal.Amount <= 0)
+            return Money.Zero;
+
+        var discountAmount = DiscountType switch
+        {
+            DiscountType.Percentage => subtotal.Amount * (Discount.Amount / 100m),
+            DiscountType.Fixed => Discount.Amount,
+            _ => 0m
+        };
+
+        if (discountAmount < 0)
+            discountAmount = 0;
+        if (discountAmount > subtotal.Amount)
+            discountAmount = subtotal.Amount;
+
+        return new Money(discountAmount);
+    }
+
+    public bool IsCompanyInScope(Guid companyId)
+    {
+        if (ApplicableCompanies is null || ApplicableCompanies.IsEmpty)
+            return true;
+        var raw = ApplicableCompanies.Raw ?? string.Empty;
+        return raw.Contains(companyId.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    public void IncrementUsage(DateTime utcNow)
+    {
+        UsageCount += 1;
+        UpdatedAt = utcNow;
+    }
+
+    public void Deactivate(DateTime utcNow)
+    {
+        IsActive = false;
+        UpdatedAt = utcNow;
+    }
+
     public static Coupon Reconstitute(
         CouponId id,
         string code,

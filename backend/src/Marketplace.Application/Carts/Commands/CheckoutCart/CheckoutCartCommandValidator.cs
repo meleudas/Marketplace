@@ -7,6 +7,7 @@ public sealed class CheckoutCartCommandValidator : AbstractValidator<CheckoutCar
     public CheckoutCartCommandValidator()
     {
         RuleFor(x => x.ActorUserId).NotEmpty();
+        RuleFor(x => x.ShippingMethodId).GreaterThan(0);
         RuleFor(x => x.Address.FirstName).NotEmpty().MaximumLength(120);
         RuleFor(x => x.Address.LastName).NotEmpty().MaximumLength(120);
         RuleFor(x => x.Address.Phone).NotEmpty().MaximumLength(64);

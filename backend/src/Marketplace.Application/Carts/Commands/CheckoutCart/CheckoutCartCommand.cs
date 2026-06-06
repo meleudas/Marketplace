@@ -8,6 +8,7 @@ namespace Marketplace.Application.Carts.Commands.CheckoutCart;
 public sealed record CheckoutCartCommand(
     Guid ActorUserId,
     CheckoutPaymentMethod PaymentMethod,
+    long ShippingMethodId,
     CheckoutAddressDto Address,
     string? Notes,
     string IdempotencyKey) : IRequest<Result<CheckoutResultDto>>;

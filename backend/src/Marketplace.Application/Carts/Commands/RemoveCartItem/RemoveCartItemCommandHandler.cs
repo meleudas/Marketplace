@@ -2,6 +2,7 @@ using Marketplace.Application.Carts.Cache;
 using Marketplace.Application.Carts.DTOs;
 using Marketplace.Application.Carts.Mappings;
 using Marketplace.Application.Carts.Services;
+using Marketplace.Application.Common.Observability;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Domain.Cart.Entities;
 using Marketplace.Domain.Cart.Repositories;
@@ -32,6 +33,9 @@ public sealed class RemoveCartItemCommandHandler : IRequestHandler<RemoveCartIte
 
     public async Task<Result<CartDto>> Handle(RemoveCartItemCommand request, CancellationToken ct)
     {
+        using var activity = MarketplaceTelemetry.StartActivity("cart.mutate");
+        activity?.SetTag("operation", "remove_item");
+
         try
         {
             var cart = await _cartRepository.GetActiveByUserIdAsync(request.ActorUserId, ct);
