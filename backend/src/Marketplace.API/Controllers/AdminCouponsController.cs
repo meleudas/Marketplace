@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("Coupons")]
 [Route("admin/coupons")]
 [Authorize(Roles = "Admin,Moderator")]
 public sealed class AdminCouponsController : ControllerBase

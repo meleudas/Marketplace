@@ -27,6 +27,7 @@ app.MapScalarApiReference(options =>
     options.Title = "Marketplace API";
     options.Theme = ScalarTheme.Mars;
     options.DefaultHttpClient = new(ScalarTarget.CSharp, ScalarClient.HttpClient);
+    options.OpenApiRoutePattern = "/openapi/{documentName}.json";
 });
 app.UseSwagger();
 app.UseSwaggerUI(options =>

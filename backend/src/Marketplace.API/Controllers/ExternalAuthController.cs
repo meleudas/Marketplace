@@ -11,6 +11,7 @@ using Microsoft.Extensions.Options;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("ExternalAuth")]
 [Route("auth")]
 public class ExternalAuthController : ControllerBase
 {

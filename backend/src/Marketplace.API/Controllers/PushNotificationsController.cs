@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("PushNotifications")]
 public sealed class PushNotificationsController : ControllerBase
 {
     private readonly IPushSubscriptionRepository _subscriptions;

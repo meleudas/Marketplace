@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("AdminPayments")]
 [Route("admin/payments")]
 [Authorize(Roles = "Admin")]
 public sealed class AdminPaymentsController : ControllerBase

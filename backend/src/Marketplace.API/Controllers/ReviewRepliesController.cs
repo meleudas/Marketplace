@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("ReviewReplies")]
 [Route("reviews")]
 [Authorize]
 public sealed class ReviewRepliesController : ControllerBase

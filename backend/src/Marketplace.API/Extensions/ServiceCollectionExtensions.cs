@@ -1,4 +1,5 @@
 using Marketplace.API.Filters;
+using Marketplace.API.OpenApi;
 using Marketplace.API.Options;
 using Marketplace.Application;
 using Marketplace.Infrastructure;
@@ -23,6 +24,7 @@ public static class ServiceCollectionExtensions
         services.AddInfrastructure(configuration, ConfigureGoogleIfPresent(configuration));
 
         services.AddHttpContextAccessor();
+        services.AddSingleton<EndpointDocRegistry>();
         services.AddControllers(options => options.Filters.Add<ValidateModelAttribute>());
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
@@ -30,8 +32,11 @@ public static class ServiceCollectionExtensions
             options.SwaggerDoc("v1", new OpenApiInfo
             {
                 Title = "Marketplace API",
-                Version = "v1"
+                Version = "v1",
+                Description = OpenApiTagDefinitions.BuildDocumentDescription()
             });
+            options.OperationFilter<EndpointDocumentationOperationFilter>();
+            options.DocumentFilter<TagDescriptionsDocumentFilter>();
 
             // HTTP Bearer: Swagger UI сам додає префікс "Bearer " — в поле вводу лише JWT (access token).
             var bearerScheme = new OpenApiSecurityScheme
@@ -53,12 +58,8 @@ public static class ServiceCollectionExtensions
 
         services.AddOpenApi("v1", options =>
         {
-            options.AddDocumentTransformer((document, _, _) =>
-            {
-                document.Info.Title = "Marketplace API";
-                document.Info.Version = "v1";
-                return Task.CompletedTask;
-            });
+            options.AddDocumentTransformer<TagDescriptionsDocumentTransformer>();
+            options.AddOperationTransformer<EndpointDocumentationTransformer>();
         });
 
         services.AddCors(options =>

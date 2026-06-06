@@ -19,6 +19,7 @@ using Microsoft.Extensions.Logging;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("Account")]
 [Route("account")]
 public class AccountController : ControllerBase
 {

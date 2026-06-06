@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("Reviews")]
 [Route("companies/{companyId:guid}/reviews")]
 public sealed class CompanyReviewsController : ControllerBase
 {

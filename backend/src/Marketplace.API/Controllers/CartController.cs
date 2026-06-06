@@ -16,6 +16,7 @@ using Microsoft.Extensions.Logging;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("Cart")]
 [Route("me/cart")]
 [Authorize]
 public sealed class CartController : ControllerBase

@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("CompanyMembers")]
 [Route("companies/{companyId:guid}/members")]
 [Authorize]
 public sealed class CompanyMembersController : ControllerBase

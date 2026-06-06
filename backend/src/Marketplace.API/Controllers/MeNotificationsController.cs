@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("MeNotifications")]
 [Route("me/in-app-notifications")]
 [Authorize]
 public sealed class MeNotificationsController : ControllerBase

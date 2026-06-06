@@ -16,6 +16,7 @@ using Microsoft.Extensions.Options;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("Auth")]
 [Route("auth")]
 public class AuthController : ControllerBase
 {

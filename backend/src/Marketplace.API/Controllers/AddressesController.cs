@@ -14,6 +14,7 @@ using Microsoft.Extensions.Options;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("Shipping")]
 [Route("me/addresses")]
 [Authorize]
 public sealed class AddressesController : ControllerBase

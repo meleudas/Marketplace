@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("Shipments")]
 [Route("me/shipments")]
 [Authorize]
 public sealed class ShipmentsController : ControllerBase

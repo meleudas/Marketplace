@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("CartCoupons")]
 [Route("me/cart/coupons")]
 [Authorize]
 public sealed class CartCouponsController : ControllerBase

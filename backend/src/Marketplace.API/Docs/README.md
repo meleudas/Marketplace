@@ -25,7 +25,9 @@
 
 Детальні таблиці полів JSON залишено в кореневому [README.md](../README.md) проєкту API (розділ «Довідник полів»). Нові endpoint-и описані в [Endpoints/](Endpoints/README.md) з посиланням на типи відповідей.
 
-## OpenAPI / Swagger
+## OpenAPI / Swagger / Scalar
 
-- UI: `/swagger`
-- OpenAPI JSON: `/openapi/v1.json`
+- **Swagger UI:** `/swagger` — схеми + markdown-опис з `Docs/Endpoints/*.md`
+- **Scalar:** `/scalar` — те саме через `/openapi/v1.json`
+- **OpenAPI JSON:** `/openapi/v1.json`, `/swagger/v1/swagger.json`
+- **Джерело описів:** [`Docs/Endpoints/`](Endpoints/README.md) (парситься `OpenApi/EndpointDocRegistry`)

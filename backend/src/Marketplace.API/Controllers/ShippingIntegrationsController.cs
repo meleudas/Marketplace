@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("ShippingIntegrations")]
 [Route("integrations/shipping/novaposhta")]
 [AllowAnonymous]
 public sealed class ShippingIntegrationsController : ControllerBase

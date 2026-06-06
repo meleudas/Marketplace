@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("AdminAnalytics")]
 [Route("admin/analytics/kpi")]
 [Authorize(Roles = "Admin")]
 public sealed class AdminAnalyticsController : ControllerBase

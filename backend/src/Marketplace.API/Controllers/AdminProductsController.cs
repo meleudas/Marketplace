@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("AdminProducts")]
 [Route("admin/products")]
 [Authorize(Roles = "Admin,Moderator")]
 public sealed class AdminProductsController : ControllerBase

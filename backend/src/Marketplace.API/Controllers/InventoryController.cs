@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("Inventory")]
 [Route("companies/{companyId:guid}")]
 [Authorize]
 public sealed class InventoryController : ControllerBase

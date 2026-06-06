@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("AdminOutbox")]
 [Route("admin/outbox")]
 [Authorize(Roles = "Admin")]
 public sealed class AdminOutboxController : ControllerBase

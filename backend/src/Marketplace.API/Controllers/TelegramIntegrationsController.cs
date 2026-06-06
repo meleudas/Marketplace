@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("TelegramIntegrations")]
 [Route("integrations/telegram")]
 [AllowAnonymous]
 public sealed class TelegramIntegrationsController : ControllerBase

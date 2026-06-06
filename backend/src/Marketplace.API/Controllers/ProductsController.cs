@@ -15,6 +15,7 @@ using Microsoft.Extensions.Options;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("Products")]
 [Route("companies/{companyId:guid}/products")]
 [Authorize]
 public sealed class ProductsController : ControllerBase

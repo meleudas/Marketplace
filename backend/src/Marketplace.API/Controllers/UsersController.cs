@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("Users")]
 [Route("users")]
 [Authorize]
 public class UsersController : ControllerBase

@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("AdminReviews")]
 [Route("admin/reviews")]
 [Authorize(Roles = "Admin,Moderator")]
 public sealed class AdminReviewsController : ControllerBase

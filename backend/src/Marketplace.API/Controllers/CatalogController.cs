@@ -16,6 +16,7 @@ using Microsoft.Extensions.Logging;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("Catalog")]
 [Route("catalog")]
 [AllowAnonymous]
 public sealed class CatalogController : ControllerBase

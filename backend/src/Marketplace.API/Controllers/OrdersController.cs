@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("Orders")]
 [Authorize]
 public sealed class OrdersController : ControllerBase
 {

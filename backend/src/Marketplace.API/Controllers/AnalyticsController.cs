@@ -11,6 +11,7 @@ using Microsoft.Extensions.Options;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("Analytics")]
 [Route("analytics")]
 public sealed class AnalyticsController : ControllerBase
 {

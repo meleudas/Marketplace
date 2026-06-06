@@ -26,6 +26,7 @@ using Microsoft.Extensions.Logging;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("AdminCatalog")]
 [Route("admin")]
 [Authorize(Roles = "Admin")]
 public sealed class AdminCatalogController : ControllerBase

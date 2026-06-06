@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("Favorites")]
 [Route("me/favorites")]
 [Authorize]
 public sealed class FavoritesController : ControllerBase

@@ -14,6 +14,7 @@ using Microsoft.Extensions.Options;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("AdminReports")]
 [Route("admin/reports")]
 [Authorize(Roles = "Moderator,Admin,Support")]
 public sealed class AdminReportsController : ControllerBase

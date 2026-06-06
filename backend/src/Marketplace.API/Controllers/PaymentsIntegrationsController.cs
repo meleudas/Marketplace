@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Marketplace.API.Controllers;
 
 [ApiController]
+[Tags("PaymentsIntegrations")]
 [Route("integrations/liqpay")]
 [AllowAnonymous]
 public sealed class PaymentsIntegrationsController : ControllerBase

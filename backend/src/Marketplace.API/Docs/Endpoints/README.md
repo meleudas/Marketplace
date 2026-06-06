@@ -1,15 +1,65 @@
 # Довідник endpoint-ів
 
-Кожен файл відповідає одному контролеру (або групі маршрутів). Формат одного endpoint-а:
+Кожен файл відповідає одному контролеру (або групі маршрутів). Текст звідси автоматично потрапляє в **Swagger** (`/swagger`) та **Scalar** (`/scalar`) через `OpenApi/EndpointDocRegistry`.
 
-- **Маршрут** — метод і path
-- **Призначення** — що робить
-- **Приймає** — route / query / body
-- **Повертає** — успішна відповідь
-- **Авторизація** — хто може викликати
-- **Side effects** — зміни в БД, кеш, рухи складу тощо
-- **Помилки** — типові `detail`/статуси
-- **Примітки** — ідемпотентність, інваріанти
+## Формат одного endpoint-а
+
+Заголовок секції (підтримуються `##`, `###`, `####`):
+
+```markdown
+### `POST /me/cart/checkout`
+```
+
+Обов'язкові поля (bullets) у форматі `- **Назва поля:** значення` (двокрапка **всередині** bold, як у Markdown):
+
+| Поле | Призначення |
+|------|-------------|
+| **Summary (1 рядок)** | Короткий заголовок операції в OpenAPI |
+| **Призначення** | Що робить endpoint |
+| **Хто може викликати** | JWT, глобальні ролі, компанійні ролі |
+| **Бізнес-логіка** | Покроково, що відбувається в handler |
+| **Side effects (синхронно)** | БД, кеш, idempotency store |
+| **Async / «магія»** | Outbox, Hangfire, push/in-app/email (див. [EventCatalog](../Notifications/EventCatalog.md)) |
+| **Де на фронті** | Екран, API-модуль, `Статус: implemented/planned/not_implemented` |
+| **Приймає** | route / query / body |
+| **Повертає** | успішна відповідь |
+| **Помилки** | типові `detail`/статуси |
+| **Примітки** | ідемпотентність, метрики, інваріанти |
+
+### Приклад
+
+```markdown
+## `POST /me/cart/checkout`
+
+- **Summary (1 рядок):** Оформлення замовлення зі сплітом по компаніях.
+- **Призначення:** checkout активного кошика з оплатою та доставкою.
+- **Хто може викликати:**
+  - JWT: обов'язково
+  - Глобальні ролі: Buyer, Seller, Admin
+  - Компанійні ролі: —
+- **Бізнес-логіка:**
+  1. Валідація кошика, адреси та методу оплати
+  2. Спліт позицій по `CompanyId` → N orders
+  3. Резервування інвентарю та ініціалізація LiqPay (якщо не cash)
+- **Side effects (синхронно):** orders, order_items, order_addresses, idempotency store, cache invalidate
+- **Async / «магія»:**
+  - Notifications: `AdminNewOrder`, `CompanyNewOrder`
+  - Outbox: події замовлення для downstream consumers
+- **Де на фронті:**
+  - Екран: Checkout (planned)
+  - API-модуль: `frontend/src/features/checkout/api/checkout.api.ts` (planned)
+  - Статус: `planned`
+- **Приймає (body):** `paymentMethod`, `shippingMethodId`, `address`, `notes?`
+- **Повертає:** `CheckoutResultDto`
+- **Помилки:** `400`, `404`, `409` (idempotency)
+- **Idempotency:** обов'язковий заголовок `Idempotency-Key`
+```
+
+Додаткові джерела при написанні:
+
+- [RoleAccessMatrix](../DDD/RoleAccessMatrix.md) — ролі
+- [BusinessFlows](../DDD/BusinessFlows.md) — сценарії
+- [FrontendCoverage.md](FrontendCoverage.md) — мапа endpoint → UI
 
 ## Індекс контролерів
 
