@@ -8,6 +8,7 @@ using Marketplace.Application.Products.DTOs;
 using Marketplace.Application.Products.Mappings;
 using Marketplace.Domain.Catalog.Entities;
 using Marketplace.Domain.Catalog.Repositories;
+using Marketplace.Domain.Common.Exceptions;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
@@ -46,19 +47,27 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
             if (!await _access.HasAccessAsync(request.CompanyId, request.ActorUserId, request.IsActorAdmin, ProductPermission.WriteProduct, ct))
                 return Result<ProductDto>.Failure("Forbidden");
 
-            var product = Product.Create(
-                ProductId.From(0),
-                CompanyId.From(request.CompanyId),
-                request.Name,
-                request.Slug,
-                request.Description,
-                new Money(request.Price),
-                request.OldPrice.HasValue ? new Money(request.OldPrice.Value) : null,
-                stock: 0,
-                minStock: request.MinStock,
-                categoryId: CategoryId.From(request.CategoryId),
-                hasVariants: request.HasVariants);
-            product.SubmitForModeration(request.ActorUserId);
+            Product product;
+            try
+            {
+                product = Product.Create(
+                    ProductId.From(0),
+                    CompanyId.From(request.CompanyId),
+                    request.Name,
+                    request.Slug,
+                    request.Description,
+                    new Money(request.Price),
+                    request.OldPrice.HasValue ? new Money(request.OldPrice.Value) : null,
+                    stock: 0,
+                    minStock: request.MinStock,
+                    categoryId: CategoryId.From(request.CategoryId),
+                    hasVariants: request.HasVariants);
+                product.SubmitForModeration(request.ActorUserId);
+            }
+            catch (DomainException ex)
+            {
+                return Result<ProductDto>.Failure(ex.Message);
+            }
 
             await _productRepository.AddAsync(product, ct);
             product = await _productRepository.GetBySlugAsync(CompanyId.From(request.CompanyId), request.Slug, ct)

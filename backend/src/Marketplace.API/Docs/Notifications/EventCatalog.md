@@ -31,7 +31,7 @@
 
 | Подія | Аудиторія | Канали (ціль) | Статус |
 |--------|-----------|---------------|--------|
-| «Запит на створення товару» на схвалення адміну | Адміни / модератори | InApp, Push, (план) TG | **Done** (бекенд) — `ProductStatus.PendingReview`; після `CreateProductCommandHandler` / повторної подачі з `UpdateProductCommandHandler` (чернетка після відхилення) — `ScheduleAsync` з шаблоном `AdminProductPendingReview`, аудиторія `Admins`, отримувачі `IAdminNotificationRecipientIds` (Admin + Moderator); `CorrelationId` = `AppNotificationCorrelationIds.ProductPendingReviewQueue` (створення) або випадковий GUID (повторна подача). |
+| «Запит на створення товару» на схвалення адміну | Адміни / модератори | InApp, Push, (план) TG | **Done** (бекенд) — `ProductStatus.PendingReview`; після `CreateProductCommandHandler` / повторної подачі з `UpdateProductCommandHandler` (чернетка після відхилення) — `ScheduleAsync` з шаблоном `AdminProductPendingReview`, аудиторія `Admins`, отримувачі `IAdminNotificationRecipientIds` (Admin + Moderator); стабільний `CorrelationId` = `AppNotificationCorrelationIds.ProductPendingReviewQueue` для create/resubmit. |
 | Товар схвалено / відхилено | Автор подання (`SubmittedByUserId`) | InApp, Push | **Done** (бекенд, без Email) — `ApproveProductCommandHandler` / `RejectProductCommandHandler` → `UserProductApproved` / `UserProductRejected`; Email залишається **Planned**. |
 | Низький залишок (мінімальний поріг) | Owner/Manager компанії | InApp, Email | **Planned** — зв’язок з `minStock` і каталогом. |
 

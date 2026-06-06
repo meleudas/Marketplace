@@ -4,7 +4,7 @@ using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Payments.Services;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Orders.Services;
-using Marketplace.Infrastructure.Observability;
+using Marketplace.Application.Common.Observability;
 using Marketplace.Domain.Orders.Repositories;
 using Marketplace.Domain.Payments.Enums;
 using Marketplace.Domain.Payments.Repositories;
@@ -40,8 +40,12 @@ public sealed class PaymentJobs
     }
 
     [DisableConcurrentExecution(timeoutInSeconds: 300)]
-    public async Task SyncPendingPaymentsAsync(CancellationToken ct = default)
+    public Task SyncPendingPaymentsAsync(CancellationToken ct = default) =>
+        MarketplaceTelemetry.RunJobAsync("payments-sync-pending-liqpay", SyncPendingPaymentsCoreAsync, ct);
+
+    private async Task SyncPendingPaymentsCoreAsync(CancellationToken ct)
     {
+        using var span = MarketplaceTelemetry.StartActivity("payment.sync.pending");
         using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.HangfireJobLatencyMs, new KeyValuePair<string, object?>("job", "payments-sync-pending"));
         var pending = await _paymentRepository.ListByStatusAsync(PaymentTransactionStatus.Pending, ct);
         foreach (var payment in pending.Where(x => !string.IsNullOrWhiteSpace(x.TransactionId)))

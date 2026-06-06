@@ -2,7 +2,7 @@ using Hangfire;
 using Marketplace.Application.Notifications;
 using Marketplace.Application.Notifications.Ports;
 using Marketplace.Infrastructure.Notifications;
-using Marketplace.Infrastructure.Observability;
+using Marketplace.Application.Common.Observability;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -41,6 +41,9 @@ public sealed class AppNotificationJobs
         string? payloadJson,
         CancellationToken ct = default)
     {
+        using var dispatchTimer = MarketplaceMetrics.StartTimer(
+            MarketplaceMetrics.NotificationDispatchLatencyMs,
+            new KeyValuePair<string, object?>("template_key", templateKey));
         using var timer = MarketplaceMetrics.StartTimer(
             MarketplaceMetrics.HangfireJobLatencyMs,
             new KeyValuePair<string, object?>("job", "app-notification-dispatch"),
@@ -48,6 +51,12 @@ public sealed class AppNotificationJobs
 
         try
         {
+            MarketplaceMetrics.NotificationDispatches.Add(1,
+            [
+                new KeyValuePair<string, object?>("template_key", templateKey),
+                new KeyValuePair<string, object?>("audience", ((AppNotificationAudienceKind)audience).ToString())
+            ]);
+
             var request = new AppNotificationRequest
             {
                 TemplateKey = templateKey,
@@ -65,7 +74,31 @@ public sealed class AppNotificationJobs
                 if ((envelope.Channels & channel.Kind) != channel.Kind)
                     continue;
 
-                await channel.DeliverAsync(envelope, ct);
+                try
+                {
+                    await channel.DeliverAsync(envelope, ct);
+                    MarketplaceMetrics.NotificationChannelDeliveries.Add(1,
+                    [
+                        new KeyValuePair<string, object?>("template_key", templateKey),
+                        new KeyValuePair<string, object?>("channel", channel.Kind.ToString()),
+                        new KeyValuePair<string, object?>("status", "success")
+                    ]);
+                }
+                catch
+                {
+                    MarketplaceMetrics.NotificationChannelErrors.Add(1,
+                    [
+                        new KeyValuePair<string, object?>("template_key", templateKey),
+                        new KeyValuePair<string, object?>("channel", channel.Kind.ToString())
+                    ]);
+                    MarketplaceMetrics.NotificationChannelDeliveries.Add(1,
+                    [
+                        new KeyValuePair<string, object?>("template_key", templateKey),
+                        new KeyValuePair<string, object?>("channel", channel.Kind.ToString()),
+                        new KeyValuePair<string, object?>("status", "failed")
+                    ]);
+                    throw;
+                }
             }
 
             MarketplaceMetrics.HangfireJobs.Add(1,
@@ -77,6 +110,10 @@ public sealed class AppNotificationJobs
         }
         catch (Exception ex)
         {
+            MarketplaceMetrics.NotificationDispatchErrors.Add(1,
+            [
+                new KeyValuePair<string, object?>("template_key", templateKey)
+            ]);
             MarketplaceMetrics.HangfireJobErrors.Add(1,
             [
                 new KeyValuePair<string, object?>("job", "app-notification-dispatch"),
@@ -87,7 +124,10 @@ public sealed class AppNotificationJobs
         }
     }
 
-    public async Task PruneExpiredInAppNotificationsAsync(CancellationToken ct = default)
+    public Task PruneExpiredInAppNotificationsAsync(CancellationToken ct = default) =>
+        MarketplaceTelemetry.RunJobAsync("app-notifications-prune-expired-inapp", PruneExpiredInAppNotificationsCoreAsync, ct);
+
+    private async Task PruneExpiredInAppNotificationsCoreAsync(CancellationToken ct)
     {
         if (!_appNotificationOptions.CurrentValue.PruneExpiredInAppEnabled)
             return;

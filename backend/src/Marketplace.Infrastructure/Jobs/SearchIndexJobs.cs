@@ -1,3 +1,4 @@
+using Marketplace.Application.Common.Observability;
 using Marketplace.Application.Products.Ports;
 
 namespace Marketplace.Infrastructure.Jobs;
@@ -17,6 +18,6 @@ public sealed class SearchIndexJobs
     public Task DeleteProductAsync(long productId, CancellationToken ct = default)
         => _indexer.DeleteProductAsync(productId, ct);
 
-    public Task FullReindexAsync(CancellationToken ct = default)
-        => _indexer.FullReindexAsync(ct);
+    public Task FullReindexAsync(CancellationToken ct = default) =>
+        MarketplaceTelemetry.RunJobAsync("search-full-reindex-products", token => _indexer.FullReindexAsync(token), ct);
 }

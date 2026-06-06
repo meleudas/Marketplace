@@ -53,7 +53,9 @@ public sealed class InAppNotificationRepository : IInAppNotificationRepository
             await _db.SaveChangesAsync(ct);
             return true;
         }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg && pg.SqlState == "23505")
+        catch (DbUpdateException ex) when (
+            (ex.InnerException is PostgresException pg && pg.SqlState == "23505") ||
+            (ex.InnerException?.Message?.Contains("UNIQUE constraint failed: notifications.UserId, notifications.CorrelationId", StringComparison.OrdinalIgnoreCase) ?? false))
         {
             _db.Entry(row).State = EntityState.Detached;
             return false;

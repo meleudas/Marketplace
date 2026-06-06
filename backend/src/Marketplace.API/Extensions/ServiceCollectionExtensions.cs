@@ -6,16 +6,16 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.OpenApi;
-using OpenTelemetry.Metrics;
-using Marketplace.Infrastructure.Observability;
-
 namespace Marketplace.API.Extensions;
 
 public static class ServiceCollectionExtensions
 {
     private const string CorsPolicyName = "MarketplaceCors";
 
-    public static IServiceCollection AddMarketplaceApi(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddMarketplaceApi(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment hostEnvironment)
     {
         services.Configure<CookieAuthOptions>(configuration.GetSection(CookieAuthOptions.SectionName));
 
@@ -79,16 +79,8 @@ public static class ServiceCollectionExtensions
             });
         });
 
-        services.AddOpenTelemetry()
-            .WithMetrics(metrics =>
-            {
-                metrics
-                    .AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation()
-                    .AddMeter(MarketplaceMetrics.MeterName)
-                    .AddPrometheusExporter();
-            });
+        services.Configure<OpenTelemetryOptions>(configuration.GetSection(OpenTelemetryOptions.SectionName));
+        services.AddMarketplaceOpenTelemetry(configuration, hostEnvironment);
 
         return services;
     }

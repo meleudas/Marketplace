@@ -11,6 +11,10 @@
     <Project Path="src/Marketplace.Infrastructure/Marketplace.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/Marketplace.Tests/Marketplace.Tests.csproj" />
+    <Project Path="tests/Marketplace.Tests.Common/Marketplace.Tests.Common.csproj" />
+    <Project Path="tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj" />
+    <Project Path="tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj" />
+    <Project Path="tests/Marketplace.Tests.Integration.Containers/Marketplace.Tests.Integration.Containers.csproj" />
+    <Project Path="tests/Marketplace.Tests.E2E/Marketplace.Tests.E2E.csproj" />
   </Folder>
 </Solution>

@@ -28,6 +28,8 @@ public sealed class ChangeCompanyMemberRoleCommandHandler : IRequestHandler<Chan
                 var actorMembership = await _companyMemberRepository.GetByCompanyAndUserAsync(companyId, request.ActorUserId, ct);
                 if (actorMembership is null || !CompanyPermissions.CanManageMembers(actorMembership.Role))
                     return Result<CompanyMemberDto>.Failure("Forbidden");
+                if (request.Role == CompanyMembershipRole.Owner)
+                    return Result<CompanyMemberDto>.Failure("Forbidden");
             }
 
             var membership = await _companyMemberRepository.GetByCompanyAndUserAsync(companyId, request.TargetUserId, ct);

@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Security.Cryptography;
+using Marketplace.Application.Common.Observability;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Notifications;
 using Marketplace.Application.Notifications.Ports;
@@ -53,6 +54,8 @@ public sealed class HandleLiqPayWebhookCommandHandler : IRequestHandler<HandleLi
 
     public async Task<Result> Handle(HandleLiqPayWebhookCommand request, CancellationToken ct)
     {
+        using var activity = MarketplaceTelemetry.StartActivity("payment.webhook.liqpay");
+        activity?.SetTag("provider", "liqpay");
         try
         {
             var isValid = await _liqPayPort.VerifySignatureAsync(request.Data, request.Signature, ct);
@@ -70,7 +73,7 @@ public sealed class HandleLiqPayWebhookCommandHandler : IRequestHandler<HandleLi
                 return Result.Failure("Payment not found");
 
             var mappedStatus = MapStatus(statusRaw);
-            var messageId = BuildWebhookMessageId(transactionId, statusRaw, request.IdempotencyKey);
+            var messageId = BuildWebhookMessageId(transactionId, statusRaw, request.Signature, request.Data);
             const string consumer = "liqpay-webhook";
             if (await _inbox.HasProcessedAsync(messageId, consumer, ct))
                 return Result.Success();
@@ -161,9 +164,9 @@ public sealed class HandleLiqPayWebhookCommandHandler : IRequestHandler<HandleLi
             _ => PaymentTransactionStatus.Pending
         };
 
-    private static Guid BuildWebhookMessageId(string transactionId, string? statusRaw, string idempotencyKey)
+    private static Guid BuildWebhookMessageId(string transactionId, string? statusRaw, string signature, string data)
     {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"{transactionId}|{statusRaw}|{idempotencyKey}"));
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"{transactionId}|{statusRaw}|{signature}|{data}"));
         var guidBytes = new byte[16];
         Array.Copy(bytes, guidBytes, 16);
         return new Guid(guidBytes);

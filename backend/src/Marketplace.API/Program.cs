@@ -1,8 +1,10 @@
 using Hangfire;
 using Marketplace.API.Extensions;
+using Marketplace.API.Options;
 using Marketplace.Application.Payments.Ports;
 using Marketplace.Infrastructure.External.Email;
 using Marketplace.Infrastructure.Jobs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using Scalar.AspNetCore;
 using System.Net.Sockets;
@@ -11,7 +13,8 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddMarketplaceApi(builder.Configuration);
+builder.Logging.AddMarketplaceOpenTelemetryLogging(builder.Configuration);
+builder.Services.AddMarketplaceApi(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 
@@ -33,34 +36,55 @@ app.UseSwaggerUI(options =>
 });
 
 app.UseMarketplaceMiddleware();
-app.UseHangfireDashboard("/hangfire");
-RecurringJob.AddOrUpdate<InventoryJobs>(
-    "inventory-expire-reservations",
-    job => job.ExpireReservationsAsync(default),
-    Cron.Minutely);
-RecurringJob.AddOrUpdate<SearchIndexJobs>(
-    "search-full-reindex-products",
-    job => job.FullReindexAsync(default),
-    Cron.Daily(2));
-RecurringJob.AddOrUpdate<PaymentJobs>(
-    "payments-sync-pending-liqpay",
-    job => job.SyncPendingPaymentsAsync(default),
-    Cron.Minutely);
-RecurringJob.AddOrUpdate<OutboxDispatcherJobs>(
-    "outbox-dispatch-pending",
-    job => job.DispatchPendingAsync(default),
-    Cron.Minutely);
-RecurringJob.AddOrUpdate<MediaCleanupJobs>(
-    "media-cleanup-orphans",
-    job => job.CleanupOrphansAsync(default),
-    Cron.Hourly);
-RecurringJob.AddOrUpdate<AppNotificationJobs>(
-    "app-notifications-prune-expired-inapp",
-    job => job.PruneExpiredInAppNotificationsAsync(default),
-    Cron.Daily(3));
+if (app.Environment.IsDevelopment())
+    app.UseHangfireDashboard("/hangfire");
+
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    RecurringJob.AddOrUpdate<InventoryJobs>(
+        "inventory-expire-reservations",
+        job => job.ExpireReservationsAsync(default),
+        Cron.Minutely);
+    RecurringJob.AddOrUpdate<SearchIndexJobs>(
+        "search-full-reindex-products",
+        job => job.FullReindexAsync(default),
+        Cron.Daily(2));
+    RecurringJob.AddOrUpdate<PaymentJobs>(
+        "payments-sync-pending-liqpay",
+        job => job.SyncPendingPaymentsAsync(default),
+        Cron.Minutely);
+    RecurringJob.AddOrUpdate<OutboxDispatcherJobs>(
+        "outbox-dispatch-pending",
+        job => job.DispatchPendingAsync(default),
+        Cron.Minutely);
+    RecurringJob.AddOrUpdate<BehaviorAggregationJobs>(
+        "behavior-aggregate-daily",
+        job => job.AggregateDailyAsync(default),
+        Cron.Hourly);
+    RecurringJob.AddOrUpdate<BehaviorAggregationJobs>(
+        "behavior-prune-raw-retention",
+        job => job.PruneRawRetentionAsync(90, default),
+        Cron.Daily(4));
+    RecurringJob.AddOrUpdate<MediaCleanupJobs>(
+        "media-cleanup-orphans",
+        job => job.CleanupOrphansAsync(default),
+        Cron.Hourly);
+    RecurringJob.AddOrUpdate<AppNotificationJobs>(
+        "app-notifications-prune-expired-inapp",
+        job => job.PruneExpiredInAppNotificationsAsync(default),
+        Cron.Daily(3));
+}
 
 app.MapControllers();
-app.MapPrometheusScrapingEndpoint("/metrics");
+
+var openTelemetryOptions = app.Configuration
+    .GetSection(OpenTelemetryOptions.SectionName)
+    .Get<OpenTelemetryOptions>() ?? new OpenTelemetryOptions();
+if (openTelemetryOptions.EnableLegacyPrometheusEndpoint)
+{
+    app.MapPrometheusScrapingEndpoint("/metrics")
+        .RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" });
+}
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
     .WithName("HealthCheck")
@@ -79,26 +103,30 @@ app.MapGet("/health/sendgrid", async (IEmailHealthProbe probe, CancellationToken
     .WithName("SendGridHealthCheck")
     .WithTags("Health");
 
-app.MapGet("/health/sendgrid/key-trace", (IConfiguration cfg, IOptions<SendGridOptions> options) =>
+if (app.Environment.IsDevelopment())
 {
-    var envApiKey = Environment.GetEnvironmentVariable("SENDGRID__APIKEY") ?? string.Empty;
-    var configApiKey = cfg["SendGrid:ApiKey"] ?? string.Empty;
-    var optionsApiKey = options.Value.ApiKey ?? string.Empty;
-
-    var response = new
+    app.MapGet("/health/sendgrid/key-trace", (IConfiguration cfg, IOptions<SendGridOptions> options) =>
     {
-        env = BuildKeySnapshot(envApiKey),
-        config = BuildKeySnapshot(configApiKey),
-        options = BuildKeySnapshot(optionsApiKey),
-        sameFingerprint = !string.IsNullOrEmpty(envApiKey) &&
-                          Fingerprint(envApiKey) == Fingerprint(configApiKey) &&
-                          Fingerprint(configApiKey) == Fingerprint(optionsApiKey)
-    };
+        var envApiKey = Environment.GetEnvironmentVariable("SENDGRID__APIKEY") ?? string.Empty;
+        var configApiKey = cfg["SendGrid:ApiKey"] ?? string.Empty;
+        var optionsApiKey = options.Value.ApiKey ?? string.Empty;
 
-    return Results.Ok(response);
-})
-    .WithName("SendGridKeyTrace")
-    .WithTags("Health");
+        var response = new
+        {
+            env = BuildKeySnapshot(envApiKey),
+            config = BuildKeySnapshot(configApiKey),
+            options = BuildKeySnapshot(optionsApiKey),
+            sameFingerprint = !string.IsNullOrEmpty(envApiKey) &&
+                              Fingerprint(envApiKey) == Fingerprint(configApiKey) &&
+                              Fingerprint(configApiKey) == Fingerprint(optionsApiKey)
+        };
+
+        return Results.Ok(response);
+    })
+        .RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" })
+        .WithName("SendGridKeyTrace")
+        .WithTags("Health");
+}
 
 app.MapGet("/health/liqpay/config", (ILiqPayPort port) =>
 {

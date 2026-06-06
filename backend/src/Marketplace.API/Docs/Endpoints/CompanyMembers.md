@@ -5,11 +5,14 @@
 ### Правила з `CompanyPermissions`
 
 - **Керування членами** (список усіх, призначення ролі, зміна ролі, видалення): актор — **Owner** або **Manager** у цій компанії, або глобальний **Admin**.
+- **Cross-company isolation:** membership у чужій компанії не дає прав на операції в поточній (`Forbidden`).
 - **Перегляд своєї ролі** (`GET .../me`): будь-який **автентифікований** користувач; якщо не член — помилка з текстом на кшталт **`Membership not found`**.
 
 ### Інваріанти
 
 - Не можна **змінити роль** або **видалити** останнього **Owner** (handlers `ChangeCompanyMemberRole`, `RemoveCompanyMember`).
+- **Owner role escalation**: non-admin actor не може призначати/підвищувати до ролі **Owner**.
+- Soft-deleted member не враховується в permission checks та listing.
 - Роль у body: рядок, парситься в `CompanyMembershipRole` case-insensitive: `owner`, `manager`, `seller`, `support`, `logistics`.
 
 ---
@@ -34,7 +37,7 @@
 - **Повертає:** **200** `CompanyMemberDto`.
 - **Авторизація:** Owner | Manager | Admin.
 - **Side effects:** створення/оновлення `CompanyMember`.
-- **Помилки:** **400** невалідна роль; `Company not found`; `User not found`; `Forbidden`.
+- **Помилки:** **400** невалідна роль; `Company not found`; `User not found`; `Forbidden` (в т.ч. спроба non-admin призначити `Owner`).
 
 ## `PATCH /companies/{companyId}/members/{userId}/role`
 
@@ -42,7 +45,7 @@
 - **Повертає:** **200** `CompanyMemberDto`.
 - **Авторизація:** Owner | Manager | Admin.
 - **Side effects:** оновлення ролі.
-- **Помилки:** інваріант останнього Owner; **400** невалідна роль.
+- **Помилки:** інваріант останнього Owner; **400** невалідна роль; `Forbidden` для non-admin при зміні на `Owner`.
 
 ## `DELETE /companies/{companyId}/members/{userId}`
 
@@ -51,6 +54,11 @@
 - **Авторизація:** Owner | Manager | Admin.
 - **Side effects:** користувач втрачає доступ до ресурсів компанії.
 - **Помилки:** не можна видалити останнього Owner.
+
+## Observability
+
+- Метрики: `company_operations_total`, `company_errors_total`, `company_latency_ms`.
+- Ключові operations labels: `company_members_list`, `company_member_me`, `company_member_assign_role`, `company_member_change_role`, `company_member_remove`.
 
 ## Примітка (архітектура API)
 

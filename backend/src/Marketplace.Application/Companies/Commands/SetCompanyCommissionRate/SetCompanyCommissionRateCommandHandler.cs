@@ -35,6 +35,10 @@ public sealed class SetCompanyCommissionRateCommandHandler : IRequestHandler<Set
             var company = await _companyRepository.GetByIdAsync(companyId, ct);
             if (company is null)
                 return Result.Failure("Company not found");
+            if (company.IsDeleted)
+                return Result.Failure("Company not found");
+            if (!company.IsApproved)
+                return Result.Failure("Company is not approved");
 
             var activeContract = await _companyContractRepository.GetActiveByCompanyIdAsync(companyId, ct);
             if (activeContract is null)

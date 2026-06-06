@@ -16,6 +16,13 @@
 2. Hangfire серіалізує виклик `AppNotificationJobs.DispatchAsync(...)` з примітивними аргументами (стійко до серіалізації).
 3. Джоба будує `AppNotificationEnvelope` через `AppNotificationPayloadBuilder` і для кожного зареєстрованого `INotificationChannel`, чий `Kind` входить у маску каналів, викликає `DeliverAsync`.
 
+### Fail/skip semantics (runtime)
+
+- `AppNotificationJobs.DispatchAsync` має `AutomaticRetry(Attempts = 3)` на рівні Hangfire job.
+- Якщо будь-який канал кидає виняток, job вважається failed і піде на retry (щоб не втрачати доставку через тимчасовий збій каналу).
+- Якщо канал свідомо не доставляє повідомлення без винятку (feature flag off, немає отримувачів, user opted-out), це трактується як **skip**, а не failure.
+- Для observability доступні доменні метрики dispatch/channels: `notification_dispatch_total`, `notification_dispatch_errors_total`, `notification_dispatch_latency_ms`, `notification_channel_deliveries_total`, `notification_channel_errors_total`.
+
 ### Розширення
 
 - Новий канал доставки = нова реалізація `INotificationChannel` + реєстрація через `services.TryAddEnumerable(ServiceDescriptor.Scoped<INotificationChannel, ...>)` у `Marketplace.Infrastructure` `DependencyInjection` (поряд з існуючими каналами).

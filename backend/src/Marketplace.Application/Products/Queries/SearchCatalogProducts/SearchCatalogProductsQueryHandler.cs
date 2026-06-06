@@ -6,6 +6,7 @@ using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Inventory.Repositories;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Marketplace.Application.Products.Queries.SearchCatalogProducts;
 
@@ -14,15 +15,18 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
     private readonly IProductSearchService _searchService;
     private readonly IProductRepository _productRepository;
     private readonly IWarehouseStockRepository _stockRepository;
+    private readonly ILogger<SearchCatalogProductsQueryHandler> _logger;
 
     public SearchCatalogProductsQueryHandler(
         IProductSearchService searchService,
         IProductRepository productRepository,
-        IWarehouseStockRepository stockRepository)
+        IWarehouseStockRepository stockRepository,
+        ILogger<SearchCatalogProductsQueryHandler> logger)
     {
         _searchService = searchService;
         _productRepository = productRepository;
         _stockRepository = stockRepository;
+        _logger = logger;
     }
 
     public async Task<Result<ProductSearchResultDto>> Handle(SearchCatalogProductsQuery request, CancellationToken ct)
@@ -45,17 +49,19 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
 
             if (esResult.IsSuccess)
                 return esResult;
+
+            _logger.LogInformation("Catalog search fallback to DB because Elasticsearch returned failure: {Error}", esResult.Error);
         }
-        catch
+        catch (Exception ex)
         {
-            // fall through to DB fallback
+            _logger.LogWarning(ex, "Catalog search fallback to DB because Elasticsearch query threw");
         }
 
         try
         {
             var products = await _productRepository.ListActiveAsync(ct);
 
-            IEnumerable<(ProductListItemDto Dto, int Score)> rows = [];
+            var rows = new List<(ProductListItemDto Dto, int Score)>(products.Count);
             foreach (var p in products)
             {
                 var stockRows = await _stockRepository.ListByProductAsync(p.CompanyId, p.Id, ct);
@@ -79,7 +85,7 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
                 if (!string.IsNullOrWhiteSpace(searchTerm) && score == 0)
                     continue;
 
-                rows = rows.Append((dto, score));
+                rows.Add((dto, score));
             }
 
             var sorted = Sort(rows, request.Sort).ToList();
@@ -96,6 +102,7 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Catalog DB fallback search failed");
             return Result<ProductSearchResultDto>.Failure($"Failed to search products: {ex.Message}");
         }
     }

@@ -77,11 +77,13 @@ public sealed class OutboxEventProcessor : IOutboxEventProcessor
             var payment = await _paymentRepository.GetByIdAsync(PaymentId.From(paymentId.Value), ct);
             if (payment is not null && status != PaymentTransactionStatus.Pending)
             {
-                payment.UpdateProviderState(status, payment.TransactionId, new JsonBlob(message.Payload));
-                await _paymentRepository.UpdateAsync(payment, ct);
+                if (payment.Status != status && !IsStatusDowngrade(payment.Status, status))
+                {
+                    payment.UpdateProviderState(status, payment.TransactionId, new JsonBlob(message.Payload));
+                    await _paymentRepository.UpdateAsync(payment, ct);
+                }
             }
         }
-
         if (orderId.HasValue && status != PaymentTransactionStatus.Pending)
         {
             var order = await _orderRepository.GetByIdAsync(OrderId.From(orderId.Value), ct);
@@ -152,4 +154,17 @@ public sealed class OutboxEventProcessor : IOutboxEventProcessor
             return numeric;
         return long.TryParse(prop.GetString(), out var parsed) ? parsed : null;
     }
+
+    private static bool IsStatusDowngrade(PaymentTransactionStatus current, PaymentTransactionStatus next)
+        => Rank(next) < Rank(current);
+
+    private static int Rank(PaymentTransactionStatus status)
+        => status switch
+        {
+            PaymentTransactionStatus.Pending => 0,
+            PaymentTransactionStatus.Failed => 1,
+            PaymentTransactionStatus.Completed => 2,
+            PaymentTransactionStatus.Refunded => 3,
+            _ => 0
+        };
 }

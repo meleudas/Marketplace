@@ -17,9 +17,11 @@ using Marketplace.Application.Companies.DTOs;
 using Marketplace.Application.Companies.Queries.GetAdminCompanyById;
 using Marketplace.Application.Companies.Queries.GetAllCompanies;
 using Marketplace.Application.Companies.Queries.GetPendingCompanies;
+using Marketplace.Application.Common.Observability;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Marketplace.API.Controllers;
 
@@ -29,33 +31,45 @@ namespace Marketplace.API.Controllers;
 public sealed class AdminCatalogController : ControllerBase
 {
     private readonly ISender _sender;
+    private readonly ILogger<AdminCatalogController> _logger;
 
-    public AdminCatalogController(ISender sender) => _sender = sender;
+    public AdminCatalogController(ISender sender, ILogger<AdminCatalogController> logger)
+    {
+        _sender = sender;
+        _logger = logger;
+    }
 
     [HttpGet("companies")]
     public async Task<IActionResult> GetCompanies(CancellationToken ct)
     {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CompanyLatencyMs, new KeyValuePair<string, object?>("operation", "admin_get_companies"));
         var result = await _sender.Send(new GetAllCompaniesQuery(), ct);
+        RecordCompanyResult("admin_get_companies", result.IsSuccess, result.Error);
         return result.ToActionResult();
     }
 
     [HttpGet("companies/pending")]
     public async Task<IActionResult> GetPendingCompanies(CancellationToken ct)
     {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CompanyLatencyMs, new KeyValuePair<string, object?>("operation", "admin_get_pending_companies"));
         var result = await _sender.Send(new GetPendingCompaniesQuery(), ct);
+        RecordCompanyResult("admin_get_pending_companies", result.IsSuccess, result.Error);
         return result.ToActionResult();
     }
 
     [HttpGet("companies/{id:guid}")]
     public async Task<IActionResult> GetCompany(Guid id, CancellationToken ct)
     {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CompanyLatencyMs, new KeyValuePair<string, object?>("operation", "admin_get_company_by_id"));
         var result = await _sender.Send(new GetAdminCompanyByIdQuery(id), ct);
+        RecordCompanyResult("admin_get_company_by_id", result.IsSuccess, result.Error);
         return result.ToActionResult();
     }
 
     [HttpPost("companies")]
     public async Task<IActionResult> CreateCompany([FromBody] CreateCompanyRequest request, CancellationToken ct)
     {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CompanyLatencyMs, new KeyValuePair<string, object?>("operation", "admin_create_company"));
         var command = new CreateCompanyCommand(
             request.Name,
             request.Slug,
@@ -68,12 +82,14 @@ public sealed class AdminCatalogController : ControllerBase
             request.MetaRaw);
 
         var result = await _sender.Send(command, ct);
+        RecordCompanyResult("admin_create_company", result.IsSuccess, result.Error);
         return result.ToActionResult();
     }
 
     [HttpPut("companies/{id:guid}")]
     public async Task<IActionResult> UpdateCompany(Guid id, [FromBody] UpdateCompanyRequest request, CancellationToken ct)
     {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CompanyLatencyMs, new KeyValuePair<string, object?>("operation", "admin_update_company"));
         var command = new UpdateCompanyCommand(
             id,
             request.Name,
@@ -86,42 +102,57 @@ public sealed class AdminCatalogController : ControllerBase
             request.MetaRaw);
 
         var result = await _sender.Send(command, ct);
+        RecordCompanyResult("admin_update_company", result.IsSuccess, result.Error);
         return result.ToActionResult();
     }
 
     [HttpPost("companies/{id:guid}/approve")]
     public async Task<IActionResult> ApproveCompany(Guid id, CancellationToken ct)
     {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CompanyLatencyMs, new KeyValuePair<string, object?>("operation", "admin_approve_company"));
         if (!User.TryGetUserId(out var adminUserId))
+        {
+            MarketplaceMetrics.CompanyErrors.Add(1, [new KeyValuePair<string, object?>("operation", "admin_approve_company"), new KeyValuePair<string, object?>("reason", "unauthorized")]);
             return Unauthorized();
+        }
 
         var result = await _sender.Send(new ApproveCompanyCommand(id, adminUserId), ct);
+        RecordCompanyResult("admin_approve_company", result.IsSuccess, result.Error);
         return result.ToActionResult();
     }
 
     [HttpPost("companies/{id:guid}/revoke-approval")]
     public async Task<IActionResult> RevokeCompanyApproval(Guid id, CancellationToken ct)
     {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CompanyLatencyMs, new KeyValuePair<string, object?>("operation", "admin_revoke_company"));
         var result = await _sender.Send(new RevokeCompanyApprovalCommand(id), ct);
+        RecordCompanyResult("admin_revoke_company", result.IsSuccess, result.Error);
         return result.ToActionResult();
     }
 
     [HttpPost("companies/{id:guid}/commission-rates")]
     public async Task<IActionResult> SetCompanyCommissionRate(Guid id, [FromBody] SetCompanyCommissionRateRequest request, CancellationToken ct)
     {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CompanyLatencyMs, new KeyValuePair<string, object?>("operation", "admin_set_company_commission"));
         if (!User.TryGetUserId(out var adminUserId))
+        {
+            MarketplaceMetrics.CompanyErrors.Add(1, [new KeyValuePair<string, object?>("operation", "admin_set_company_commission"), new KeyValuePair<string, object?>("reason", "unauthorized")]);
             return Unauthorized();
+        }
 
         var result = await _sender.Send(
             new SetCompanyCommissionRateCommand(id, request.CommissionPercent, request.EffectiveFrom, request.Reason, adminUserId),
             ct);
+        RecordCompanyResult("admin_set_company_commission", result.IsSuccess, result.Error);
         return result.ToActionResult();
     }
 
     [HttpDelete("companies/{id:guid}")]
     public async Task<IActionResult> DeleteCompany(Guid id, CancellationToken ct)
     {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CompanyLatencyMs, new KeyValuePair<string, object?>("operation", "admin_delete_company"));
         var result = await _sender.Send(new DeleteCompanyCommand(id), ct);
+        RecordCompanyResult("admin_delete_company", result.IsSuccess, result.Error);
         return result.ToActionResult();
     }
 
@@ -199,6 +230,18 @@ public sealed class AdminCatalogController : ControllerBase
     {
         var result = await _sender.Send(new DeleteCategoryCommand(id), ct);
         return result.ToActionResult();
+    }
+
+    private void RecordCompanyResult(string operation, bool success, string? error)
+    {
+        if (success)
+        {
+            MarketplaceMetrics.CompanyOps.Add(1, [new KeyValuePair<string, object?>("operation", operation), new KeyValuePair<string, object?>("status", "success")]);
+            return;
+        }
+
+        MarketplaceMetrics.CompanyErrors.Add(1, [new KeyValuePair<string, object?>("operation", operation), new KeyValuePair<string, object?>("reason", "application_failure")]);
+        _logger.LogWarning("Company admin operation {Operation} failed: {Error}", operation, error);
     }
 }
 

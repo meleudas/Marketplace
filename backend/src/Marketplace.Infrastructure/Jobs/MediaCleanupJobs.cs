@@ -1,5 +1,6 @@
+using Marketplace.Application.Common.Observability;
 using Marketplace.Application.Common.Ports;
-using Marketplace.Infrastructure.External.Storage;
+using Marketplace.Application.Common.Options;
 using Marketplace.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -22,7 +23,10 @@ public sealed class MediaCleanupJobs
         _options = options.Value;
     }
 
-    public async Task CleanupOrphansAsync(CancellationToken ct = default)
+    public Task CleanupOrphansAsync(CancellationToken ct = default) =>
+        MarketplaceTelemetry.RunJobAsync("media-cleanup-orphans", CleanupOrphansCoreAsync, ct);
+
+    private async Task CleanupOrphansCoreAsync(CancellationToken ct)
     {
         var dbKeys = await _context.ProductImages
             .AsNoTracking()

@@ -1,4 +1,5 @@
 using Marketplace.Domain.Inventory.Repositories;
+using Marketplace.Application.Common.Observability;
 using Hangfire;
 
 namespace Marketplace.Infrastructure.Jobs;
@@ -17,20 +18,46 @@ public sealed class InventoryJobs
     }
 
     [DisableConcurrentExecution(timeoutInSeconds: 300)]
-    public async Task ExpireReservationsAsync(CancellationToken ct = default)
+    public Task ExpireReservationsAsync(CancellationToken ct = default) =>
+        MarketplaceTelemetry.RunJobAsync("inventory-expire-reservations", ExpireReservationsCoreAsync, ct);
+
+    private async Task ExpireReservationsCoreAsync(CancellationToken ct)
     {
-        var expired = await _reservationRepository.ListExpiredActiveAsync(DateTime.UtcNow, ct);
-        foreach (var reservation in expired)
+        using var timer = MarketplaceMetrics.StartTimer(
+            MarketplaceMetrics.HangfireJobLatencyMs,
+            new KeyValuePair<string, object?>("job", "inventory-expire-reservations"));
+
+        try
         {
-            var stock = await _stockRepository.GetByWarehouseAndProductAsync(reservation.WarehouseId, reservation.ProductId, ct);
-            if (stock is not null)
+            var expired = await _reservationRepository.ListExpiredActiveAsync(DateTime.UtcNow, ct);
+            foreach (var reservation in expired)
             {
-                stock.Release(reservation.Quantity);
-                await _stockRepository.UpdateAsync(stock, ct);
+                var stock = await _stockRepository.GetByWarehouseAndProductAsync(reservation.WarehouseId, reservation.ProductId, ct);
+                if (stock is not null)
+                {
+                    stock.Release(reservation.Quantity);
+                    await _stockRepository.UpdateAsync(stock, ct);
+                }
+
+                reservation.Expire();
+                await _reservationRepository.UpdateAsync(reservation, ct);
             }
 
-            reservation.Expire();
-            await _reservationRepository.UpdateAsync(reservation, ct);
+            MarketplaceMetrics.HangfireJobs.Add(1, [
+                new KeyValuePair<string, object?>("job", "inventory-expire-reservations"),
+                new KeyValuePair<string, object?>("status", "success")
+            ]);
+        }
+        catch
+        {
+            MarketplaceMetrics.HangfireJobErrors.Add(1, [
+                new KeyValuePair<string, object?>("job", "inventory-expire-reservations")
+            ]);
+            MarketplaceMetrics.HangfireJobs.Add(1, [
+                new KeyValuePair<string, object?>("job", "inventory-expire-reservations"),
+                new KeyValuePair<string, object?>("status", "failed")
+            ]);
+            throw;
         }
     }
 }

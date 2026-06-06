@@ -23,8 +23,22 @@
 
 ## Важливі політики
 
-- **`RequireConfirmedEmail`** — після реєстрації токени можуть не видаватись до `confirm-email`; логін блокується з повідомленням у `detail` (**403** за мапінгом).
+- **`RequireConfirmedEmail`** — production policy за замовчуванням увімкнена (`Identity:RequireConfirmedEmail=true`), після реєстрації токени не видаються до `confirm-email`; логін блокується з повідомленням у `detail` (**403** за мапінгом).
+- **Password policy / lockout** — мінімум 12 символів, обов'язкові upper+lower+digit+special, lockout після 5 невдалих спроб на 15 хв.
+- **Refresh replay protection** — повторне використання вже-ротованого refresh token трактуємо як replay-атаку і примусово revoke активних сесій користувача.
+- **Password reset session hygiene** — успішний reset пароля автоматично revoke всіх активних refresh сесій.
 - **Мапінг статусів** — `ResultExtensions`: ключові слова в тексті помилки визначають 401/403/404.
+
+## Production perimeter
+
+- `/metrics` захищений `Authorize(Roles=Admin)`.
+- `/hangfire` та `sendgrid/key-trace` доступні лише в `Development`.
+- Telegram webhook у non-dev режимі вимагає заданий `WebhookSecret`.
+
+## Тестовий контур домену
+
+- Unit/application/API/integration/contract/security/performance сценарії покриті `Suite=IdentityAccess`.
+- CI має окремий gate `identity-access-gate` з line coverage threshold 12%.
 
 ## Файли для орієнтації
 

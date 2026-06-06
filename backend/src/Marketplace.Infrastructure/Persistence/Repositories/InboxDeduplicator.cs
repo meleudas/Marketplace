@@ -31,6 +31,13 @@ public sealed class InboxDeduplicator : IInboxDeduplicator
             ProcessedAtUtc = DateTime.UtcNow
         });
 
-        await _context.SaveChangesAsync(ct);
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // Concurrent insert for the same (MessageId, Consumer) is safe to ignore.
+        }
     }
 }

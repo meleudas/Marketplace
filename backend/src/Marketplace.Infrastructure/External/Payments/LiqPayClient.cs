@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Marketplace.Application.Payments.Ports;
-using Marketplace.Infrastructure.Observability;
+using Marketplace.Application.Common.Observability;
 using Microsoft.Extensions.Options;
 
 namespace Marketplace.Infrastructure.External.Payments;

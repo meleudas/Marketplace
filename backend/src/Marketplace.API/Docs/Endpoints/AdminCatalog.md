@@ -40,11 +40,13 @@
 - **Приймає:** path `id`; з JWT береться `adminUserId` для аудиту.
 - **Повертає:** **200** порожнє тіло при успіху.
 - **Side effects:** `isApproved`, `approvedAt`, `approvedByUserId`, авто-створення `company_contracts` та початкової версії `company_commission_rates` (якщо ще не існують).
+- **Observability labels:** `admin_approve_company`.
 
 ### `POST /admin/companies/{id}/revoke-approval`
 
 - **Повертає:** **200** порожнє тіло.
 - **Side effects:** скасування апруву (компанія зникає з публічного каталогу approved).
+- **Observability labels:** `admin_revoke_company`.
 
 ### `POST /admin/companies/{id}/commission-rates`
 
@@ -55,11 +57,18 @@
   - `reason` (optional)
 - **Повертає:** **200** порожнє тіло.
 - **Side effects:** закриває попередню активну ставку (`effectiveTo`) і додає новий запис `company_commission_rates`.
+- **Обмеження:** ставка дозволена лише для **approved** компаній.
+- **Observability labels:** `admin_set_company_commission`.
 
 ### `DELETE /admin/companies/{id}`
 
 - **Повертає:** **200** порожнє тіло.
 - **Side effects:** soft-delete компанії.
+
+## Observability (компанійні операції)
+
+- Метрики: `company_operations_total`, `company_errors_total`, `company_latency_ms`.
+- Ключові operations labels: `admin_get_companies`, `admin_get_pending_companies`, `admin_get_company_by_id`, `admin_create_company`, `admin_update_company`, `admin_approve_company`, `admin_revoke_company`, `admin_set_company_commission`, `admin_delete_company`.
 
 ## Категорії
 

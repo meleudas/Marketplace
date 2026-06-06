@@ -11,6 +11,29 @@
 - `postgres`
 - `redis`
 - `frontend` (лише з профілем `frontend`, див. корінь репозиторію `docker-compose.yml`)
+- **Observability** (profile `observability`): `otel-collector`, `prometheus`, `jaeger`, `grafana` — див. [docs/platform-engineering/09-local-docker-compose-runbook.md](../docs/platform-engineering/09-local-docker-compose-runbook.md)
+- **SonarQube CE** (profile `sonar`): `sonarqube`, `sonarqube-db`
+
+### Observability stack (корінь репозиторію)
+
+```powershell
+# У .env або backend/.env: OTEL_ENABLED=true
+docker compose -f docker-compose.yml -f docker-compose.observability.yml --profile observability up -d --build
+```
+
+SonarQube (з кореня або backend):
+
+```powershell
+docker compose --profile sonar up -d
+# Після bootstrap: backend/scripts/sonar-scan.ps1
+```
+
+| UI | URL |
+|----|-----|
+| Grafana | http://localhost:3001 |
+| Prometheus | http://localhost:9090 |
+| Jaeger | http://localhost:16686 |
+| SonarQube | http://localhost:9002 (`docker compose --profile sonar up -d`) |
 
 ---
 

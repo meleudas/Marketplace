@@ -33,7 +33,7 @@ jobs:
         run: dotnet build backend/Marketplace.slnx -c Release --no-restore
 
       - name: API regression suite
-        run: dotnet test backend/tests/Marketplace.Tests/Marketplace.Tests.csproj -c Release --no-build --filter "Suite=API" --logger "trx;LogFileName=api-tests.trx" --results-directory backend/test-results
+        run: dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=API" --logger "trx;LogFileName=api-tests.trx" --results-directory backend/test-results
 
       - name: Upload API test artifacts
         if: always()
@@ -62,7 +62,7 @@ jobs:
       - name: Build
         run: dotnet build backend/Marketplace.slnx -c Release --no-restore
       - name: Contract suite
-        run: dotnet test backend/tests/Marketplace.Tests/Marketplace.Tests.csproj -c Release --no-build --filter "Suite=Contract" --logger "trx;LogFileName=contract-tests.trx" --results-directory backend/test-results
+        run: dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Contract" --logger "trx;LogFileName=contract-tests.trx" --results-directory backend/test-results
       - name: Upload contract artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -90,7 +90,7 @@ jobs:
       - name: Build
         run: dotnet build backend/Marketplace.slnx -c Release --no-restore
       - name: Security regression suite
-        run: dotnet test backend/tests/Marketplace.Tests/Marketplace.Tests.csproj -c Release --no-build --filter "Suite=Security" --logger "trx;LogFileName=security-tests.trx" --results-directory backend/test-results
+        run: dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Security" --logger "trx;LogFileName=security-tests.trx" --results-directory backend/test-results
       - name: Dependency vulnerability policy
         run: python3 backend/scripts/ci/check_vulnerabilities.py
       - name: Upload security artifacts
@@ -120,12 +120,492 @@ jobs:
       - name: Build
         run: dotnet build backend/Marketplace.slnx -c Release --no-restore
       - name: Performance baseline suite
-        run: dotnet test backend/tests/Marketplace.Tests/Marketplace.Tests.csproj -c Release --no-build --filter "Suite=Performance" --logger "trx;LogFileName=performance-tests.trx" --results-directory backend/test-results
+        run: dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Performance" --logger "trx;LogFileName=performance-tests.trx" --results-directory backend/test-results
       - name: Upload performance artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: backend-performance-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  cart-checkout-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Cart & checkout domain gate
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=CartCheckout" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/cart-coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=cart-checkout-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=CartCheckout" --logger "trx;LogFileName=cart-checkout-integration-tests.trx" --results-directory backend/test-results
+      - name: Upload cart/checkout artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-cart-checkout-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  catalog-categories-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Catalog & categories domain gate
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=CatalogCategories" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/catalog-coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=catalog-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=CatalogCategories" --logger "trx;LogFileName=catalog-integration-tests.trx" --results-directory backend/test-results
+      - name: Upload catalog test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-catalog-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  companies-workspace-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Companies & workspace domain gate
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=CompaniesWorkspace" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/companies-coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=companies-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=CompaniesWorkspace" --logger "trx;LogFileName=companies-integration-tests.trx" --results-directory backend/test-results
+      - name: Upload companies/workspace artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-companies-workspace-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  favorites-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Favorites domain gate
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Favorites" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/favorites-coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=favorites-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=Favorites" --logger "trx;LogFileName=favorites-integration-tests.trx" --results-directory backend/test-results
+      - name: Upload favorites artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-favorites-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  inventory-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Inventory domain gate
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Inventory" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/inventory-coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=inventory-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=Inventory" --logger "trx;LogFileName=inventory-integration-tests.trx" --results-directory backend/test-results
+      - name: Upload inventory artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-inventory-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  notifications-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Notifications domain gate
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Notifications" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/notifications-coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=notifications-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=Notifications" --logger "trx;LogFileName=notifications-integration-tests.trx" --results-directory backend/test-results
+      - name: Upload notifications artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-notifications-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  orders-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Orders domain gate
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Orders" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/orders-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.API]*Orders*%2c[Marketplace.Application]*Orders*%2c[Marketplace.Domain]*Order*%2c[Marketplace.Infrastructure]*Order*" /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=orders-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=Orders" --logger "trx;LogFileName=orders-integration-tests.trx" --results-directory backend/test-results
+      - name: Upload orders artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-orders-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  shipping-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Shipping domain gate
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Shipping" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/shipping-coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=shipping-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=Shipping" --logger "trx;LogFileName=shipping-integration-tests.trx" --results-directory backend/test-results
+      - name: Upload shipping artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-shipping-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  coupons-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Coupons domain gate
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Coupons" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/coupons-coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=coupons-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=Coupons" --logger "trx;LogFileName=coupons-integration-tests.trx" --results-directory backend/test-results
+      - name: Upload coupons artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coupons-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  reports-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Reports domain gate
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Reports" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/reports-coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=reports-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=Reports" --logger "trx;LogFileName=reports-integration-tests.trx" --results-directory backend/test-results
+      - name: Upload reports artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-reports-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  behavior-analytics-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Behavior & analytics domain gate
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=BehaviorAnalytics" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/behavior-analytics-coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=behavior-analytics-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=BehaviorAnalytics" --logger "trx;LogFileName=behavior-analytics-integration-tests.trx" --results-directory backend/test-results
+      - name: Upload behavior/analytics artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-behavior-analytics-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  payments-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Payments domain gate
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Payments" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/payments-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.API]*Payment*%2c[Marketplace.Application]*Payment*%2c[Marketplace.Domain]*Payment*%2c[Marketplace.Domain]*Refund*%2c[Marketplace.Infrastructure]*Payment*%2c[Marketplace.Infrastructure]*Refund*" /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=payments-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=Payments" --logger "trx;LogFileName=payments-integration-tests.trx" --results-directory backend/test-results
+      - name: Upload payments artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-payments-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  platform-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Platform domain gate
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Platform" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/platform-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.Infrastructure]*OutboxDispatcherJobs*%2c[Marketplace.Infrastructure]*OutboxEventProcessor*%2c[Marketplace.Infrastructure]*OutboxRepository*%2c[Marketplace.Infrastructure]*InboxDeduplicator*%2c[Marketplace.Infrastructure]*HttpIdempotencyStore*%2c[Marketplace.API]*AdminOutboxController*" /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=platform-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=Platform" --logger "trx;LogFileName=platform-integration-tests.trx" --results-directory backend/test-results
+      - name: Upload platform artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-platform-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  products-moderation-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Products moderation domain gate
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=ProductsModeration" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/products-moderation-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.API]*ProductsController*%2c[Marketplace.Application]*Product*%2c[Marketplace.Domain]*Product*%2c[Marketplace.Infrastructure]*Product*" /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=products-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=ProductsModeration" --logger "trx;LogFileName=products-integration-tests.trx" --results-directory backend/test-results
+      - name: Upload products moderation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-products-moderation-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  reviews-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Reviews domain gate
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Reviews" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/reviews-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.API]*Review*%2c[Marketplace.Application]*Review*%2c[Marketplace.Domain]*Review*%2c[Marketplace.Domain]*CompanyReview*%2c[Marketplace.Infrastructure]*Review*" /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=reviews-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=Reviews" --logger "trx;LogFileName=reviews-integration-tests.trx" --results-directory backend/test-results
+      - name: Upload reviews artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-reviews-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  identity-access-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Identity & access domain gate
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=IdentityAccess" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/identity-access-coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=identity-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=IdentityAccess" --logger "trx;LogFileName=identity-integration-tests.trx" --results-directory backend/test-results
+      - name: Upload identity/access artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-identity-access-test-results
           path: backend/test-results
           if-no-files-found: warn
 
@@ -148,12 +628,145 @@ jobs:
       - name: Build
         run: dotnet build backend/Marketplace.slnx -c Release --no-restore
       - name: Unit coverage gate
-        run: dotnet test backend/tests/Marketplace.Tests/Marketplace.Tests.csproj -c Release --no-build --filter "Suite!=API&Suite!=Contract&Suite!=Security&Suite!=Performance" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=8 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=unit-tests.trx" --results-directory backend/test-results
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite!=API&Suite!=Contract&Suite!=Security&Suite!=Performance&Suite!=Architecture" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=8 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --logger "trx;LogFileName=integration-light-tests.trx" --results-directory backend/test-results
 
       - name: Upload unit artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: backend-unit-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  architecture-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Architecture suite
+        run: dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Architecture" --logger "trx;LogFileName=architecture-tests.trx" --results-directory backend/test-results
+      - name: Upload architecture artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-architecture-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  observability-config-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate OTEL Collector config
+        run: |
+          docker run --rm -v "${{ github.workspace }}/observability:/cfg" \
+            otel/opentelemetry-collector-contrib:0.96.0 \
+            validate --config=/cfg/otel-collector-config.yaml
+      - name: Install promtool
+        run: |
+          curl -sL https://github.com/prometheus/prometheus/releases/download/v2.51.2/prometheus-2.51.2.linux-amd64.tar.gz | tar xz
+          ./prometheus-2.51.2.linux-amd64/promtool check rules observability/prometheus-rules.yml
+
+  sonar-analysis:
+    runs-on: ubuntu-latest
+    if: ${{ vars.SONAR_HOST_URL != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Install SonarScanner
+        run: dotnet tool install --global dotnet-sonarscanner
+      - name: Begin Sonar analysis
+        working-directory: backend
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+        run: |
+          dotnet sonarscanner begin \
+            /k:"marketplace-backend" \
+            /d:sonar.host.url="$SONAR_HOST_URL" \
+            /d:sonar.token="$SONAR_TOKEN" \
+            /d:sonar.cs.opencover.reportsPaths="test-results/**/coverage.cobertura.xml"
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release
+      - name: Test with coverage
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-restore \
+            /p:CollectCoverage=true \
+            /p:CoverletOutput=backend/test-results/sonar-coverage/ \
+            /p:CoverletOutputFormat=cobertura
+          dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-restore \
+            /p:CollectCoverage=true \
+            /p:CoverletOutput=backend/test-results/sonar-coverage-integration/ \
+            /p:CoverletOutputFormat=cobertura
+      - name: End Sonar analysis
+        working-directory: backend
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+      - name: Wait for SonarQube Quality Gate
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+        run: |
+          status=$(curl -s -u "${SONAR_TOKEN}:" \
+            "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=marketplace-backend" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['projectStatus']['status'])")
+          if [ "$status" != "OK" ]; then
+            echo "SonarQube Quality Gate failed: $status"
+            exit 1
+          fi
+
+  integration-full:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'integration-full')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Integration containers suite
+        run: dotnet test backend/tests/Marketplace.Tests.Integration.Containers/Marketplace.Tests.Integration.Containers.csproj -c Release --no-build --filter "Layer=IntegrationContainers" --logger "trx;LogFileName=integration-containers-tests.trx" --results-directory backend/test-results
+      - name: E2E suite
+        run: dotnet test backend/tests/Marketplace.Tests.E2E/Marketplace.Tests.E2E.csproj -c Release --no-build --filter "Layer=E2E" --logger "trx;LogFileName=e2e-tests.trx" --results-directory backend/test-results
+      - name: Upload integration-full artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-integration-full-test-results
           path: backend/test-results
           if-no-files-found: warn

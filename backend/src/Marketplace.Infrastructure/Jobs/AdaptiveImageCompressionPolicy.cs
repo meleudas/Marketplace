@@ -1,5 +1,5 @@
 using Marketplace.Application.Products.Ports;
-using Marketplace.Infrastructure.External.Storage;
+using Marketplace.Application.Common.Options;
 using Microsoft.Extensions.Options;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Webp;

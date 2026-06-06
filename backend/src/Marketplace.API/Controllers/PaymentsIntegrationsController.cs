@@ -1,7 +1,7 @@
 using Marketplace.Application.Payments.Commands.HandleLiqPayWebhook;
 using Marketplace.Application.Common.Ports;
 using Marketplace.API.Extensions;
-using Marketplace.Infrastructure.Observability;
+using Marketplace.Application.Common.Observability;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,11 +26,10 @@ public sealed class PaymentsIntegrationsController : ControllerBase
     public async Task<IActionResult> Webhook([FromBody] LiqPayWebhookRequest request, CancellationToken ct)
     {
         using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.WebhookLatencyMs, new KeyValuePair<string, object?>("provider", "liqpay"));
-        if (!Request.TryGetIdempotencyKey(out var idempotencyKey))
-            return BadRequest("Idempotency-Key header is required.");
-
         var scope = "liqpay-webhook";
         var requestHash = HttpIdempotencyExtensions.BuildRequestHash(request.Data, request.Signature);
+        // Provider-native idempotency: LiqPay callback payload is the dedup key.
+        var idempotencyKey = requestHash;
         var begin = await _idempotency.TryBeginAsync(scope, idempotencyKey, requestHash, TimeSpan.FromHours(24), ct);
         if (begin.State == HttpIdempotencyBeginState.Completed && begin.StoredResponse is not null)
             return this.ReplayResponse(begin.StoredResponse);

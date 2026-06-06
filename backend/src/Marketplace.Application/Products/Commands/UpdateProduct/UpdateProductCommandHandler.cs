@@ -10,6 +10,7 @@ using Marketplace.Application.Products.Ports;
 using Marketplace.Domain.Catalog.Entities;
 using Marketplace.Domain.Catalog.Enums;
 using Marketplace.Domain.Catalog.Repositories;
+using Marketplace.Domain.Common.Exceptions;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
@@ -71,7 +72,16 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
                 request.HasVariants);
 
             if (wasDraft)
-                product.SubmitForModeration(request.ActorUserId);
+            {
+                try
+                {
+                    product.SubmitForModeration(request.ActorUserId);
+                }
+                catch (DomainException ex)
+                {
+                    return Result<ProductDto>.Failure(ex.Message);
+                }
+            }
 
             await _productRepository.UpdateAsync(product, ct);
 
@@ -161,7 +171,7 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
                     new AppNotificationRequest
                     {
                         TemplateKey = AppNotificationTemplateKeys.AdminProductPendingReview,
-                        CorrelationId = Guid.NewGuid(),
+                        CorrelationId = AppNotificationCorrelationIds.ProductPendingReviewQueue(product.Id.Value),
                         Channels = AppNotificationChannelKind.Push | AppNotificationChannelKind.InApp,
                         Audience = AppNotificationAudienceKind.Admins,
                         PayloadJson = JsonSerializer.Serialize(new

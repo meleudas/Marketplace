@@ -110,6 +110,7 @@ public sealed class OutboxRepository : IOutboxWriter
         row.DeadLetterReason = null;
         row.DeadLetterCategory = null;
         row.LastError = null;
+        row.Attempts = 0;
         row.NextAttemptAtUtc = DateTime.UtcNow;
         row.ProcessedAtUtc = null;
         await _context.SaveChangesAsync(ct);

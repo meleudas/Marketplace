@@ -29,6 +29,16 @@ public sealed class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategor
             if (category == null)
                 return Result<CategoryDto>.Failure("Category not found");
 
+            if (request.ParentCategoryId.HasValue)
+            {
+                if (request.ParentCategoryId.Value == request.CategoryId)
+                    return Result<CategoryDto>.Failure("Category cannot be its own parent");
+
+                var parent = await _categoryRepository.GetByIdAsync(CategoryId.From(request.ParentCategoryId.Value), ct);
+                if (parent is null || parent.IsDeleted)
+                    return Result<CategoryDto>.Failure("Parent category not found");
+            }
+
             category.UpdateDetails(
                 request.Name,
                 request.Slug,
@@ -43,6 +53,7 @@ public sealed class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategor
             await _cache.RemoveAsync(CatalogCacheKeys.AllCategories, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.CatalogCategoryByIdPrefix + category.Id.Value, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.AdminCategoryByIdPrefix + category.Id.Value, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
             return Result<CategoryDto>.Success(CategoryMapper.ToDto(category));
         }
         catch (Exception ex)

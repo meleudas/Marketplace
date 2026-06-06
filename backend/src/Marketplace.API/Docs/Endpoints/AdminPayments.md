@@ -8,6 +8,7 @@
 - **Приймає:** path `paymentId` + body `RequestRefundBody`.
 - **Повертає:** **200** порожнє тіло.
 - **Помилки:** **404** `Payment not found`, **400** якщо платіж не в статусі `completed`.
+- **Metrics:** `payment_latency_ms{operation="admin_payments_refund"}`, `payment_operations_total`, `payment_errors_total{reason="unauthorized|not_found|application_failure"}`.
 
 ### `POST /admin/payments/{paymentId}/sync`
 
@@ -15,3 +16,4 @@
 - **Приймає:** path `paymentId`.
 - **Повертає:** **200** порожнє тіло.
 - **Side effects:** оновлює статус `payments` і пов'язаного `orders`.
+- **Metrics:** `payment_latency_ms{operation="admin_payments_sync"}`, `payment_operations_total`, `payment_errors_total{reason="unauthorized|not_found|application_failure"}`.

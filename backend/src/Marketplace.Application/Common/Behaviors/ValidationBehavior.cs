@@ -1,4 +1,4 @@
-п»їusing FluentValidation;
+using FluentValidation;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
 
@@ -31,10 +31,10 @@ namespace Marketplace.Application.Common.Behaviors
 
                 if (failures.Any())
                 {
-                    // РЎС‚РІРѕСЂСЋС”РјРѕ РїРѕРјРёР»РєСѓ Result Р· РїРµСЂРµР»С–РєРѕРј РїСЂРѕР±Р»РµРј
+                    // Створюємо помилку Result з переліком проблем
                     var errorMessage = string.Join("; ", failures.Select(f => f.ErrorMessage));
 
-                    // РЇРєС‰Рѕ РІС–РґРїРѕРІС–РґСЊ Result, РїРѕРІРµСЂС‚Р°С”РјРѕ Failure
+                    // Якщо відповідь Result, повертаємо Failure
                     if (typeof(TResponse).IsGenericType &&
                         typeof(TResponse).GetGenericTypeDefinition() == typeof(Result<>))
                     {

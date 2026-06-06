@@ -23,6 +23,11 @@ services:
       Storage__PublicBaseUrl: "http://localhost:9000"
       Storage__PresignedGetTtlMinutes: "60"
       Storage__MaxUploadBytes: "10485760"
+      OTEL_SERVICE_NAME: marketplace-api
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      OpenTelemetry__Enabled: "${OTEL_ENABLED:-false}"
+      OpenTelemetry__EnableLegacyPrometheusEndpoint: "false"
     depends_on:
       postgres:
         condition: service_healthy
@@ -139,6 +144,98 @@ services:
     networks:
       - marketplace
 
+  otel-collector:
+    profiles: ["observability"]
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    command: ["--config=/etc/otelcol-contrib/otel-collector-config.yaml"]
+    depends_on:
+      - jaeger
+    volumes:
+      - ./observability/otel-collector-config.yaml:/etc/otelcol-contrib/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8889:8889"
+      - "13133:13133"
+    networks:
+      - marketplace
+
+  prometheus:
+    profiles: ["observability"]
+    image: prom/prometheus:v2.51.2
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - otel-collector
+    networks:
+      - marketplace
+
+  jaeger:
+    profiles: ["observability"]
+    image: jaegertracing/all-in-one:1.57
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+      - "4319:4317"
+    networks:
+      - marketplace
+
+  grafana:
+    profiles: ["observability"]
+    image: grafana/grafana:10.4.2
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+      - jaeger
+    networks:
+      - marketplace
+
+  sonarqube-db:
+    profiles: ["sonar"]
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+      POSTGRES_DB: sonar
+    volumes:
+      - sonarqube_db_data:/var/lib/postgresql/data
+    networks:
+      - marketplace
+
+  sonarqube:
+    profiles: ["sonar"]
+    image: sonarqube:10.4-community
+    depends_on:
+      - sonarqube-db
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://sonarqube-db:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: sonar
+    ports:
+      - "9002:9000"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - marketplace
+
   db-seed:
     profiles: ["tools"]
     image: postgres:17-alpine
@@ -161,6 +258,11 @@ volumes:
   frontend_node_modules:
   frontend_next_cache:
   minio_data:
+  prometheus_data:
+  sonarqube_db_data:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
 
 networks:
   # Фіксоване ім'я мережі: без нього Compose створює marketplace_marketplace, а старі

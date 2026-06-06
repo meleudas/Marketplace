@@ -25,6 +25,13 @@ public sealed class CreateCategoryCommandHandler : IRequestHandler<CreateCategor
     {
         try
         {
+            if (request.ParentCategoryId.HasValue)
+            {
+                var parent = await _categoryRepository.GetByIdAsync(CategoryId.From(request.ParentCategoryId.Value), ct);
+                if (parent is null || parent.IsDeleted)
+                    return Result<CategoryDto>.Failure("Parent category not found");
+            }
+
             var id = CategoryId.From(0);
 
             var category = Category.Create(
@@ -43,6 +50,7 @@ public sealed class CreateCategoryCommandHandler : IRequestHandler<CreateCategor
             await _cache.RemoveAsync(CatalogCacheKeys.AllCategories, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.CatalogCategoryByIdPrefix + createdCategory.Id.Value, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.AdminCategoryByIdPrefix + createdCategory.Id.Value, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
             return Result<CategoryDto>.Success(CategoryMapper.ToDto(createdCategory));
         }
         catch (Exception ex)

@@ -1,7 +1,6 @@
 using Marketplace.API.Extensions;
 using Marketplace.Application.Notifications;
 using Marketplace.Application.Notifications.Ports;
-using Marketplace.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;

@@ -2,22 +2,34 @@ using Hangfire;
 using Hangfire.MemoryStorage;
 using Hangfire.PostgreSql;
 using Elastic.Clients.Elasticsearch;
+using Marketplace.Application.Auth.Options;
 using Marketplace.Application.Auth.Ports;
+using Marketplace.Application.Notifications;
 using Marketplace.Application.Carts.Ports;
 using Marketplace.Application.Common.Options;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Coupons.Options;
+using Marketplace.Application.Coupons.Services;
 using Marketplace.Application.Products.Ports;
 using Marketplace.Application.Payments.Ports;
+using Marketplace.Application.Shipping.Ports;
+using Marketplace.Application.Shipping.Options;
+using Marketplace.Application.Reports.Options;
+using Marketplace.Application.Behavior.Options;
 using Marketplace.Domain.Categories.Repositories;
 using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Cart.Repositories;
 using Marketplace.Domain.Companies.Repositories;
+using Marketplace.Domain.Coupons.Repositories;
 using Marketplace.Domain.Favorites.Repositories;
 using Marketplace.Domain.Users.Repositories;
 using Marketplace.Domain.Inventory.Repositories;
 using Marketplace.Domain.Orders.Repositories;
 using Marketplace.Domain.Payments.Repositories;
 using Marketplace.Domain.Reviews.Repositories;
+using Marketplace.Domain.Reports.Repositories;
+using Marketplace.Domain.Shipping.Repositories;
+using Marketplace.Domain.Behavior.Repositories;
 using Marketplace.Infrastructure.Caching;
 using Marketplace.Infrastructure.External.Email;
 using Marketplace.Infrastructure.External.OAuth;
@@ -26,6 +38,7 @@ using Marketplace.Infrastructure.External.Sms;
 using Marketplace.Infrastructure.External.Telegram;
 using Marketplace.Infrastructure.External.Storage;
 using Marketplace.Infrastructure.External.Payments;
+using Marketplace.Infrastructure.External.Shipping;
 using Marketplace.Infrastructure.Identity;
 using Marketplace.Infrastructure.Identity.Entities;
 using Marketplace.Infrastructure.Identity.Managers;
@@ -45,6 +58,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Marketplace.Infrastructure;
 
@@ -62,6 +76,11 @@ public static class DependencyInjection
         services.Configure<CacheTtlOptions>(configuration.GetSection(CacheTtlOptions.SectionName));
         services.Configure<ElasticsearchOptions>(configuration.GetSection(ElasticsearchOptions.SectionName));
         services.Configure<LiqPayOptions>(configuration.GetSection(LiqPayOptions.SectionName));
+        services.Configure<ShippingOptions>(configuration.GetSection(ShippingOptions.SectionName));
+        services.Configure<CouponsOptions>(configuration.GetSection(CouponsOptions.SectionName));
+        services.Configure<ReportsOptions>(configuration.GetSection(ReportsOptions.SectionName));
+        services.Configure<BehaviorAnalyticsOptions>(configuration.GetSection(BehaviorAnalyticsOptions.SectionName));
+        services.Configure<NovaPoshtaOptions>(configuration.GetSection(NovaPoshtaOptions.SectionName));
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         services.Configure<WebPushOptions>(configuration.GetSection(WebPushOptions.SectionName));
 
@@ -83,20 +102,36 @@ public static class DependencyInjection
         services
             .AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
             {
-                options.Password.RequiredLength = 4;
-                options.Password.RequireDigit = false;
-                options.Password.RequireUppercase = false;
+                options.Password.RequiredLength = 12;
+                options.Password.RequireDigit = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireNonAlphanumeric = true;
                 options.User.RequireUniqueEmail = true;
-                options.SignIn.RequireConfirmedEmail = false;
+                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+                options.SignIn.RequireConfirmedEmail = configuration.GetValue<bool?>("Identity:RequireConfirmedEmail") ?? true;
             })
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders()
             .AddUserManager<CustomUserManager>();
 
-        var jwt = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
-            ?? throw new InvalidOperationException($"Configuration section '{JwtOptions.SectionName}' is missing.");
+        var isTestingEnvironment = string.Equals(
+            configuration["ASPNETCORE_ENVIRONMENT"],
+            "Testing",
+            StringComparison.OrdinalIgnoreCase);
 
-        _ = JwtParameterHelper.CreateSigningKey(jwt);
+        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+            .Configure<IOptions<JwtOptions>>((jwtBearerOptions, jwtOptionsAccessor) =>
+            {
+                var jwt = jwtOptionsAccessor.Value;
+                if (string.IsNullOrWhiteSpace(jwt.SecretKey))
+                    throw new InvalidOperationException($"Configuration section '{JwtOptions.SectionName}:SecretKey' is missing.");
+
+                _ = JwtParameterHelper.CreateSigningKey(jwt);
+                jwtBearerOptions.TokenValidationParameters = JwtParameterHelper.CreateValidationParameters(jwt);
+            });
 
         var authenticationBuilder = services.AddAuthentication(options =>
             {
@@ -105,8 +140,7 @@ public static class DependencyInjection
             })
             .AddJwtBearer(options =>
             {
-                options.TokenValidationParameters = JwtParameterHelper.CreateValidationParameters(jwt);
-                options.RequireHttpsMetadata = true;
+                options.RequireHttpsMetadata = !isTestingEnvironment;
                 options.Events = new JwtBearerEvents
                 {
                     OnMessageReceived = context =>
@@ -135,6 +169,8 @@ public static class DependencyInjection
         var redisConnection = configuration.GetConnectionString("Redis");
         if (!string.IsNullOrWhiteSpace(redisConnection))
         {
+            services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(_ =>
+                StackExchange.Redis.ConnectionMultiplexer.Connect(redisConnection));
             services.AddStackExchangeRedisCache(o => o.Configuration = redisConnection);
             services.AddSingleton<RedisCacheService>();
             services.AddSingleton<ICacheService>(sp => sp.GetRequiredService<RedisCacheService>());
@@ -188,6 +224,7 @@ public static class DependencyInjection
         services.AddScoped<IHttpIdempotencyStore, HttpIdempotencyStore>();
         services.AddScoped<IAppTransactionPort, AppTransactionPort>();
         services.AddHttpClient<ILiqPayPort, LiqPayClient>();
+        services.AddHttpClient<INovaPoshtaPort, NovaPoshtaClient>();
         services.AddSingleton(sp =>
         {
             var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ElasticsearchOptions>>().Value;
@@ -214,23 +251,41 @@ public static class DependencyInjection
         services.AddScoped<ICartRepository, CartRepository>();
         services.AddScoped<ICartItemRepository, CartItemRepository>();
         services.AddScoped<ICartStockWatchRepository, CartStockWatchRepository>();
+        services.AddScoped<ICouponRepository, CouponRepository>();
+        services.AddScoped<ICouponUsageRepository, CouponUsageRepository>();
+        services.AddScoped<ICartCouponLinkRepository, CartCouponLinkRepository>();
+        services.AddScoped<CouponCartValidationService>();
+        services.AddScoped<ICouponCheckoutService, CouponCheckoutService>();
         services.AddScoped<IFavoriteRepository, FavoriteRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IOrderStatusHistoryRepository, OrderStatusHistoryRepository>();
         services.AddScoped<IOrderItemRepository, OrderItemRepository>();
         services.AddScoped<IOrderAddressSnapshotRepository, OrderAddressSnapshotRepository>();
+        services.AddScoped<IUserAddressRepository, UserAddressRepository>();
+        services.AddScoped<IShippingMethodRepository, ShippingMethodRepository>();
+        services.AddScoped<IShipmentRepository, ShipmentRepository>();
+        services.AddScoped<IShippingQuoteRepository, ShippingQuoteRepository>();
+        services.AddScoped<IShippingEventRepository, ShippingEventRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IRefundRepository, RefundRepository>();
         services.AddScoped<IProductReviewRepository, ProductReviewRepository>();
         services.AddScoped<ICompanyReviewRepository, CompanyReviewRepository>();
         services.AddScoped<IReviewReplyRepository, ReviewReplyRepository>();
+        services.AddScoped<IReportRepository, ReportRepository>();
+        services.AddScoped<IReportActionAuditRepository, ReportActionAuditRepository>();
+        services.AddScoped<IBehaviorEventRepository, BehaviorEventRepository>();
+        services.AddScoped<IUserBehaviorDailyRepository, UserBehaviorDailyRepository>();
+        services.AddScoped<ISearchQueryAggregateRepository, SearchQueryAggregateRepository>();
         services.AddScoped<IWarehouseRepository, WarehouseRepository>();
         services.AddScoped<IWarehouseStockRepository, WarehouseStockRepository>();
         services.AddScoped<IStockMovementRepository, StockMovementRepository>();
         services.AddScoped<IInventoryReservationRepository, InventoryReservationRepository>();
         services.AddScoped<GoogleOAuthService>();
+        services.AddScoped<IGoogleOAuthPort>(sp => sp.GetRequiredService<GoogleOAuthService>());
         services.AddScoped<ITelegramLinkCodeStore, TelegramLinkCodeStore>();
         services.AddHttpClient<TelegramBotSender>();
+        services.AddScoped<Marketplace.Application.Behavior.Services.BehaviorPayloadRedactionService>();
+        services.AddScoped<BehaviorAggregationJobs>();
 
         var telegramOptions = configuration.GetSection(TelegramOptions.SectionName).Get<TelegramOptions>() ?? new TelegramOptions();
         if (!string.IsNullOrWhiteSpace(telegramOptions.BotToken))

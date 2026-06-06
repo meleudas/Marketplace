@@ -23,6 +23,14 @@
 - `catalog:products:list`
 - `catalog:products:detail:{slug}` (старий і новий slug при перейменуванні)
 
+## Moderation lifecycle
+
+- Створення/редагування чернетки переводить товар у `PendingReview`.
+- `AdminProductsController` виконує `approve/reject`:
+  - `approve` -> `Active` + enqueue upsert у пошуковий індекс + нотифікація автору.
+  - `reject` -> `Draft` + причина відхилення + нотифікація автору.
+- Публічний каталог повертає лише `Active`; `PendingReview`/`Draft` не публікуються.
+
 ## HTTP API
 
 [Endpoints/Products.md](../Endpoints/Products.md)

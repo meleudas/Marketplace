@@ -65,6 +65,9 @@ public sealed class SyncPaymentStatusCommandHandler : IRequestHandler<SyncPaymen
                 _ => PaymentTransactionStatus.Pending
             };
 
+            if (mapped == payment.Status || IsStatusDowngrade(payment.Status, mapped))
+                return Result.Success();
+
             payment.UpdateProviderState(mapped, statusResult.TransactionId, new JsonBlob(statusResult.RawResponse));
             await _paymentRepository.UpdateAsync(payment, ct);
             await _outbox.AppendAsync(
@@ -105,4 +108,17 @@ public sealed class SyncPaymentStatusCommandHandler : IRequestHandler<SyncPaymen
             return Result.Failure($"Failed to sync payment: {ex.Message}");
         }
     }
+
+    private static bool IsStatusDowngrade(PaymentTransactionStatus current, PaymentTransactionStatus next)
+        => Rank(next) < Rank(current);
+
+    private static int Rank(PaymentTransactionStatus status)
+        => status switch
+        {
+            PaymentTransactionStatus.Pending => 0,
+            PaymentTransactionStatus.Failed => 1,
+            PaymentTransactionStatus.Completed => 2,
+            PaymentTransactionStatus.Refunded => 3,
+            _ => 0
+        };
 }

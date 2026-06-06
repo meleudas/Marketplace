@@ -7,7 +7,8 @@ public static class ApplicationBuilderExtensions
     public static WebApplication UseMarketplaceMiddleware(this WebApplication app)
     {
         app.UseMiddleware<ErrorHandlerMiddleware>();
-        app.UseHttpsRedirection();
+        if (!app.Environment.IsEnvironment("Testing"))
+            app.UseHttpsRedirection();
         app.UseCors(ServiceCollectionExtensions.GetCorsPolicyName());
         app.UseAuthentication();
         app.UseMiddleware<JwtCookieMiddleware>();

@@ -21,11 +21,17 @@
 | [Users.md](Users.md) | `/users` |
 | [AdminCatalog.md](AdminCatalog.md) | `/admin` |
 | [AdminProducts.md](AdminProducts.md) | `/admin/products` |
+| [AdminOutbox.md](AdminOutbox.md) | `/admin/outbox` |
 | [Catalog.md](Catalog.md) | `/catalog` |
 | [Products.md](Products.md) | `/companies/{companyId}/products` |
 | [Inventory.md](Inventory.md) | `/companies/{companyId}` (склади та інвентар) |
 | [CompanyMembers.md](CompanyMembers.md) | `/companies/{companyId}/members` |
 | [Cart.md](Cart.md) | `/me/cart` |
+| [Coupons.md](Coupons.md) | `/admin/coupons`, `/me/cart/coupons` |
+| [Reports.md](Reports.md) | `/reports`, `/me/reports`, `/admin/reports/*` |
+| [Analytics.md](Analytics.md) | `/analytics/*` |
+| [AdminAnalytics.md](AdminAnalytics.md) | `/admin/analytics/kpi/*` |
+| [Shipping.md](Shipping.md) | `/me/addresses`, `/shipping`, `/me/shipments`, `/integrations/shipping/novaposhta` |
 | [Favorites.md](Favorites.md) | `/me/favorites` |
 | [MeNotifications.md](MeNotifications.md) | `/me/in-app-notifications` |
 | [Reviews.md](Reviews.md) | `/products/*/reviews`, `/companies/*/reviews`, `/reviews/*`, `/admin/reviews/*` |
@@ -52,7 +58,7 @@
 ### `GET /health/sendgrid/key-trace`
 
 - **Призначення:** діагностика джерел API-ключа (масковано).
-- **Авторизація:** немає в коді — **не відкривати в публічному інтернеті без захисту**.
+- **Авторизація:** лише development + `Admin`.
 
 ### `GET /health/liqpay/config`
 
@@ -68,3 +74,9 @@
 
 - **Призначення:** Prometheus scrape endpoint для OpenTelemetry metrics.
 - **Містить:** HTTP, runtime, cache, payment/webhook, Hangfire counters/histograms.
+- **Авторизація:** лише `Admin`.
+
+### `GET /hangfire`
+
+- **Призначення:** Hangfire dashboard для jobs/manual operations.
+- **Авторизація:** endpoint піднімається лише в development середовищі.

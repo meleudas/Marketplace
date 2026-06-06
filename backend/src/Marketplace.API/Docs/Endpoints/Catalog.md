@@ -60,7 +60,11 @@
   - `page` (int, default 1), `pageSize` (int, default 20)
   - `searchAfter` (base64 cursor, опційно) — cursor для наступної сторінки
 - **Повертає:** `ProductSearchResultDto` (`items`, `total`, `page`, `pageSize`, `nextSearchAfter`).
-- **Side effects:** читає з Elasticsearch; якщо ES недоступний, fallback на БД-логіку каталогу.
+- **Side effects:** читає з Elasticsearch; якщо ES повертає помилку або недоступний, застосовується fallback на БД-логіку каталогу.
+- **Fallback policy (production):**
+  - запит не падає одразу на 5xx через ES-деградацію;
+  - результат формується через `ListActiveAsync` + фільтрацію/сортування в застосунку;
+  - в observability фіксуються `catalog_operations_total`, `catalog_errors_total`, `catalog_latency_ms`, `catalog_search_fallback_total`.
 - **Примітки:** `name` комбінується з `categoryIds` як AND-фільтр (пошук по назві всередині вибраних категорій).
 
 ## `GET /catalog/products/{slug}`

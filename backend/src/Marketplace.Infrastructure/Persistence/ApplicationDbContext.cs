@@ -32,11 +32,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<CartRecord> Carts => Set<CartRecord>();
     public DbSet<CartItemRecord> CartItems => Set<CartItemRecord>();
     public DbSet<CartStockWatchRecord> CartStockWatches => Set<CartStockWatchRecord>();
+    public DbSet<CouponRecord> Coupons => Set<CouponRecord>();
+    public DbSet<CouponUsageRecord> CouponUsages => Set<CouponUsageRecord>();
+    public DbSet<CartCouponLinkRecord> CartCouponLinks => Set<CartCouponLinkRecord>();
     public DbSet<FavoriteRecord> Favorites => Set<FavoriteRecord>();
     public DbSet<OrderRecord> Orders => Set<OrderRecord>();
     public DbSet<OrderStatusHistoryRecord> OrderStatusHistory => Set<OrderStatusHistoryRecord>();
     public DbSet<OrderItemRecord> OrderItems => Set<OrderItemRecord>();
     public DbSet<OrderAddressSnapshotRecord> OrderAddresses => Set<OrderAddressSnapshotRecord>();
+    public DbSet<UserAddressRecord> UserAddresses => Set<UserAddressRecord>();
+    public DbSet<ShippingMethodRecord> ShippingMethods => Set<ShippingMethodRecord>();
+    public DbSet<ShipmentRecord> Shipments => Set<ShipmentRecord>();
+    public DbSet<ShippingQuoteRecord> ShippingQuotes => Set<ShippingQuoteRecord>();
+    public DbSet<ShippingEventRecord> ShippingEvents => Set<ShippingEventRecord>();
     public DbSet<PaymentRecord> Payments => Set<PaymentRecord>();
     public DbSet<RefundRecord> Refunds => Set<RefundRecord>();
     public DbSet<OutboxMessageRecord> OutboxMessages => Set<OutboxMessageRecord>();
@@ -45,8 +53,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<ProductReviewRecord> ProductReviews => Set<ProductReviewRecord>();
     public DbSet<CompanyReviewRecord> CompanyReviews => Set<CompanyReviewRecord>();
     public DbSet<ReviewReplyRecord> ReviewReplies => Set<ReviewReplyRecord>();
+    public DbSet<ReportRecord> Reports => Set<ReportRecord>();
+    public DbSet<ReportActionRecord> ReportActions => Set<ReportActionRecord>();
+    public DbSet<ReportAssignmentRecord> ReportAssignments => Set<ReportAssignmentRecord>();
+    public DbSet<ReportEscalationRecord> ReportEscalations => Set<ReportEscalationRecord>();
     public DbSet<PushSubscriptionRecord> PushSubscriptions => Set<PushSubscriptionRecord>();
     public DbSet<NotificationRecord> Notifications => Set<NotificationRecord>();
+    public DbSet<BehaviorEventRawRecord> BehaviorEventRaw => Set<BehaviorEventRawRecord>();
+    public DbSet<BehaviorEventDedupRecord> BehaviorEventDedup => Set<BehaviorEventDedupRecord>();
+    public DbSet<BehaviorDailyAggregateRecord> BehaviorDailyAggregates => Set<BehaviorDailyAggregateRecord>();
+    public DbSet<SearchQueryAggregateRecord> SearchQueryAggregates => Set<SearchQueryAggregateRecord>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

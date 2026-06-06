@@ -7,18 +7,21 @@
 - **Призначення:** список товарів у статусі `PendingReview`.
 - **Повертає:** масив `PendingProductModerationDto` (`productId`, `companyId`, `name`, `slug`, `submittedByUserId`, `createdAt`).
 - **Авторизація:** `Admin`, `Moderator`.
+- **Metrics:** `product_latency_ms{operation="admin_products_pending"}`, `product_operations_total{operation="admin_products_pending",status="success"}`, `product_errors_total{operation="admin_products_pending",reason=*}`.
 
 ## `POST /admin/products/{id}/approve`
 
 - **Призначення:** схвалити товар → статус `Active`, оновлення пошукового індексу, нотифікація автору подання (якщо відомий `submittedByUserId`).
 - **Параметри:** `id` — ідентифікатор товару.
 - **Авторизація:** `Admin`, `Moderator`.
+- **Metrics:** `product_latency_ms{operation="admin_products_approve"}`, `product_operations_total{operation="admin_products_approve",status="success"}`, `product_errors_total{operation="admin_products_approve",reason="unauthorized|not_found|application_failure"}`.
 
 ## `POST /admin/products/{id}/reject`
 
 - **Призначення:** відхилити товар → статус `Draft`, збереження причини, нотифікація автору.
 - **Body (опційно):** `{ "reason": "..." }`.
 - **Авторизація:** `Admin`, `Moderator`.
+- **Metrics:** `product_latency_ms{operation="admin_products_reject"}`, `product_operations_total{operation="admin_products_reject",status="success"}`, `product_errors_total{operation="admin_products_reject",reason="unauthorized|not_found|application_failure"}`.
 
 ## Side effects
 

@@ -48,8 +48,14 @@
 
 ## `POST /me/cart/checkout`
 - **Призначення:** оформити checkout із автосплітом кошика на окремі ордери по `CompanyId`.
+- **Idempotency:** обов'язковий заголовок `Idempotency-Key`.
+  - `400` якщо заголовок відсутній;
+  - `409` якщо ключ уже `in-progress`;
+  - `409` якщо ключ використаний з іншим payload (`request mismatch`);
+  - replay повертає збережений результат при `completed`.
 - **Приймає (body):**
   - `paymentMethod` (`card` / `payPal` / `bankTransfer` / `cash`)
+  - `shippingMethodId` (id з `GET /shipping/methods`)
   - `address`
     - `firstName`, `lastName`, `phone`
     - `street`, `city`, `state`, `postalCode`, `country`
@@ -65,3 +71,4 @@
   - soft-delete checkout-нутих позицій кошика.
 - **Кеш:** інвалідує `cart:user:{userId}:active`.
 - **Помилки:** `400` (`Invalid paymentMethod`, валідація), `404/400` (`Cart not found`, `Cart is empty`, `Product ... not found`).
+- **Спостережуваність:** `checkout_operations_total`, `checkout_errors_total`, `checkout_latency_ms`, а також cart-mutation метрики.

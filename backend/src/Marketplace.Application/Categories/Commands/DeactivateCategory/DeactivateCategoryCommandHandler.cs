@@ -32,6 +32,7 @@ public sealed class DeactivateCategoryCommandHandler : IRequestHandler<Deactivat
             await _cache.RemoveAsync(CatalogCacheKeys.AllCategories, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.CatalogCategoryByIdPrefix + category.Id.Value, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.AdminCategoryByIdPrefix + category.Id.Value, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
             return Result.Success();
         }
         catch (Exception ex)
