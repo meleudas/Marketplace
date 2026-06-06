@@ -1,0 +1,46 @@
+{
+  "uid": "marketplace-business-sli",
+  "title": "Marketplace Business SLI",
+  "tags": ["marketplace", "business"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Cart operations",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum(rate(cart_operations_total[5m])) by (operation)", "legendFormat": "{{operation}}" }]
+    },
+    {
+      "id": 2,
+      "title": "Checkout error rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "targets": [{ "expr": "marketplace:checkout_error_rate:10m", "legendFormat": "error rate" }]
+    },
+    {
+      "id": 3,
+      "title": "Payment operations",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "targets": [{ "expr": "sum(rate(payment_operations_total[5m])) by (operation)", "legendFormat": "{{operation}}" }]
+    },
+    {
+      "id": 4,
+      "title": "Order operations",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [{ "expr": "sum(rate(order_operations_total[5m])) by (operation)", "legendFormat": "{{operation}}" }]
+    },
+    {
+      "id": 5,
+      "title": "Auth errors",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [{ "expr": "sum(rate(auth_errors_total[5m])) by (reason)", "legendFormat": "{{reason}}" }]
+    }
+  ]
+}

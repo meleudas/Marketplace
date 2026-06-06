@@ -1,0 +1,11 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: marketplace-default
+    receivers:
+      - uid: marketplace-log-receiver
+        type: webhook
+        settings:
+          url: http://127.0.0.1:65535/alert-noop
+        disableResolveMessage: false

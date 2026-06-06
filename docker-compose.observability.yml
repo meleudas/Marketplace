@@ -1,0 +1,8 @@
+services:
+  api:
+    environment:
+      OTEL_ENABLED: "true"
+      OpenTelemetry__Enabled: "true"
+    depends_on:
+      otel-collector:
+        condition: service_started

@@ -1,0 +1,444 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: marketplace-sli
+    folder: Marketplace
+    interval: 1m
+    rules:
+      - uid: checkout-error-rate
+        title: Checkout high error rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: marketplace:checkout_error_rate:10m
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [0.02]
+                    type: gt
+        for: 10m
+        noDataState: NoData
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: Checkout error rate above 2% for 10 minutes
+
+      - uid: outbox-dlq-growth
+        title: Outbox dead letter growth
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: increase(outbox_dead_letter_total[1h])
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [10]
+                    type: gt
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: Outbox dead-letter growth in the last hour
+
+      - uid: liqpay-webhook-errors
+        title: LiqPay webhook error rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: marketplace:payment_webhook_error_rate:10m
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [0.1]
+                    type: gt
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: LiqPay webhook errors elevated
+
+      - uid: cart-p95-latency
+        title: Cart mutation p95 latency
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: histogram_quantile(0.95, sum(rate(cart_latency_ms_bucket[5m])) by (le))
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [500]
+                    type: gt
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Cart p95 latency above 500ms
+
+      - uid: auth-replay-spike
+        title: Auth replay detected spike
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: sum(rate(auth_errors_total{reason="replay_detected"}[10m]))
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [0.5]
+                    type: gt
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Auth replay_detected errors spiking
+
+      - uid: hangfire-job-errors
+        title: Hangfire job errors
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: sum(increase(hangfire_job_errors_total[10m]))
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Hangfire job errors in the last 10 minutes
+
+      - uid: notification-dispatch-errors
+        title: Notification dispatch errors
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: sum(rate(notification_dispatch_errors_total[10m]))
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [0.1]
+                    type: gt
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Notification dispatch error rate elevated
+
+      - uid: idempotency-conflicts
+        title: Idempotency conflicts
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: sum(rate(idempotency_conflicts_total[10m]))
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [0.2]
+                    type: gt
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Idempotency conflicts above baseline
+
+      - uid: catalog-search-fallback
+        title: Catalog search fallback growth
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: sum(rate(catalog_search_fallback_total[10m]))
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [0.05]
+                    type: gt
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Catalog search fallback rate elevated
+
+      - uid: payment-admin-errors
+        title: Payment admin errors burst
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: sum(rate(payment_errors_total{operation=~"admin_payments_.*"}[10m]))
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [0.2]
+                    type: gt
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Payment admin operation errors elevated
+
+      - uid: http-5xx-ratio
+        title: HTTP 5xx ratio
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m])) / clamp_min(sum(rate(http_server_request_duration_seconds_count[5m])), 1)
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [0.02]
+                    type: gt
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: HTTP 5xx ratio above 2%
+
+      - uid: reports-queue-backlog
+        title: Reports queue backlog high
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: max_over_time(report_queue_backlog[10m])
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [100]
+                    type: gt
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Reports queue backlog above threshold
+
+      - uid: reports-sla-breach
+        title: Reports SLA breach spike
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: increase(report_sla_breach_total[10m])
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [5]
+                    type: gt
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: Reports SLA breach spike
+
+      - uid: analytics-drop-rate
+        title: Analytics drop rate high
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: marketplace:analytics_drop_rate:10m
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [0.05]
+                    type: gt
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Analytics drop rate above 5%
+
+      - uid: analytics-aggregation-lag
+        title: Analytics aggregation lag
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: max_over_time(analytics_pipeline_latency_ms_sum[10m])
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [10000]
+                    type: gt
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Analytics pipeline latency lag above threshold
