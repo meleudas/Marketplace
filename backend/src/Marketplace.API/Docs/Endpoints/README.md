@@ -79,6 +79,8 @@
 | [Cart.md](Cart.md) | `/me/cart` |
 | [Coupons.md](Coupons.md) | `/admin/coupons`, `/me/cart/coupons` |
 | [Reports.md](Reports.md) | `/reports`, `/me/reports`, `/admin/reports/*` |
+| [Chats.md](Chats.md) | `/me/chats/*`, SignalR `/hubs/chat` |
+| [AdminChats.md](AdminChats.md) | `/admin/chats/*` |
 | [Analytics.md](Analytics.md) | `/analytics/*` |
 | [AdminAnalytics.md](AdminAnalytics.md) | `/admin/analytics/kpi/*` |
 | [Shipping.md](Shipping.md) | `/me/addresses`, `/shipping`, `/me/shipments`, `/integrations/shipping/novaposhta` |

@@ -34,7 +34,11 @@ public static class OpenApiTagDefinitions
         ["PaymentsIntegrations"] = "Webhook LiqPay.",
         ["TelegramIntegrations"] = "Telegram bot webhook.",
         ["PushNotifications"] = "Web Push підписки та VAPID.",
-        ["MeNotifications"] = "In-app нотифікації користувача."
+        ["MeNotifications"] = "In-app нотифікації користувача.",
+        ["Chats"] = "Чати buyer/seller/support та модерація.",
+        ["Support"] = "Звернення до підтримки (helpdesk tickets).",
+        ["AdminSupport"] = "Призначення, статуси та ескалація support tickets.",
+        ["SupportIntegrations"] = "Inbound webhook helpdesk-провайдера."
     };
 
     public static string BuildDocumentDescription() =>

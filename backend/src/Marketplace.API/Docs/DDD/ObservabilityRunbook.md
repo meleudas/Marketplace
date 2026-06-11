@@ -88,6 +88,9 @@
 - reports queue backlog growth: sustained `report_queue_backlog` above baseline.
 - reports SLA breach spike: sustained growth in `report_sla_breach_total`.
 - reports moderation error burst: sustained growth in `report_errors_total`.
+- chat send failure spike: growth of `chat_message_errors_total`.
+- chat spam attack: spike in `chat_spam_block_total`.
+- chat unread backlog: sustained growth in `chat_unread_backlog`.
 
 ## Reports incident runbook
 
@@ -117,6 +120,41 @@
    - перевірити `analytics_pipeline_latency_ms` і `analytics_aggregation_failures_total`.
 4. Для відновлення вікна:
    - replay з `behavior_events_raw` у агрегати за потрібний період.
+
+## Chats incident runbook
+
+1. Перевірити feature flags:
+   - `Chats:Enabled`
+   - `Chats:ModerationEnabled`
+   - `Chats:RealtimeEnabled`
+2. Spam attack mode:
+   - зменшити `Chats:MessagesPerMinute`,
+   - збільшити `Chats:DuplicateWindowSeconds`,
+   - увімкнути `Chats:RejectOnProhibitedContent=true` та доповнити `ProhibitedPatterns`.
+3. Realtime degradation:
+   - вимкнути `Chats:RealtimeEnabled=false` (fallback на HTTP polling `GET /me/chats/{id}/messages`).
+4. Moderation queue lag:
+   - перевірити `chat_message_errors_total` та audit у `chat_moderation_actions`,
+   - застосувати `POST /admin/chats/{chatId}/moderate` для block/hide.
+
+## Support / Helpdesk incident runbook
+
+1. Перевірити feature flags:
+   - `Support:Enabled`
+   - `Support:HelpdeskSyncEnabled`
+   - `Support:HelpdeskWebhookEnabled`
+2. Helpdesk outage (outbound):
+   - тимчасово `HelpdeskSyncEnabled=false` (internal tickets працюють),
+   - моніторити `support_helpdesk_sync_failures_total` та outbox DLQ (`SupportTicket*` events),
+   - після відновлення — replay DLQ через admin outbox або дочекатися `support-helpdesk-reconcile`.
+3. Bad inbound webhook traffic:
+   - вимкнути `HelpdeskWebhookEnabled=false`,
+   - перевірити `WebhookSigningSecret`, rotate secret у провайдері.
+4. SLA pressure:
+   - `support_sla_breach_total`, ескалація через `POST /admin/support/tickets/{id}/escalate`,
+   - tune `SlaHoursP1` / `SlaHoursP2`.
+5. Manual reconciliation:
+   - Hangfire job `support-helpdesk-reconcile` (hourly) порівнює `support_external_links` з `IHelpdeskPort.FetchTicketSnapshotAsync`.
 
 ## Shipping degradation runbook (Nova Poshta)
 

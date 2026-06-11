@@ -26,6 +26,15 @@
 | `POST /me/web-push/subscriptions` | — | Push opt-in | `planned` |
 | `GET /admin/*` | — | AdminShell routes | `partial` |
 | `POST /reports` | — | Report dialog | `planned` |
+| `POST /me/chats` | — | Chat inbox / product seller chat | `backend-only` |
+| `GET /me/chats` | — | Chat inbox | `backend-only` |
+| `POST /me/chats/{chatId}/messages` | — | Chat thread | `backend-only` |
+| `POST /admin/chats/{chatId}/moderate` | — | Admin moderation | `backend-only` |
+| `WS /hubs/chat` | — | Realtime chat | `backend-only` |
+| `POST /support/tickets` | — | Support ticket form | `backend-only` |
+| `GET /me/support/tickets` | — | My support inbox | `backend-only` |
+| `POST /admin/support/tickets/{id}/status` | — | Admin support queue | `backend-only` |
+| `POST /integrations/support/helpdesk/webhook` | — | Helpdesk provider | `backend-only` |
 | `POST /analytics/*` | — | Storefront tracking hooks | `planned` |
 
 **Статуси:**
