@@ -1,6 +1,7 @@
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Payments.Services;
+using Marketplace.Application.Support.Ports;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Entities;
 using Marketplace.Domain.Orders.Enums;
@@ -27,7 +28,8 @@ public sealed class InfrastructureOutboxEventProcessorTests
             paymentRepo,
             new OrderPaymentStateApplier(),
             new StubOrderCacheInvalidation(),
-            new StubOrderStatusHistoryWriter());
+            new StubOrderStatusHistoryWriter(),
+            new NoOpSupportHelpdeskSyncHandler());
 
         var message = new OutboxMessage(
             Guid.NewGuid(),
@@ -64,7 +66,8 @@ public sealed class InfrastructureOutboxEventProcessorTests
             paymentRepo,
             new OrderPaymentStateApplier(),
             cache,
-            history);
+            history,
+            new NoOpSupportHelpdeskSyncHandler());
 
         var message = new OutboxMessage(
             Guid.NewGuid(),
@@ -102,7 +105,8 @@ public sealed class InfrastructureOutboxEventProcessorTests
             paymentRepo,
             new OrderPaymentStateApplier(),
             new StubOrderCacheInvalidation(),
-            new StubOrderStatusHistoryWriter());
+            new StubOrderStatusHistoryWriter(),
+            new NoOpSupportHelpdeskSyncHandler());
 
         var message = new OutboxMessage(
             Guid.NewGuid(),
@@ -133,7 +137,8 @@ public sealed class InfrastructureOutboxEventProcessorTests
             new StubPaymentRepository(),
             new OrderPaymentStateApplier(),
             new StubOrderCacheInvalidation(),
-            new StubOrderStatusHistoryWriter());
+            new StubOrderStatusHistoryWriter(),
+            new NoOpSupportHelpdeskSyncHandler());
 
         var message = new OutboxMessage(
             Guid.NewGuid(),
@@ -222,5 +227,10 @@ public sealed class InfrastructureOutboxEventProcessorTests
             Wrote = true;
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class NoOpSupportHelpdeskSyncHandler : ISupportHelpdeskSyncHandler
+    {
+        public Task ProcessAsync(OutboxMessage message, CancellationToken ct = default) => Task.CompletedTask;
     }
 }
