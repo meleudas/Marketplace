@@ -1,6 +1,8 @@
 using Marketplace.API.Filters;
 using Marketplace.API.OpenApi;
 using Marketplace.API.Options;
+using Marketplace.API.Chats;
+using Marketplace.Application.Chats.Ports;
 using Marketplace.Application;
 using Marketplace.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
@@ -22,6 +24,8 @@ public static class ServiceCollectionExtensions
 
         services.AddApplication();
         services.AddInfrastructure(configuration, ConfigureGoogleIfPresent(configuration));
+        services.AddSignalR();
+        services.AddScoped<IChatRealtimeNotifier, SignalRChatRealtimeNotifier>();
 
         services.AddHttpContextAccessor();
         services.AddSingleton<EndpointDocRegistry>();

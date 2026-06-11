@@ -15,6 +15,11 @@ using Marketplace.Application.Payments.Ports;
 using Marketplace.Application.Shipping.Ports;
 using Marketplace.Application.Shipping.Options;
 using Marketplace.Application.Reports.Options;
+using Marketplace.Application.Chats.Options;
+using Marketplace.Application.Support.Options;
+using Marketplace.Application.Support.Ports;
+using Marketplace.Application.Chats.Ports;
+using Marketplace.Infrastructure.Chats;
 using Marketplace.Application.Behavior.Options;
 using Marketplace.Domain.Categories.Repositories;
 using Marketplace.Domain.Catalog.Repositories;
@@ -28,6 +33,8 @@ using Marketplace.Domain.Orders.Repositories;
 using Marketplace.Domain.Payments.Repositories;
 using Marketplace.Domain.Reviews.Repositories;
 using Marketplace.Domain.Reports.Repositories;
+using Marketplace.Domain.Chats.Repositories;
+using Marketplace.Domain.Support.Repositories;
 using Marketplace.Domain.Shipping.Repositories;
 using Marketplace.Domain.Behavior.Repositories;
 using Marketplace.Infrastructure.Caching;
@@ -39,6 +46,7 @@ using Marketplace.Infrastructure.External.Telegram;
 using Marketplace.Infrastructure.External.Storage;
 using Marketplace.Infrastructure.External.Payments;
 using Marketplace.Infrastructure.External.Shipping;
+using Marketplace.Infrastructure.External.Support;
 using Marketplace.Infrastructure.Identity;
 using Marketplace.Infrastructure.Identity.Entities;
 using Marketplace.Infrastructure.Identity.Managers;
@@ -79,6 +87,8 @@ public static class DependencyInjection
         services.Configure<ShippingOptions>(configuration.GetSection(ShippingOptions.SectionName));
         services.Configure<CouponsOptions>(configuration.GetSection(CouponsOptions.SectionName));
         services.Configure<ReportsOptions>(configuration.GetSection(ReportsOptions.SectionName));
+        services.Configure<ChatsOptions>(configuration.GetSection(ChatsOptions.SectionName));
+        services.Configure<SupportOptions>(configuration.GetSection(SupportOptions.SectionName));
         services.Configure<BehaviorAnalyticsOptions>(configuration.GetSection(BehaviorAnalyticsOptions.SectionName));
         services.Configure<NovaPoshtaOptions>(configuration.GetSection(NovaPoshtaOptions.SectionName));
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
@@ -154,6 +164,14 @@ public static class DependencyInjection
                         {
                             context.Token = authHeader["Bearer ".Length..].Trim();
                         }
+
+                        var accessToken = context.Request.Query["access_token"];
+                        if (!string.IsNullOrWhiteSpace(accessToken)
+                            && context.Request.Path.StartsWithSegments("/hubs/chat"))
+                        {
+                            context.Token = accessToken;
+                        }
+
                         return Task.CompletedTask;
                     }
                 };
@@ -217,6 +235,9 @@ public static class DependencyInjection
         services.AddScoped<OutboxDispatcherJobs>();
         services.AddScoped<ProductImageJobs>();
         services.AddScoped<MediaCleanupJobs>();
+        services.AddScoped<SupportHelpdeskSyncHandler>();
+        services.AddScoped<ISupportHelpdeskSyncHandler>(sp => sp.GetRequiredService<SupportHelpdeskSyncHandler>());
+        services.AddScoped<SupportHelpdeskReconciliationJobs>();
         services.AddScoped<IOutboxEventProcessor, OutboxEventProcessor>();
         services.AddScoped<IAppCachePort, AppCachePort>();
         services.AddScoped<IOutboxWriter, OutboxRepository>();
@@ -273,6 +294,18 @@ public static class DependencyInjection
         services.AddScoped<IReviewReplyRepository, ReviewReplyRepository>();
         services.AddScoped<IReportRepository, ReportRepository>();
         services.AddScoped<IReportActionAuditRepository, ReportActionAuditRepository>();
+        services.AddScoped<IChatRepository, ChatRepository>();
+        services.AddScoped<IChatParticipantRepository, ChatParticipantRepository>();
+        services.AddScoped<IMessageRepository, MessageRepository>();
+        services.AddScoped<IChatReadStateRepository, ChatReadStateRepository>();
+        services.AddScoped<IChatModerationActionRepository, ChatModerationActionRepository>();
+        services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
+        services.AddScoped<ISupportTicketMessageRepository, SupportTicketMessageRepository>();
+        services.AddScoped<ISupportTicketAssignmentRepository, SupportTicketAssignmentRepository>();
+        services.AddScoped<ISupportTicketEventRepository, SupportTicketEventRepository>();
+        services.AddScoped<ISupportExternalLinkRepository, SupportExternalLinkRepository>();
+        services.AddScoped<IHelpdeskPort, LoggingHelpdeskPort>();
+        services.AddScoped<IChatRealtimeNotifier, NullChatRealtimeNotifier>();
         services.AddScoped<IBehaviorEventRepository, BehaviorEventRepository>();
         services.AddScoped<IUserBehaviorDailyRepository, UserBehaviorDailyRepository>();
         services.AddScoped<ISearchQueryAggregateRepository, SearchQueryAggregateRepository>();

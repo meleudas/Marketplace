@@ -3,6 +3,7 @@ using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Orders.Services;
 using Marketplace.Application.Payments.Services;
+using Marketplace.Application.Support.Ports;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Repositories;
 using Marketplace.Domain.Payments.Enums;
@@ -18,6 +19,7 @@ public sealed class OutboxEventProcessor : IOutboxEventProcessor
     private readonly IOrderPaymentStateApplier _paymentStateApplier;
     private readonly IOrderCacheInvalidationService _cacheInvalidation;
     private readonly IOrderStatusHistoryWriter _historyWriter;
+    private readonly ISupportHelpdeskSyncHandler _supportHelpdeskSync;
 
     public OutboxEventProcessor(
         IInboxDeduplicator inbox,
@@ -25,7 +27,8 @@ public sealed class OutboxEventProcessor : IOutboxEventProcessor
         IPaymentRepository paymentRepository,
         IOrderPaymentStateApplier paymentStateApplier,
         IOrderCacheInvalidationService cacheInvalidation,
-        IOrderStatusHistoryWriter historyWriter)
+        IOrderStatusHistoryWriter historyWriter,
+        ISupportHelpdeskSyncHandler supportHelpdeskSync)
     {
         _inbox = inbox;
         _orderRepository = orderRepository;
@@ -33,6 +36,7 @@ public sealed class OutboxEventProcessor : IOutboxEventProcessor
         _paymentStateApplier = paymentStateApplier;
         _cacheInvalidation = cacheInvalidation;
         _historyWriter = historyWriter;
+        _supportHelpdeskSync = supportHelpdeskSync;
     }
 
     public async Task ProcessAsync(OutboxMessage message, CancellationToken ct = default)
@@ -51,6 +55,11 @@ public sealed class OutboxEventProcessor : IOutboxEventProcessor
             case "InventoryReleased":
             case "InventoryFailed":
                 await MarkInventoryEventAsSeenAsync(message, ct);
+                break;
+            case "SupportTicketCreated":
+            case "SupportTicketMessageAdded":
+            case "SupportTicketStatusChanged":
+                await _supportHelpdeskSync.ProcessAsync(message, ct);
                 break;
             default:
                 throw new PermanentOutboxException($"Unsupported outbox event type: {message.EventType}");

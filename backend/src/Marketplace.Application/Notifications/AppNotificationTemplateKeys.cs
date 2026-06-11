@@ -10,4 +10,6 @@ public static class AppNotificationTemplateKeys
     public const string AdminProductPendingReview = "AdminProductPendingReview";
     public const string UserProductApproved = "UserProductApproved";
     public const string UserProductRejected = "UserProductRejected";
+    public const string ChatMessageReceived = "ChatMessageReceived";
+    public const string SupportTicketStatusChanged = "SupportTicketStatusChanged";
 }

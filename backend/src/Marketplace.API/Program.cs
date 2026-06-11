@@ -18,7 +18,7 @@ builder.Services.AddMarketplaceApi(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Database:AutoMigrate"))
     await InitializeDevelopmentDatabaseWithRetriesAsync(app.Services, app.Logger);
 
 app.MapOpenApi("/openapi/{documentName}.json");
@@ -74,9 +74,14 @@ if (!app.Environment.IsEnvironment("Testing"))
         "app-notifications-prune-expired-inapp",
         job => job.PruneExpiredInAppNotificationsAsync(default),
         Cron.Daily(3));
+    RecurringJob.AddOrUpdate<SupportHelpdeskReconciliationJobs>(
+        "support-helpdesk-reconcile",
+        job => job.ReconcileAsync(default),
+        Cron.Hourly);
 }
 
 app.MapControllers();
+app.MapHub<Marketplace.API.Hubs.ChatHub>("/hubs/chat");
 
 var openTelemetryOptions = app.Configuration
     .GetSection(OpenTelemetryOptions.SectionName)

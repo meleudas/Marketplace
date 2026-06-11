@@ -11,6 +11,9 @@ using Marketplace.Application.Users.Services;
 using Marketplace.Application.Payments.Services;
 using Marketplace.Application.Carts.Services;
 using Marketplace.Application.Inventory.Services;
+using Marketplace.Application.Chats.Policies;
+using Marketplace.Application.Support.Policies;
+using Marketplace.Application.Support.Services;
 using Marketplace.Application.Notifications.Ports;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,6 +48,15 @@ public static class DependencyInjection
         services.AddScoped<IOrderPaymentStateApplier, OrderPaymentStateApplier>();
         services.AddScoped<ICartStockWatchSyncService, CartStockWatchSyncService>();
         services.AddScoped<IRestockAvailabilityNotifier, RestockAvailabilityNotifier>();
+        services.AddScoped<ChatAccessPolicy>();
+        services.AddScoped<ChatAntiSpamPolicy>();
+        services.AddScoped<ChatContentModerationPolicy>();
+        services.AddScoped<SupportTicketAccessPolicy>();
+        services.AddScoped<SupportTicketStatePolicy>();
+        services.AddScoped<SupportEscalationPolicy>();
+        services.AddScoped<SupportAntiAbusePolicy>();
+        services.AddScoped<HelpdeskWebhookSignatureValidator>();
+        services.AddScoped<SupportHelpdeskOutboxPublisher>();
 
         return services;
     }

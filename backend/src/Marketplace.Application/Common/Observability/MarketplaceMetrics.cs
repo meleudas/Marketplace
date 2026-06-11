@@ -74,6 +74,18 @@ public static class MarketplaceMetrics
     public static readonly UpDownCounter<int> ReportQueueBacklog = Meter.CreateUpDownCounter<int>("report_queue_backlog");
     public static readonly Histogram<double> ReportResolutionLatencyMs = Meter.CreateHistogram<double>("report_resolution_latency_ms");
 
+    public static readonly Counter<long> ChatMessagesTotal = Meter.CreateCounter<long>("chat_messages_total");
+    public static readonly Counter<long> ChatMessageErrorsTotal = Meter.CreateCounter<long>("chat_message_errors_total");
+    public static readonly Histogram<double> ChatMessageLatencyMs = Meter.CreateHistogram<double>("chat_message_latency_ms");
+    public static readonly Counter<long> ChatSpamBlockTotal = Meter.CreateCounter<long>("chat_spam_block_total");
+    public static readonly UpDownCounter<int> ChatUnreadBacklog = Meter.CreateUpDownCounter<int>("chat_unread_backlog");
+
+    public static readonly Counter<long> SupportTicketsTotal = Meter.CreateCounter<long>("support_tickets_total");
+    public static readonly Counter<long> SupportTicketErrorsTotal = Meter.CreateCounter<long>("support_ticket_errors_total");
+    public static readonly Histogram<double> SupportTicketLatencyMs = Meter.CreateHistogram<double>("support_ticket_latency_ms");
+    public static readonly Counter<long> SupportSlaBreachTotal = Meter.CreateCounter<long>("support_sla_breach_total");
+    public static readonly Counter<long> SupportHelpdeskSyncFailuresTotal = Meter.CreateCounter<long>("support_helpdesk_sync_failures_total");
+
     public static readonly Counter<long> NotificationDispatches = Meter.CreateCounter<long>("notification_dispatch_total");
     public static readonly Counter<long> NotificationDispatchErrors = Meter.CreateCounter<long>("notification_dispatch_errors_total");
     public static readonly Histogram<double> NotificationDispatchLatencyMs = Meter.CreateHistogram<double>("notification_dispatch_latency_ms");

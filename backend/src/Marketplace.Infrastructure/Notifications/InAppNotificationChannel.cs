@@ -120,7 +120,8 @@ public sealed class InAppNotificationChannel : INotificationChannel
             AppNotificationTemplateKeys.CartProductBackInStock => NotificationKind.System,
             AppNotificationTemplateKeys.AdminProductPendingReview
                 or AppNotificationTemplateKeys.UserProductApproved
-                or AppNotificationTemplateKeys.UserProductRejected => NotificationKind.System,
+                or AppNotificationTemplateKeys.UserProductRejected
+                or AppNotificationTemplateKeys.ChatMessageReceived => NotificationKind.System,
             _ => NotificationKind.System
         };
 

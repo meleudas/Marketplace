@@ -63,6 +63,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<BehaviorEventDedupRecord> BehaviorEventDedup => Set<BehaviorEventDedupRecord>();
     public DbSet<BehaviorDailyAggregateRecord> BehaviorDailyAggregates => Set<BehaviorDailyAggregateRecord>();
     public DbSet<SearchQueryAggregateRecord> SearchQueryAggregates => Set<SearchQueryAggregateRecord>();
+    public DbSet<ChatRecord> Chats => Set<ChatRecord>();
+    public DbSet<ChatParticipantRecord> ChatParticipants => Set<ChatParticipantRecord>();
+    public DbSet<ChatMessageRecord> ChatMessages => Set<ChatMessageRecord>();
+    public DbSet<ChatReadStateRecord> ChatReadStates => Set<ChatReadStateRecord>();
+    public DbSet<ChatModerationActionRecord> ChatModerationActions => Set<ChatModerationActionRecord>();
+    public DbSet<SupportTicketRecord> SupportTickets => Set<SupportTicketRecord>();
+    public DbSet<SupportTicketMessageRecord> SupportTicketMessages => Set<SupportTicketMessageRecord>();
+    public DbSet<SupportTicketAssignmentRecord> SupportTicketAssignments => Set<SupportTicketAssignmentRecord>();
+    public DbSet<SupportTicketEventRecord> SupportTicketEvents => Set<SupportTicketEventRecord>();
+    public DbSet<SupportExternalLinkRecord> SupportExternalLinks => Set<SupportExternalLinkRecord>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

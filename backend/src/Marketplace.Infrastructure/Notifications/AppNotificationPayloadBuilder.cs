@@ -30,6 +30,8 @@ public sealed class AppNotificationPayloadBuilder
             AppNotificationTemplateKeys.AdminProductPendingReview => BuildAdminProductPendingReview(request, root, baseUrl),
             AppNotificationTemplateKeys.UserProductApproved => BuildUserProductApproved(request, root, baseUrl),
             AppNotificationTemplateKeys.UserProductRejected => BuildUserProductRejected(request, root, baseUrl),
+            AppNotificationTemplateKeys.ChatMessageReceived => BuildChatMessageReceived(request, root, baseUrl),
+            AppNotificationTemplateKeys.SupportTicketStatusChanged => BuildSupportTicketStatusChanged(request, root, baseUrl),
             _ => new AppNotificationEnvelope
             {
                 TemplateKey = request.TemplateKey,
@@ -262,6 +264,58 @@ public sealed class AppNotificationPayloadBuilder
         if (!string.IsNullOrEmpty(orderStatus))
             body += $" ({orderStatus})";
         var action = orderId is null || baseUrl.Length == 0 ? null : $"{baseUrl}/orders/{orderId}";
+        return new AppNotificationEnvelope
+        {
+            TemplateKey = request.TemplateKey,
+            CorrelationId = request.CorrelationId,
+            Channels = request.Channels,
+            Audience = request.Audience,
+            TargetUserId = request.TargetUserId,
+            TargetCompanyId = request.TargetCompanyId,
+            Title = title,
+            Body = body,
+            ActionUrl = action,
+            PayloadJson = request.PayloadJson
+        };
+    }
+
+    private static AppNotificationEnvelope BuildChatMessageReceived(
+        AppNotificationRequest request,
+        JsonElement root,
+        string baseUrl)
+    {
+        var chatId = TryGetGuid(root, "chatId");
+        var preview = TryGetString(root, "preview") ?? "Нове повідомлення";
+        var title = "Нове повідомлення в чаті";
+        var action = chatId is null || baseUrl.Length == 0 ? null : $"{baseUrl}/chats/{chatId:D}";
+        return new AppNotificationEnvelope
+        {
+            TemplateKey = request.TemplateKey,
+            CorrelationId = request.CorrelationId,
+            Channels = request.Channels,
+            Audience = request.Audience,
+            TargetUserId = request.TargetUserId,
+            TargetCompanyId = request.TargetCompanyId,
+            Title = title,
+            Body = preview,
+            ActionUrl = action,
+            PayloadJson = request.PayloadJson
+        };
+    }
+
+    private static AppNotificationEnvelope BuildSupportTicketStatusChanged(
+        AppNotificationRequest request,
+        JsonElement root,
+        string baseUrl)
+    {
+        var ticketId = TryGetLong(root, "ticketId");
+        var ticketNumber = TryGetString(root, "ticketNumber") ?? "";
+        var status = TryGetLong(root, "status");
+        var title = "Оновлення звернення підтримки";
+        var body = string.IsNullOrEmpty(ticketNumber)
+            ? $"Статус звернення #{ticketId} змінено"
+            : $"Звернення {ticketNumber}: новий статус {status}";
+        var action = ticketId is null || baseUrl.Length == 0 ? null : $"{baseUrl}/support/tickets/{ticketId}";
         return new AppNotificationEnvelope
         {
             TemplateKey = request.TemplateKey,
