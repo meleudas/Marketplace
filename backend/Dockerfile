@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1
+# Production image: multi-stage publish to aspnet runtime.
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
