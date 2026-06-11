@@ -10,15 +10,41 @@ public sealed class SupportTicketMessage : AuditableSoftDeleteAggregateRoot<Supp
     public SupportTicketId TicketId { get; private set; } = null!;
     public string SenderId { get; private set; } = string.Empty;
     public string Message { get; private set; } = string.Empty;
-    public JsonBlob? Attachments { get; private set; }
+    public JsonBlob Attachments { get; private set; } = JsonBlob.Empty;
     public bool IsInternal { get; private set; }
+
+    public static SupportTicketMessage Send(
+        SupportTicketId ticketId,
+        string senderId,
+        string message,
+        JsonBlob attachments,
+        bool isInternal,
+        DateTime nowUtc)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            throw new ArgumentException("Message is required.", nameof(message));
+
+        return new SupportTicketMessage
+        {
+            Id = SupportTicketMessageId.From(0),
+            TicketId = ticketId,
+            SenderId = senderId,
+            Message = message.Trim(),
+            Attachments = attachments,
+            IsInternal = isInternal,
+            CreatedAt = nowUtc,
+            UpdatedAt = nowUtc,
+            IsDeleted = false,
+            DeletedAt = null
+        };
+    }
 
     public static SupportTicketMessage Reconstitute(
         SupportTicketMessageId id,
         SupportTicketId ticketId,
         string senderId,
         string message,
-        JsonBlob? attachments,
+        JsonBlob attachments,
         bool isInternal,
         DateTime createdAt,
         DateTime updatedAt,
