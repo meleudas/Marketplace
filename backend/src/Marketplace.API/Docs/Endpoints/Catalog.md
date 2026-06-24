@@ -187,3 +187,45 @@
 - **Приймає:** path `slug` (string).
 - **Повертає:** `ProductDto` (композиція продукту; структура в коді — `ProductMapper`).
 - **Примітки:** кеш detail також інвалідується після inventory-мутацій (`receive/ship/reserve/release/adjust/transfer`), щоб уникнути stale `availabilityStatus`.
+
+## `GET /catalog/products/{id}/similar`
+
+- **Summary (1 рядок):** Схожі товари за `productId` через Elasticsearch More Like This.
+- **Призначення:** рекомендації «схожі товари» для картки товару.
+- **Хто може викликати:**
+  - JWT: не потрібна
+- **Бізнес-логіка:**
+  1. Знайти активний товар за `id`
+  2. Виконати ES-запит `more_like_this` по `name`, `description`, `tags`, `brands` з фільтрами `categoryId`, price band, exclude self
+  3. При деградації ES — fallback на БД (same category + tag/brand scoring)
+- **Side effects (синхронно):** кеш `catalog:products:similar:{productId}`, TTL 15 хв; observability: `catalog_similar_products_fallback_total`
+- **Приймає:** path `id` (long), query `limit` (default 12, max 24)
+- **Повертає:** `SimilarProductsResultDto` (`sourceProductId`, `items[]`)
+
+## `GET /catalog/products/{slug}/similar`
+
+- **Summary (1 рядок):** Схожі товари за `slug` (той самий алгоритм, що й для `id`).
+- **Призначення:** рекомендації для storefront, де маршрут побудований на slug.
+- **Хто може викликати:**
+  - JWT: не потрібна
+- **Бізнес-логіка:** resolve slug → active product → similar products pipeline (див. endpoint за `id`)
+- **Приймає:** path `slug` (string), query `limit` (default 12, max 24)
+- **Повертає:** `SimilarProductsResultDto`
+
+## `GET /catalog/recommendations/me`
+
+- **Summary (1 рядок):** Персональні рекомендації для поточного авторизованого користувача.
+- **Призначення:** повернути персоналізовану стрічку товарів на основі активної ML.NET моделі; при недоступній моделі — fallback.
+- **Хто може викликати:**
+  - JWT: обов'язковий
+  - Глобальні ролі: будь-який авторизований користувач
+  - Компанійні ролі: будь-які
+- **Бізнес-логіка:**
+  1. Взяти `userId` з JWT
+  2. Завантажити активну recommendation model (`model.zip`)
+  3. Обчислити top-K рекомендацій або застосувати fallback, якщо модель недоступна
+  4. Повернути `PersonalizedRecommendationsResultDto`
+- **Side effects (синхронно):** observability для inference latency/fallback rate.
+- **Async / «магія»:** модель тренується і промотується фоновими Hangfire jobs.
+- **Приймає:** query `limit` (default 12).
+- **Повертає:** `PersonalizedRecommendationsResultDto` (`userId`, `modelVersion`, `usedFallback`, `items[]`).
