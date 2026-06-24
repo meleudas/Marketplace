@@ -7,6 +7,7 @@ public static class CatalogCacheKeys
     public const string AllCategories = "admin:categories:all";
     public const string ProductList = "catalog:products:list";
     public const string ProductDetailPrefix = "catalog:products:detail:";
+    public const string SimilarProductsPrefix = "catalog:products:similar:";
     public const string CatalogCompanyByIdPrefix = "catalog:companies:id:";
     public const string CatalogCompanyBySlugPrefix = "catalog:companies:slug:";
     public const string AdminCompanyByIdPrefix = "admin:companies:id:";

@@ -18,6 +18,7 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
 {
     private readonly ElasticsearchClient _client;
     private readonly ElasticsearchOptions _options;
+    private readonly ProductSearchIndexManager _indexManager;
     private readonly IProductRepository _productRepository;
     private readonly IProductDetailRepository _productDetailRepository;
     private readonly IWarehouseStockRepository _stockRepository;
@@ -26,6 +27,7 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
     public ElasticsearchProductSearchService(
         ElasticsearchClient client,
         IOptions<ElasticsearchOptions> options,
+        ProductSearchIndexManager indexManager,
         IProductRepository productRepository,
         IProductDetailRepository productDetailRepository,
         IWarehouseStockRepository stockRepository,
@@ -33,6 +35,7 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
     {
         _client = client;
         _options = options.Value;
+        _indexManager = indexManager;
         _productRepository = productRepository;
         _productDetailRepository = productDetailRepository;
         _stockRepository = stockRepository;
@@ -57,12 +60,12 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
 
         try
         {
-            await EnsureIndexExistsAsync(ct);
+            await _indexManager.EnsureIndexExistsAsync(ct);
 
             var cursorValues = DecodeSearchAfter(searchAfter);
             var response = await _client.SearchAsync<ProductSearchDocument>(s =>
             {
-                s.Indices(_options.ProductsIndex);
+                s.Indices(_indexManager.IndexName);
                 s.Size(Math.Clamp(pageSize, 1, 200));
                 if (cursorValues.Count > 0)
                     s.SearchAfter(cursorValues);
@@ -126,7 +129,7 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
         if (!_options.Enabled)
             return;
 
-        await EnsureIndexExistsAsync(ct);
+        await _indexManager.EnsureIndexExistsAsync(ct);
 
         var product = await _productRepository.GetByIdAsync(ProductId.From(productId), ct);
         if (product is null || product.IsDeleted || product.Status != ProductStatus.Active)
@@ -163,7 +166,7 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
         };
 
         var indexResponse = await _client.IndexAsync(document, i => i
-            .Index(_options.ProductsIndex)
+            .Index(_indexManager.IndexName)
             .Id(productId), ct);
 
         if (!indexResponse.IsValidResponse)
@@ -175,8 +178,8 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
         if (!_options.Enabled)
             return;
 
-        await EnsureIndexExistsAsync(ct);
-        _ = await _client.DeleteAsync(new DeleteRequest(_options.ProductsIndex, productId), ct);
+        await _indexManager.EnsureIndexExistsAsync(ct);
+        _ = await _client.DeleteAsync(new DeleteRequest(_indexManager.IndexName, productId), ct);
     }
 
     public async Task FullReindexAsync(CancellationToken ct = default)
@@ -184,21 +187,12 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
         if (!_options.Enabled)
             return;
 
-        await EnsureIndexExistsAsync(ct);
+        await _indexManager.EnsureIndexExistsAsync(ct);
         var products = await _productRepository.ListActiveAsync(ct);
         foreach (var product in products)
         {
             await UpsertProductAsync(product.Id.Value, ct);
         }
-    }
-
-    private async Task EnsureIndexExistsAsync(CancellationToken ct)
-    {
-        var exists = await _client.Indices.ExistsAsync(_options.ProductsIndex, ct);
-        if (exists.Exists)
-            return;
-
-        _ = await _client.Indices.CreateAsync(_options.ProductsIndex, cancellationToken: ct);
     }
 
     private static ProductListItemDto ToProductListItem(ProductSearchDocument x) =>
