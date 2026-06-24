@@ -7,5 +7,6 @@ public enum AppNotificationChannelKind
     Push = 1,
     InApp = 2,
     Email = 4,
-    Telegram = 8
+    Telegram = 8,
+    Sms = 16
 }

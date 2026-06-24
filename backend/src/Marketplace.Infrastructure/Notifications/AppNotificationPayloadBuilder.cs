@@ -61,6 +61,7 @@ public sealed class AppNotificationPayloadBuilder
         return new AppNotificationEnvelope
         {
             TemplateKey = request.TemplateKey,
+            TemplateVersion = AppNotificationTemplateVersions.GetVersion(request.TemplateKey),
             CorrelationId = request.CorrelationId,
             Channels = request.Channels,
             Audience = request.Audience,
@@ -89,6 +90,7 @@ public sealed class AppNotificationPayloadBuilder
         return new AppNotificationEnvelope
         {
             TemplateKey = request.TemplateKey,
+            TemplateVersion = AppNotificationTemplateVersions.GetVersion(request.TemplateKey),
             CorrelationId = request.CorrelationId,
             Channels = request.Channels,
             Audience = request.Audience,
@@ -117,6 +119,7 @@ public sealed class AppNotificationPayloadBuilder
         return new AppNotificationEnvelope
         {
             TemplateKey = request.TemplateKey,
+            TemplateVersion = AppNotificationTemplateVersions.GetVersion(request.TemplateKey),
             CorrelationId = request.CorrelationId,
             Channels = request.Channels,
             Audience = request.Audience,
@@ -145,6 +148,7 @@ public sealed class AppNotificationPayloadBuilder
         return new AppNotificationEnvelope
         {
             TemplateKey = request.TemplateKey,
+            TemplateVersion = AppNotificationTemplateVersions.GetVersion(request.TemplateKey),
             CorrelationId = request.CorrelationId,
             Channels = request.Channels,
             Audience = request.Audience,
@@ -175,6 +179,7 @@ public sealed class AppNotificationPayloadBuilder
         return new AppNotificationEnvelope
         {
             TemplateKey = request.TemplateKey,
+            TemplateVersion = AppNotificationTemplateVersions.GetVersion(request.TemplateKey),
             CorrelationId = request.CorrelationId,
             Channels = request.Channels,
             Audience = request.Audience,
@@ -206,6 +211,7 @@ public sealed class AppNotificationPayloadBuilder
         return new AppNotificationEnvelope
         {
             TemplateKey = request.TemplateKey,
+            TemplateVersion = AppNotificationTemplateVersions.GetVersion(request.TemplateKey),
             CorrelationId = request.CorrelationId,
             Channels = request.Channels,
             Audience = request.Audience,
@@ -236,6 +242,7 @@ public sealed class AppNotificationPayloadBuilder
         return new AppNotificationEnvelope
         {
             TemplateKey = request.TemplateKey,
+            TemplateVersion = AppNotificationTemplateVersions.GetVersion(request.TemplateKey),
             CorrelationId = request.CorrelationId,
             Channels = request.Channels,
             Audience = request.Audience,
@@ -267,6 +274,7 @@ public sealed class AppNotificationPayloadBuilder
         return new AppNotificationEnvelope
         {
             TemplateKey = request.TemplateKey,
+            TemplateVersion = AppNotificationTemplateVersions.GetVersion(request.TemplateKey),
             CorrelationId = request.CorrelationId,
             Channels = request.Channels,
             Audience = request.Audience,
@@ -291,6 +299,7 @@ public sealed class AppNotificationPayloadBuilder
         return new AppNotificationEnvelope
         {
             TemplateKey = request.TemplateKey,
+            TemplateVersion = AppNotificationTemplateVersions.GetVersion(request.TemplateKey),
             CorrelationId = request.CorrelationId,
             Channels = request.Channels,
             Audience = request.Audience,
@@ -319,6 +328,7 @@ public sealed class AppNotificationPayloadBuilder
         return new AppNotificationEnvelope
         {
             TemplateKey = request.TemplateKey,
+            TemplateVersion = AppNotificationTemplateVersions.GetVersion(request.TemplateKey),
             CorrelationId = request.CorrelationId,
             Channels = request.Channels,
             Audience = request.Audience,

@@ -139,6 +139,7 @@ public sealed class InAppNotificationChannel : INotificationChannel
         }
 
         root["templateKey"] = envelope.TemplateKey;
+        root["templateVersion"] = envelope.TemplateVersion;
         root["jobCorrelationId"] = envelope.CorrelationId.ToString("N");
         return root.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
     }

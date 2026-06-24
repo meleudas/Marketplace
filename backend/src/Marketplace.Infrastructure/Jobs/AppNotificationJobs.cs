@@ -1,10 +1,15 @@
 using Hangfire;
+using Marketplace.Application.Common;
+using Marketplace.Application.Common.Observability;
+using Marketplace.Application.Common.Options;
+using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Notifications;
 using Marketplace.Application.Notifications.Ports;
 using Marketplace.Infrastructure.Notifications;
 using Marketplace.Application.Common.Observability;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace Marketplace.Infrastructure.Jobs;
 
@@ -14,6 +19,8 @@ public sealed class AppNotificationJobs
     private readonly AppNotificationPayloadBuilder _payloadBuilder;
     private readonly IInAppNotificationRepository _inAppNotifications;
     private readonly IOptionsMonitor<AppNotificationOptions> _appNotificationOptions;
+    private readonly IIntegrationRetryStore _integrationRetryStore;
+    private readonly IntegrationRetryOptions _retryOptions;
     private readonly ILogger<AppNotificationJobs> _logger;
 
     public AppNotificationJobs(
@@ -21,12 +28,16 @@ public sealed class AppNotificationJobs
         AppNotificationPayloadBuilder payloadBuilder,
         IInAppNotificationRepository inAppNotifications,
         IOptionsMonitor<AppNotificationOptions> appNotificationOptions,
+        IIntegrationRetryStore integrationRetryStore,
+        IOptions<IntegrationRetryOptions> retryOptions,
         ILogger<AppNotificationJobs> logger)
     {
         _channels = channels;
         _payloadBuilder = payloadBuilder;
         _inAppNotifications = inAppNotifications;
         _appNotificationOptions = appNotificationOptions;
+        _integrationRetryStore = integrationRetryStore;
+        _retryOptions = retryOptions.Value;
         _logger = logger;
     }
 
@@ -84,7 +95,7 @@ public sealed class AppNotificationJobs
                         new KeyValuePair<string, object?>("status", "success")
                     ]);
                 }
-                catch
+                catch (Exception ex)
                 {
                     MarketplaceMetrics.NotificationChannelErrors.Add(1,
                     [
@@ -97,6 +108,30 @@ public sealed class AppNotificationJobs
                         new KeyValuePair<string, object?>("channel", channel.Kind.ToString()),
                         new KeyValuePair<string, object?>("status", "failed")
                     ]);
+                    var nextAttempt = RetryBackoffCalculator.ComputeNextAttemptUtc(
+                        1,
+                        _retryOptions.BaseBackoffMinutes,
+                        _retryOptions.MaxBackoffMinutes,
+                        DateTime.UtcNow);
+                    await _integrationRetryStore.UpsertAsync(
+                        new IntegrationRetryUpsert(
+                            IntegrationRetryKinds.NotificationDispatch,
+                            "AppNotification",
+                            $"{correlationId:N}:{channel.Kind}",
+                            JsonSerializer.Serialize(new
+                            {
+                                templateKey,
+                                correlationId,
+                                channels,
+                                audience,
+                                targetUserId,
+                                targetCompanyId,
+                                payloadJson,
+                                channel = channel.Kind.ToString()
+                            }),
+                            ex.Message),
+                        nextAttempt,
+                        ct);
                     throw;
                 }
             }

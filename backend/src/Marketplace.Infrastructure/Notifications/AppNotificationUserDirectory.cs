@@ -22,6 +22,8 @@ public sealed class AppNotificationUserDirectory : IAppNotificationUserContactRe
             u.EmailConfirmed,
             u.TelegramChatId,
             u.NotifyAppByEmail,
-            u.NotifyAppByTelegram);
+            u.NotifyAppByTelegram,
+            u.PhoneNumber,
+            u.PhoneNumberConfirmed);
     }
 }

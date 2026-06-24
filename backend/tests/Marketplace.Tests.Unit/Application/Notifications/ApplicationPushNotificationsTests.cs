@@ -2,6 +2,8 @@ using System.Security.Claims;
 using System.Text.Json;
 using Marketplace.API.Controllers;
 using Marketplace.Application.Auth.Ports;
+using Marketplace.Application.Common.Options;
+using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Notifications;
 using Marketplace.Application.Notifications.Ports;
 using Marketplace.Domain.Notifications.Enums;
@@ -59,6 +61,7 @@ public sealed class ApplicationPushNotificationsTests
 
         Assert.Contains("Shipped", envelope.Body, StringComparison.Ordinal);
         Assert.Equal("https://shop.example/orders/5", envelope.ActionUrl);
+        Assert.Equal(AppNotificationTemplateVersions.GetVersion(AppNotificationTemplateKeys.UserOrderStatus), envelope.TemplateVersion);
     }
 
     [Fact]
@@ -326,7 +329,7 @@ public sealed class ApplicationPushNotificationsTests
     {
         var emails = new RecordingEmailPort();
         var uid = Guid.NewGuid();
-        var contacts = new FixedContactReader(new AppNotificationUserContact("a@b.c", true, null, true, true));
+        var contacts = new FixedContactReader(new AppNotificationUserContact("a@b.c", true, null, true, true, null, false));
         var opts = new StaticOptionsMonitor<AppNotificationOptions>(new AppNotificationOptions { EmailEnabled = true });
         var channel = new EmailNotificationChannel(
             emails,
@@ -361,7 +364,7 @@ public sealed class ApplicationPushNotificationsTests
     public async Task TelegramNotificationChannel_Skips_When_NoChatId()
     {
         var tg = new RecordingTelegramPort();
-        var contacts = new FixedContactReader(new AppNotificationUserContact("a@b.c", true, null, true, true));
+        var contacts = new FixedContactReader(new AppNotificationUserContact("a@b.c", true, null, true, true, null, false));
         var opts = new StaticOptionsMonitor<AppNotificationOptions>(new AppNotificationOptions { TelegramEnabled = true });
         var channel = new TelegramAppChannel(
             tg,
@@ -398,6 +401,8 @@ public sealed class ApplicationPushNotificationsTests
             new AppNotificationPayloadBuilder(new StaticOptionsMonitor<FrontendOptions>(new FrontendOptions())),
             repo,
             opts,
+            new NoopIntegrationRetryStore(),
+            Options.Create(new IntegrationRetryOptions()),
             NullLogger<AppNotificationJobs>.Instance);
 
         await jobs.PruneExpiredInAppNotificationsAsync(CancellationToken.None);
@@ -645,5 +650,15 @@ public sealed class ApplicationPushNotificationsTests
             Task.FromResult<IReadOnlyList<PushSubscriptionDto>>([]);
 
         public Task DeleteByIdAsync(long id, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class NoopIntegrationRetryStore : IIntegrationRetryStore
+    {
+        public Task UpsertAsync(IntegrationRetryUpsert request, DateTime nextAttemptAtUtc, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<IReadOnlyList<IntegrationRetryEntry>> ListDueAsync(int batchSize, DateTime utcNow, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<IntegrationRetryEntry>>([]);
+        public Task MarkResolvedAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
+        public Task MarkFailedAsync(Guid id, string error, DateTime nextAttemptAtUtc, CancellationToken ct = default) => Task.CompletedTask;
+        public Task MarkDeadLetterAsync(Guid id, string reason, string category, CancellationToken ct = default) => Task.CompletedTask;
     }
 }

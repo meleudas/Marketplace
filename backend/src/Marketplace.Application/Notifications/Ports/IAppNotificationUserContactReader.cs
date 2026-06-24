@@ -6,7 +6,9 @@ public sealed record AppNotificationUserContact(
     bool EmailConfirmed,
     string? TelegramChatId,
     bool NotifyAppByEmail,
-    bool NotifyAppByTelegram);
+    bool NotifyAppByTelegram,
+    string? PhoneNumber,
+    bool PhoneNumberConfirmed);
 
 public interface IAppNotificationUserContactReader
 {

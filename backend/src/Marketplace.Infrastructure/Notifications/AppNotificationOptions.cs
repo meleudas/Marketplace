@@ -10,6 +10,8 @@ public sealed class AppNotificationOptions
     /// <summary>Повідомлення в Telegram через <c>ITelegramPort</c> (окремо від 2FA).</summary>
     public bool TelegramEnabled { get; set; } = true;
 
+    public bool SmsEnabled { get; set; } = false;
+
     /// <summary>Термін зберігання in-app рядка; 0 = без закінчення.</summary>
     public int InAppDefaultTtlDays { get; set; } = 90;
 
