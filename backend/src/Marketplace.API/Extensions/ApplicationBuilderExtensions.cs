@@ -12,6 +12,7 @@ public static class ApplicationBuilderExtensions
         app.UseCors(ServiceCollectionExtensions.GetCorsPolicyName());
         app.UseAuthentication();
         app.UseMiddleware<JwtCookieMiddleware>();
+        app.UseMiddleware<RateLimitingMiddleware>();
         app.UseAuthorization();
         return app;
     }

@@ -26,6 +26,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<WarehouseStockRecord> WarehouseStocks => Set<WarehouseStockRecord>();
     public DbSet<StockMovementRecord> StockMovements => Set<StockMovementRecord>();
     public DbSet<InventoryReservationRecord> InventoryReservations => Set<InventoryReservationRecord>();
+    public DbSet<OrderFulfillmentAllocationRecord> OrderFulfillmentAllocations => Set<OrderFulfillmentAllocationRecord>();
+    public DbSet<OrderFinancialsRecord> OrderFinancials => Set<OrderFinancialsRecord>();
+    public DbSet<SellerLedgerEntryRecord> SellerLedgerEntries => Set<SellerLedgerEntryRecord>();
+    public DbSet<SettlementBatchRecord> SettlementBatches => Set<SettlementBatchRecord>();
+    public DbSet<SellerPayoutRecord> SellerPayouts => Set<SellerPayoutRecord>();
     public DbSet<ProductRecord> Products => Set<ProductRecord>();
     public DbSet<ProductDetailRecord> ProductDetails => Set<ProductDetailRecord>();
     public DbSet<ProductImageRecord> ProductImages => Set<ProductImageRecord>();
@@ -43,11 +48,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<UserAddressRecord> UserAddresses => Set<UserAddressRecord>();
     public DbSet<ShippingMethodRecord> ShippingMethods => Set<ShippingMethodRecord>();
     public DbSet<ShipmentRecord> Shipments => Set<ShipmentRecord>();
+    public DbSet<ShipmentItemRecord> ShipmentItems => Set<ShipmentItemRecord>();
     public DbSet<ShippingQuoteRecord> ShippingQuotes => Set<ShippingQuoteRecord>();
     public DbSet<ShippingEventRecord> ShippingEvents => Set<ShippingEventRecord>();
+    public DbSet<ReturnRequestRecord> ReturnRequests => Set<ReturnRequestRecord>();
+    public DbSet<ReturnLineItemRecord> ReturnLineItems => Set<ReturnLineItemRecord>();
     public DbSet<PaymentRecord> Payments => Set<PaymentRecord>();
     public DbSet<RefundRecord> Refunds => Set<RefundRecord>();
     public DbSet<OutboxMessageRecord> OutboxMessages => Set<OutboxMessageRecord>();
+    public DbSet<IntegrationRetryRecord> IntegrationRetries => Set<IntegrationRetryRecord>();
     public DbSet<InboxMessageRecord> InboxMessages => Set<InboxMessageRecord>();
     public DbSet<HttpIdempotencyRequestRecord> HttpIdempotencyRequests => Set<HttpIdempotencyRequestRecord>();
     public DbSet<ProductReviewRecord> ProductReviews => Set<ProductReviewRecord>();

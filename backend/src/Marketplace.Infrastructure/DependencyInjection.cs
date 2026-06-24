@@ -4,13 +4,20 @@ using Hangfire.PostgreSql;
 using Elastic.Clients.Elasticsearch;
 using Marketplace.Application.Auth.Options;
 using Marketplace.Application.Auth.Ports;
+using Marketplace.Application.Common.RateLimiting;
+using Marketplace.Infrastructure.RateLimiting;
 using Marketplace.Application.Notifications;
 using Marketplace.Application.Carts.Ports;
 using Marketplace.Application.Common.Options;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Inventory.Options;
 using Marketplace.Application.Coupons.Options;
+using Marketplace.Application.Finance.Options;
 using Marketplace.Application.Coupons.Services;
+using Marketplace.Application.Coupons.Validation;
+using Marketplace.Application.Products.Options;
 using Marketplace.Application.Products.Ports;
+using Marketplace.Application.Products.Services;
 using Marketplace.Application.Payments.Ports;
 using Marketplace.Application.Shipping.Ports;
 using Marketplace.Application.Shipping.Options;
@@ -19,14 +26,17 @@ using Marketplace.Application.Chats.Options;
 using Marketplace.Application.Support.Options;
 using Marketplace.Application.Support.Ports;
 using Marketplace.Application.Chats.Ports;
+using Marketplace.Application.Finance.Ports;
 using Marketplace.Infrastructure.Chats;
 using Marketplace.Application.Behavior.Options;
+using Marketplace.Application.Behavior.Ports;
 using Marketplace.Domain.Categories.Repositories;
 using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Cart.Repositories;
 using Marketplace.Domain.Companies.Repositories;
 using Marketplace.Domain.Coupons.Repositories;
 using Marketplace.Domain.Favorites.Repositories;
+using Marketplace.Domain.Finance.Repositories;
 using Marketplace.Domain.Users.Repositories;
 using Marketplace.Domain.Inventory.Repositories;
 using Marketplace.Domain.Orders.Repositories;
@@ -35,12 +45,16 @@ using Marketplace.Domain.Reviews.Repositories;
 using Marketplace.Domain.Reports.Repositories;
 using Marketplace.Domain.Chats.Repositories;
 using Marketplace.Domain.Support.Repositories;
+using Marketplace.Domain.Returns.Repositories;
 using Marketplace.Domain.Shipping.Repositories;
 using Marketplace.Domain.Behavior.Repositories;
 using Marketplace.Infrastructure.Caching;
 using Marketplace.Infrastructure.External.Email;
+using Marketplace.Infrastructure.External.Analytics;
+using Marketplace.Infrastructure.External.Finance;
 using Marketplace.Infrastructure.External.OAuth;
 using Marketplace.Infrastructure.External.Search;
+using Marketplace.Infrastructure.External.Recommendations;
 using Marketplace.Infrastructure.External.Sms;
 using Marketplace.Infrastructure.External.Telegram;
 using Marketplace.Infrastructure.External.Storage;
@@ -83,16 +97,29 @@ public static class DependencyInjection
         services.Configure<FrontendOptions>(configuration.GetSection(FrontendOptions.SectionName));
         services.Configure<CacheTtlOptions>(configuration.GetSection(CacheTtlOptions.SectionName));
         services.Configure<ElasticsearchOptions>(configuration.GetSection(ElasticsearchOptions.SectionName));
+        services.Configure<SimilarProductsOptions>(configuration.GetSection(SimilarProductsOptions.SectionName));
+        services.Configure<RecommendationModelOptions>(configuration.GetSection(RecommendationModelOptions.SectionName));
+        services.Configure<RecommendationTrainingOptions>(configuration.GetSection(RecommendationTrainingOptions.SectionName));
         services.Configure<LiqPayOptions>(configuration.GetSection(LiqPayOptions.SectionName));
         services.Configure<ShippingOptions>(configuration.GetSection(ShippingOptions.SectionName));
+        services.Configure<SettlementOptions>(configuration.GetSection(SettlementOptions.SectionName));
         services.Configure<CouponsOptions>(configuration.GetSection(CouponsOptions.SectionName));
+        services.Configure<CheckoutInventoryOptions>(configuration.GetSection(CheckoutInventoryOptions.SectionName));
         services.Configure<ReportsOptions>(configuration.GetSection(ReportsOptions.SectionName));
         services.Configure<ChatsOptions>(configuration.GetSection(ChatsOptions.SectionName));
         services.Configure<SupportOptions>(configuration.GetSection(SupportOptions.SectionName));
         services.Configure<BehaviorAnalyticsOptions>(configuration.GetSection(BehaviorAnalyticsOptions.SectionName));
+        services.Configure<ClickHouseOptions>(configuration.GetSection(ClickHouseOptions.SectionName));
         services.Configure<NovaPoshtaOptions>(configuration.GetSection(NovaPoshtaOptions.SectionName));
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         services.Configure<WebPushOptions>(configuration.GetSection(WebPushOptions.SectionName));
+        services.Configure<OutboxOptions>(configuration.GetSection(OutboxOptions.SectionName));
+        services.Configure<IntegrationRetryOptions>(configuration.GetSection(IntegrationRetryOptions.SectionName));
+        services.Configure<Marketplace.Application.Orders.Options.OrderCancellationOptions>(
+            configuration.GetSection(Marketplace.Application.Orders.Options.OrderCancellationOptions.SectionName));
+        services.Configure<Marketplace.Application.Returns.Options.ReturnRequestOptions>(
+            configuration.GetSection(Marketplace.Application.Returns.Options.ReturnRequestOptions.SectionName));
+        services.Configure<RateLimitingOptions>(configuration.GetSection(RateLimitingOptions.SectionName));
 
         var connectionString = configuration.GetConnectionString("Database")
             ?? throw new InvalidOperationException("Connection string 'Database' is not configured.");
@@ -198,6 +225,12 @@ public static class DependencyInjection
             services.AddSingleton<ICacheService>(sp => sp.GetRequiredService<MemoryCacheService>());
         }
 
+        var redisConnectionForRateLimit = configuration.GetConnectionString("Redis");
+        if (!string.IsNullOrWhiteSpace(redisConnectionForRateLimit))
+            services.AddSingleton<IRateLimitCounterStore, RedisRateLimitCounterStore>();
+        else
+            services.AddSingleton<IRateLimitCounterStore, MemoryRateLimitCounterStore>();
+
         services.AddHangfire(config =>
         {
             config.UseSimpleAssemblyNameTypeSerializer()
@@ -224,6 +257,8 @@ public static class DependencyInjection
         services.TryAddEnumerable(ServiceDescriptor.Scoped<INotificationChannel, InAppNotificationChannel>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<INotificationChannel, EmailNotificationChannel>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<INotificationChannel, TelegramAppChannel>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<INotificationChannel, SmsNotificationChannel>());
+        services.AddScoped<IAppNotificationRedispatcher, HangfireAppNotificationRedispatcher>();
         services.AddScoped<IInAppNotificationRepository, InAppNotificationRepository>();
         services.AddScoped<IAdminNotificationRecipientIds, AdminNotificationRecipientIds>();
         services.AddScoped<ICompanyOrderNotificationRecipientIds, CompanyOrderNotificationRecipientIds>();
@@ -232,7 +267,12 @@ public static class DependencyInjection
         services.AddScoped<InventoryJobs>();
         services.AddScoped<SearchIndexJobs>();
         services.AddScoped<PaymentJobs>();
+        services.AddScoped<SettlementBatchJob>();
+        services.AddScoped<SellerPayoutProcessor>();
         services.AddScoped<OutboxDispatcherJobs>();
+        services.AddScoped<IntegrationRetryProcessor>();
+        services.AddScoped<IntegrationRetryJobs>();
+        services.AddScoped<ShippingSyncJobs>();
         services.AddScoped<ProductImageJobs>();
         services.AddScoped<MediaCleanupJobs>();
         services.AddScoped<SupportHelpdeskSyncHandler>();
@@ -241,10 +281,13 @@ public static class DependencyInjection
         services.AddScoped<IOutboxEventProcessor, OutboxEventProcessor>();
         services.AddScoped<IAppCachePort, AppCachePort>();
         services.AddScoped<IOutboxWriter, OutboxRepository>();
+        services.AddScoped<IIntegrationRetryStore, IntegrationRetryRepository>();
         services.AddScoped<IInboxDeduplicator, InboxDeduplicator>();
         services.AddScoped<IHttpIdempotencyStore, HttpIdempotencyStore>();
         services.AddScoped<IAppTransactionPort, AppTransactionPort>();
         services.AddHttpClient<ILiqPayPort, LiqPayClient>();
+        services.AddHttpClient<LiqPaySellerPayoutAdapter>();
+        services.AddScoped<ISellerPayoutPort, ManualSellerPayoutAdapter>();
         services.AddHttpClient<INovaPoshtaPort, NovaPoshtaClient>();
         services.AddSingleton(sp =>
         {
@@ -254,8 +297,20 @@ public static class DependencyInjection
                 settings = settings.Authentication(new Elastic.Transport.BasicAuthentication(options.Username, options.Password));
             return new ElasticsearchClient(settings);
         });
+        services.AddScoped<ProductSearchIndexManager>();
         services.AddScoped<IProductSearchService, ElasticsearchProductSearchService>();
         services.AddScoped<IProductSearchIndexer, ElasticsearchProductSearchService>();
+        services.AddScoped<IProductSimilarityService, ElasticsearchProductSimilarityService>();
+        services.AddScoped<IPersonalizedRecommendationService, MlNetPersonalizedRecommendationService>();
+        services.AddSingleton<IRecommendationModelRegistry, ObjectStorageRecommendationModelRegistry>();
+        services.AddScoped<IRecommendationModelTrainer, MlNetRecommendationModelTrainer>();
+        services.AddHttpClient<IRecommendationTrainingDataReader, ClickHouseRecommendationTrainingDataReader>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<IOptions<ClickHouseOptions>>().Value;
+            client.BaseAddress = new Uri(options.Url);
+        });
+        services.AddSingleton<RecommendationModelLoader>();
+        services.AddScoped<SimilarProductsOrchestrator>();
         services.AddScoped<IProductSearchIndexDispatcher, HangfireProductSearchIndexDispatcher>();
         services.AddScoped<IProductImageProcessingDispatcher, HangfireProductImageProcessingDispatcher>();
         services.AddScoped<IImageCompressionPolicy, AdaptiveImageCompressionPolicy>();
@@ -275,6 +330,11 @@ public static class DependencyInjection
         services.AddScoped<ICouponRepository, CouponRepository>();
         services.AddScoped<ICouponUsageRepository, CouponUsageRepository>();
         services.AddScoped<ICartCouponLinkRepository, CartCouponLinkRepository>();
+        services.AddScoped<CouponEligibilityEvaluator>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<Marketplace.Application.Coupons.Validation.ICouponRule, Marketplace.Application.Coupons.Validation.ActiveWindowCouponRule>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<Marketplace.Application.Coupons.Validation.ICouponRule, Marketplace.Application.Coupons.Validation.CompanyScopeCouponRule>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<Marketplace.Application.Coupons.Validation.ICouponRule, Marketplace.Application.Coupons.Validation.UsageLimitsCouponRule>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<Marketplace.Application.Coupons.Validation.ICouponRule, Marketplace.Application.Coupons.Validation.MinOrderAmountCouponRule>());
         services.AddScoped<CouponCartValidationService>();
         services.AddScoped<ICouponCheckoutService, CouponCheckoutService>();
         services.AddScoped<IFavoriteRepository, FavoriteRepository>();
@@ -285,8 +345,11 @@ public static class DependencyInjection
         services.AddScoped<IUserAddressRepository, UserAddressRepository>();
         services.AddScoped<IShippingMethodRepository, ShippingMethodRepository>();
         services.AddScoped<IShipmentRepository, ShipmentRepository>();
+        services.AddScoped<IShipmentItemRepository, ShipmentItemRepository>();
         services.AddScoped<IShippingQuoteRepository, ShippingQuoteRepository>();
         services.AddScoped<IShippingEventRepository, ShippingEventRepository>();
+        services.AddScoped<IReturnRequestRepository, ReturnRequestRepository>();
+        services.AddScoped<IReturnLineItemRepository, ReturnLineItemRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IRefundRepository, RefundRepository>();
         services.AddScoped<IProductReviewRepository, ProductReviewRepository>();
@@ -313,12 +376,24 @@ public static class DependencyInjection
         services.AddScoped<IWarehouseStockRepository, WarehouseStockRepository>();
         services.AddScoped<IStockMovementRepository, StockMovementRepository>();
         services.AddScoped<IInventoryReservationRepository, InventoryReservationRepository>();
+        services.AddScoped<IOrderFulfillmentAllocationRepository, OrderFulfillmentAllocationRepository>();
+        services.AddScoped<IOrderFinancialsRepository, OrderFinancialsRepository>();
+        services.AddScoped<ISellerLedgerRepository, SellerLedgerRepository>();
+        services.AddScoped<ISettlementBatchRepository, SettlementBatchRepository>();
+        services.AddScoped<ISellerPayoutRepository, SellerPayoutRepository>();
         services.AddScoped<GoogleOAuthService>();
         services.AddScoped<IGoogleOAuthPort>(sp => sp.GetRequiredService<GoogleOAuthService>());
         services.AddScoped<ITelegramLinkCodeStore, TelegramLinkCodeStore>();
         services.AddHttpClient<TelegramBotSender>();
         services.AddScoped<Marketplace.Application.Behavior.Services.BehaviorPayloadRedactionService>();
         services.AddScoped<BehaviorAggregationJobs>();
+        services.AddScoped<AnalyticsWarehouseAggregationJobs>();
+        services.AddScoped<RecommendationModelJobs>();
+        services.AddHttpClient<IAnalyticsWarehouseWriter, ClickHouseAnalyticsWarehouseWriter>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<IOptions<ClickHouseOptions>>().Value;
+            client.BaseAddress = new Uri(options.Url);
+        });
 
         var telegramOptions = configuration.GetSection(TelegramOptions.SectionName).Get<TelegramOptions>() ?? new TelegramOptions();
         if (!string.IsNullOrWhiteSpace(telegramOptions.BotToken))

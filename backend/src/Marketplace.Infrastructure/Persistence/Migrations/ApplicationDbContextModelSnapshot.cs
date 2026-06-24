@@ -1701,6 +1701,13 @@ namespace Marketplace.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("CancelledAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("CancellationComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<short?>("CancellationReasonCode")
+                        .HasColumnType("smallint");
+
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
@@ -1835,6 +1842,8 @@ namespace Marketplace.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrderId", "ChangedAt");
 
+                    b.HasIndex("ChangedByUserId", "OrderId");
+
                     b.ToTable("order_status_history", (string)null);
                 });
 
@@ -1899,6 +1908,71 @@ namespace Marketplace.Infrastructure.Persistence.Migrations
                     b.HasIndex("ProcessedAtUtc", "NextAttemptAtUtc");
 
                     b.ToTable("outbox_messages", (string)null);
+                });
+
+            modelBuilder.Entity("Marketplace.Infrastructure.Persistence.Entities.IntegrationRetryRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AggregateId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("AggregateType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeadLetterCategory")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("DeadLetterReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime?>("DeadLetteredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime?>("NextAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<DateTime?>("ResolvedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeadLetteredAtUtc");
+
+                    b.HasIndex("NextAttemptAtUtc");
+
+                    b.HasIndex("Kind", "AggregateType", "AggregateId")
+                        .IsUnique();
+
+                    b.ToTable("integration_retries", (string)null);
                 });
 
             modelBuilder.Entity("Marketplace.Infrastructure.Persistence.Entities.PaymentRecord", b =>

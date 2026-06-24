@@ -4,6 +4,7 @@ using Marketplace.API.Options;
 using Marketplace.API.Chats;
 using Marketplace.Application.Chats.Ports;
 using Marketplace.Application;
+using Marketplace.Infrastructure.Health;
 using Marketplace.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -24,6 +25,7 @@ public static class ServiceCollectionExtensions
 
         services.AddApplication();
         services.AddInfrastructure(configuration, ConfigureGoogleIfPresent(configuration));
+        services.AddMarketplaceHealthChecks(configuration);
         services.AddSignalR();
         services.AddScoped<IChatRealtimeNotifier, SignalRChatRealtimeNotifier>();
 

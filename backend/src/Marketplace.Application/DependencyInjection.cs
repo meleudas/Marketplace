@@ -4,13 +4,22 @@ using Marketplace.Application.Inventory.Authorization;
 using Marketplace.Application.Products.Authorization;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Orders.Authorization;
+using Marketplace.Application.Orders.Options;
+using Marketplace.Application.Orders.Policies;
 using Marketplace.Application.Orders.Services;
 using Marketplace.Application.Reviews.Authorization;
 using Marketplace.Application.Reviews.Services;
 using Marketplace.Application.Users.Services;
 using Marketplace.Application.Payments.Services;
+using Marketplace.Application.Returns.Options;
+using Marketplace.Application.Returns.Policies;
+using Marketplace.Application.Shipping.Policies;
+using Marketplace.Application.Shipping.Services;
 using Marketplace.Application.Carts.Services;
+using Marketplace.Application.Finance.Authorization;
+using Marketplace.Application.Finance.Services;
 using Marketplace.Application.Inventory.Services;
+using Marketplace.Application.Inventory.Options;
 using Marketplace.Application.Chats.Policies;
 using Marketplace.Application.Support.Policies;
 using Marketplace.Application.Support.Services;
@@ -40,7 +49,9 @@ public static class DependencyInjection
         services.AddScoped<IInventoryAccessService, InventoryAccessService>();
         services.AddScoped<IProductAccessService, ProductAccessService>();
         services.AddScoped<IOrderAccessService, OrderAccessService>();
+        services.AddScoped<OrderCancellationPolicy>();
         services.AddScoped<IOrderCacheInvalidationService, OrderCacheInvalidationService>();
+        services.AddScoped<OrderMutationCoordinator>();
         services.AddScoped<IOrderStatusHistoryWriter, OrderStatusHistoryWriter>();
         services.AddScoped<IReviewAccessService, ReviewAccessService>();
         services.AddScoped<IReviewPurchaseVerificationService, ReviewPurchaseVerificationService>();
@@ -48,6 +59,10 @@ public static class DependencyInjection
         services.AddScoped<IOrderPaymentStateApplier, OrderPaymentStateApplier>();
         services.AddScoped<ICartStockWatchSyncService, CartStockWatchSyncService>();
         services.AddScoped<IRestockAvailabilityNotifier, RestockAvailabilityNotifier>();
+        services.AddScoped<IInventoryReservationReleaseService, InventoryReservationReleaseService>();
+        services.AddScoped<WarehouseAllocationPlanner>();
+        services.AddScoped<IFulfillmentInventoryService, FulfillmentInventoryService>();
+        services.AddScoped<ICheckoutInventoryService, CheckoutInventoryService>();
         services.AddScoped<ChatAccessPolicy>();
         services.AddScoped<ChatAntiSpamPolicy>();
         services.AddScoped<ChatContentModerationPolicy>();
@@ -57,6 +72,13 @@ public static class DependencyInjection
         services.AddScoped<SupportAntiAbusePolicy>();
         services.AddScoped<HelpdeskWebhookSignatureValidator>();
         services.AddScoped<SupportHelpdeskOutboxPublisher>();
+        services.AddScoped<IShipmentFulfillmentService, ShipmentFulfillmentService>();
+        services.AddScoped<IShipmentAccessPolicy, ShipmentAccessPolicy>();
+        services.AddScoped<ReturnRequestPolicy>();
+        services.AddScoped<IPaymentRefundExecutor, PaymentRefundExecutor>();
+        services.AddScoped<IFinanceAccessService, FinanceAccessService>();
+        services.AddScoped<SellerLedgerService>();
+        services.AddScoped<IOrderFinancialsWriter, OrderFinancialsWriter>();
 
         return services;
     }

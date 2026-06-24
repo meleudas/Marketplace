@@ -2,6 +2,7 @@ using Hangfire;
 using Marketplace.API.Extensions;
 using Marketplace.API.Options;
 using Marketplace.Application.Payments.Ports;
+using Marketplace.Application.Products.Options;
 using Marketplace.Infrastructure.External.Email;
 using Marketplace.Infrastructure.Jobs;
 using Microsoft.AspNetCore.Authorization;
@@ -42,6 +43,10 @@ if (app.Environment.IsDevelopment())
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
+    var recommendationOptions = app.Configuration
+        .GetSection(RecommendationModelOptions.SectionName)
+        .Get<RecommendationModelOptions>() ?? new RecommendationModelOptions();
+
     RecurringJob.AddOrUpdate<InventoryJobs>(
         "inventory-expire-reservations",
         job => job.ExpireReservationsAsync(default),
@@ -58,6 +63,14 @@ if (!app.Environment.IsEnvironment("Testing"))
         "outbox-dispatch-pending",
         job => job.DispatchPendingAsync(default),
         Cron.Minutely);
+    RecurringJob.AddOrUpdate<IntegrationRetryJobs>(
+        "integration-retry-dispatch",
+        job => job.DispatchDueAsync(default),
+        Cron.Minutely);
+    RecurringJob.AddOrUpdate<ShippingSyncJobs>(
+        "shipping-sync-pending",
+        job => job.SyncPendingAsync(default),
+        Cron.Hourly);
     RecurringJob.AddOrUpdate<BehaviorAggregationJobs>(
         "behavior-aggregate-daily",
         job => job.AggregateDailyAsync(default),
@@ -66,6 +79,14 @@ if (!app.Environment.IsEnvironment("Testing"))
         "behavior-prune-raw-retention",
         job => job.PruneRawRetentionAsync(90, default),
         Cron.Daily(4));
+    RecurringJob.AddOrUpdate<AnalyticsWarehouseAggregationJobs>(
+        "analytics-warehouse-rebuild-signals",
+        job => job.RebuildUserItemSignalsAsync(default),
+        Cron.Hourly);
+    RecurringJob.AddOrUpdate<AnalyticsWarehouseAggregationJobs>(
+        "analytics-warehouse-rebuild-funnel",
+        job => job.RebuildFunnelDailyAsync(default),
+        Cron.Hourly);
     RecurringJob.AddOrUpdate<MediaCleanupJobs>(
         "media-cleanup-orphans",
         job => job.CleanupOrphansAsync(default),
@@ -78,6 +99,29 @@ if (!app.Environment.IsEnvironment("Testing"))
         "support-helpdesk-reconcile",
         job => job.ReconcileAsync(default),
         Cron.Hourly);
+    RecurringJob.AddOrUpdate<SettlementBatchJob>(
+        "finance-settlement-batch",
+        job => job.RunAsync(default),
+        Cron.Hourly);
+    RecurringJob.AddOrUpdate<SellerPayoutProcessor>(
+        "finance-seller-payout",
+        job => job.ProcessAsync(default),
+        Cron.Hourly);
+    if (recommendationOptions.Enabled)
+    {
+        RecurringJob.AddOrUpdate<RecommendationModelJobs>(
+            "recommendation-model-train",
+            job => job.TrainAndValidateAsync(default),
+            recommendationOptions.RetrainCron);
+        RecurringJob.AddOrUpdate<RecommendationModelJobs>(
+            "recommendation-model-promote",
+            job => job.PromoteCandidateAsync(default),
+            recommendationOptions.PromoteCron);
+        RecurringJob.AddOrUpdate<RecommendationModelJobs>(
+            "recommendation-model-cleanup",
+            job => job.PruneOldArtifactsAsync(default),
+            recommendationOptions.CleanupCron);
+    }
 }
 
 app.MapControllers();
@@ -94,6 +138,33 @@ if (openTelemetryOptions.EnableLegacyPrometheusEndpoint)
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
     .WithName("HealthCheck")
+    .WithTags("Health");
+
+app.MapGet("/health/live", () => Results.Ok(new { status = "ok" }))
+    .WithName("HealthLive")
+    .WithTags("Health");
+
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var postgresUnhealthy = report.Entries.TryGetValue("postgres", out var pg) && pg.Status == Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy;
+        context.Response.StatusCode = postgresUnhealthy
+            ? StatusCodes.Status503ServiceUnavailable
+            : StatusCodes.Status200OK;
+        var payload = new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.ToDictionary(
+                x => x.Key,
+                x => new { status = x.Value.Status.ToString(), description = x.Value.Description })
+        };
+        await context.Response.WriteAsJsonAsync(payload);
+    }
+})
+    .WithName("HealthReady")
     .WithTags("Health");
 
 app.MapGet("/health/sendgrid", async (IEmailHealthProbe probe, CancellationToken ct) =>
