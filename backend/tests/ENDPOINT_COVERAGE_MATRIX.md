@@ -44,4 +44,25 @@ Legend: **U** = Unit.Api, **L** = Integration.Light, **C** = Integration.Contain
 | Payment sync job | | | C | | JobSmokePostgresTests |
 | Elasticsearch reachability | | | C | | Ping container |
 
+## P4 finance / fulfillment (seed-backed)
+
+| Route | U | L | C | E | Notes |
+|-------|---|---|---|---|-------|
+| `GET /companies/{id}/earnings/summary` | U | | C | E | SeedFinanceE2ETests + FinanceSettlementPostgresTests |
+| `GET /companies/{id}/settlements` | U | | | E | SeedFinanceE2ETests |
+| `PATCH /companies/{id}/payout-profile` | U | | | | ApiCompanyFinanceControllerTests |
+| `GET /admin/settlements` | U | | | E | SeedFinanceE2ETests |
+| `POST /admin/settlements/{id}/approve-payout` | U | | C | | FinanceSettlementPostgresTests |
+| `GET /companies/{id}/orders/{orderId}` (fulfillment) | | | C | E | SeedP4FulfillmentE2ETests |
+| `GET /companies/{id}/orders/{orderId}/shipments` | U | | C | E | Seed + ShipmentFulfillmentPostgresTests |
+| `POST /companies/{id}/orders/{orderId}/shipments` | U | | C | | ShipmentFulfillmentPostgresTests |
+| `GET /me/orders/{orderId}/shipments` | U | | | E | SeedP4FulfillmentE2ETests |
+| `GET /me/returns` | U | | | E | SeedCouponReturnChatE2ETests |
+| `GET /me/chats` | U | | | E | SeedCouponReturnChatE2ETests |
+| `POST /me/chats/{id}/messages` | U | | | E | SeedCouponReturnChatE2ETests |
+| `POST /me/cart/coupons/validate` | U | L | | E | Seed SEED10 |
+| `GET /catalog/products/{slug}` | U | | | E | SeedCatalogE2ETests |
+| `GET /me/orders/{id}` | U | L | | E | SeedOrdersE2ETests |
+| All HTTP routes (catalog smoke) | | | | E | ApiEndpointCatalogSmokeTests (`Suite=ApiCatalogSmoke`) |
+
 Update this table when adding or changing routes in `src/Marketplace.API/Docs/Endpoints/`.

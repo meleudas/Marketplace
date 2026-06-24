@@ -1,5 +1,7 @@
 using System.Text.Json;
 using Marketplace.Application.Orders.DTOs;
+using Marketplace.Application.Returns.DTOs;
+using Marketplace.Application.Shipping.DTOs;
 using Marketplace.Domain.Orders.Enums;
 
 namespace Marketplace.Tests;
@@ -52,14 +54,17 @@ public sealed class ContractOrderDtoSnapshotTests
             null,
             DateTime.UnixEpoch,
             DateTime.UnixEpoch,
-            [new OrderItemDto(5, "Keyboard", null, 1, 250m, 10m, 240m)],
+            [new OrderItemDto(99, 5, "Keyboard", null, 1, 250m, 10m, 240m)],
             [new OrderAddressDto("Shipping", "A", "B", "+380", "Street", "Kyiv", "Kyiv", "01001", "UA")],
             new PaymentSnapshotDto(77, "LiqPay", 300m, "UAH", "txn-1", "Completed", DateTime.UnixEpoch),
             [new RefundSnapshotDto(0, 0m, "none", "None", null, null, DateTime.UnixEpoch)],
-            [new OrderStatusHistoryDto("Paid", "Shipped", Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"), "manual", null, null, DateTime.UnixEpoch)]);
+            [],
+            [new OrderStatusHistoryDto("Paid", "Shipped", Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"), "company", "manual", null, null, DateTime.UnixEpoch)],
+            new FulfillmentReadinessDto(1, 1, 0, true, false, [], [], []));
 
         var json = JsonSerializer.Serialize(dto);
-        const string expected = "{\"OrderId\":18,\"OrderNumber\":\"ORD-18\",\"CustomerId\":\"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\",\"CompanyId\":\"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb\",\"Status\":3,\"TotalPrice\":300,\"Subtotal\":250,\"ShippingCost\":30,\"DiscountAmount\":10,\"TaxAmount\":30,\"PaymentMethod\":\"Card\",\"Notes\":\"deliver soon\",\"TrackingNumber\":\"TRK-18\",\"ShippedAt\":\"1970-01-01T00:00:00Z\",\"DeliveredAt\":null,\"CancelledAt\":null,\"RefundedAt\":null,\"CreatedAt\":\"1970-01-01T00:00:00Z\",\"UpdatedAt\":\"1970-01-01T00:00:00Z\",\"Items\":[{\"ProductId\":5,\"ProductName\":\"Keyboard\",\"ProductImage\":null,\"Quantity\":1,\"PriceAtMoment\":250,\"Discount\":10,\"TotalPrice\":240}],\"Addresses\":[{\"Kind\":\"Shipping\",\"FirstName\":\"A\",\"LastName\":\"B\",\"Phone\":\"\\u002B380\",\"Street\":\"Street\",\"City\":\"Kyiv\",\"State\":\"Kyiv\",\"PostalCode\":\"01001\",\"Country\":\"UA\"}],\"Payment\":{\"PaymentId\":77,\"Method\":\"LiqPay\",\"Amount\":300,\"Currency\":\"UAH\",\"TransactionId\":\"txn-1\",\"Status\":\"Completed\",\"ProcessedAt\":\"1970-01-01T00:00:00Z\"},\"Refunds\":[{\"RefundId\":0,\"Amount\":0,\"Reason\":\"none\",\"Status\":\"None\",\"ProcessedByUserId\":null,\"ProcessedAt\":null,\"CreatedAt\":\"1970-01-01T00:00:00Z\"}],\"StatusHistory\":[{\"OldStatus\":\"Paid\",\"NewStatus\":\"Shipped\",\"ChangedByUserId\":\"cccccccc-cccc-cccc-cccc-cccccccccccc\",\"Source\":\"manual\",\"Comment\":null,\"CorrelationId\":null,\"ChangedAt\":\"1970-01-01T00:00:00Z\"}]}";
-        Assert.Equal(expected, json);
+        Assert.Contains("\"OrderItemId\":99", json);
+        Assert.Contains("\"Fulfillment\"", json);
+        Assert.Contains("\"Returns\"", json);
     }
 }

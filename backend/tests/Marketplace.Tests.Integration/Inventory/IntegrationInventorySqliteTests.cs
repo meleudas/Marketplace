@@ -1,6 +1,8 @@
 using Marketplace.Application.Catalog.Cache;
 using Marketplace.Application.Common.Exceptions;
+using Marketplace.Application.Common.Options;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Tests.Common.Fakes;
 using Marketplace.Application.Inventory.Authorization;
 using Marketplace.Application.Inventory.Commands.ReleaseReservation;
 using Marketplace.Application.Inventory.Commands.ReserveStock;
@@ -16,6 +18,7 @@ using Marketplace.Infrastructure.Persistence;
 using Marketplace.Infrastructure.Persistence.Repositories;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Marketplace.Tests;
 
@@ -54,15 +57,11 @@ public class IntegrationInventorySqliteTests
             new StubOutboxWriter(),
             new NoOpTransactionPort());
 
+        var releaseService = CreateReleaseService(db);
         var releaseHandler = new ReleaseReservationCommandHandler(
             new AllowInventoryAccessService(),
             new InventoryReservationRepository(db),
-            new WarehouseStockRepository(db),
-            new ProductRepository(db),
-            new SpyCachePort(),
-            new StubOutboxWriter(),
-            new NoOpTransactionPort(),
-            new SpyRestockNotifier());
+            releaseService);
 
         var reserve = await reserveHandler.Handle(
             new ReserveStockCommand(companyId, warehouseId, productId, 4, reservationCode, 20, "order-1", actorId, false),
@@ -194,7 +193,12 @@ public class IntegrationInventorySqliteTests
                 null),
             CancellationToken.None);
 
-        var job = new InventoryJobs(reservationRepo, stockRepo);
+        var releaseService = CreateReleaseService(db);
+        var job = new InventoryJobs(
+            reservationRepo,
+            releaseService,
+            new NoopIntegrationRetryStore(),
+            Options.Create(new IntegrationRetryOptions()));
         await job.ExpireReservationsAsync(CancellationToken.None);
 
         var stock = await stockRepo.GetByWarehouseAndProductAsync(WarehouseId.From(warehouseId), ProductId.From(productId), CancellationToken.None);
@@ -205,6 +209,17 @@ public class IntegrationInventorySqliteTests
         Assert.Equal(0, stock!.Reserved);
         Assert.Equal(InventoryReservationStatus.Expired, reservation!.Status);
     }
+
+    private static InventoryReservationReleaseService CreateReleaseService(ApplicationDbContext db)
+        => new(
+            new WarehouseStockRepository(db),
+            new InventoryReservationRepository(db),
+            new StockMovementRepository(db),
+            new ProductRepository(db),
+            new SpyCachePort(),
+            new StubOutboxWriter(),
+            new NoOpTransactionPort(),
+            new SpyRestockNotifier());
 
     private static async Task<ApplicationDbContext> CreateSqliteContextAsync()
     {
@@ -287,5 +302,19 @@ public class IntegrationInventorySqliteTests
         public Task MarkFailedAsync(Guid id, string error, DateTime nextAttemptAtUtc, CancellationToken ct = default) => Task.CompletedTask;
         public Task MarkDeadLetterAsync(Guid id, string reason, string category, CancellationToken ct = default) => Task.CompletedTask;
         public Task RequeueDeadLetterAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListDeadLettersAsync(int page, int pageSize, CancellationToken ct = default)
+            => OutboxWriterFakeDefaults.EmptyListAsync(page, pageSize, ct);
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListStuckAsync(DateTime utcNow, int page, int pageSize, CancellationToken ct = default)
+            => OutboxWriterFakeDefaults.EmptyListAsync(page, pageSize, ct);
+    }
+
+    private sealed class NoopIntegrationRetryStore : IIntegrationRetryStore
+    {
+        public Task UpsertAsync(IntegrationRetryUpsert request, DateTime nextAttemptAtUtc, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<IReadOnlyList<IntegrationRetryEntry>> ListDueAsync(int batchSize, DateTime utcNow, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<IntegrationRetryEntry>>([]);
+        public Task MarkResolvedAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
+        public Task MarkFailedAsync(Guid id, string error, DateTime nextAttemptAtUtc, CancellationToken ct = default) => Task.CompletedTask;
+        public Task MarkDeadLetterAsync(Guid id, string reason, string category, CancellationToken ct = default) => Task.CompletedTask;
     }
 }

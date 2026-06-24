@@ -18,6 +18,7 @@ using Marketplace.Infrastructure.Persistence;
 using Marketplace.Infrastructure.Persistence.Repositories;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Marketplace.Tests.Common.Fakes;
 
 namespace Marketplace.Tests;
 
@@ -40,12 +41,13 @@ public sealed class IntegrationPaymentsSqliteTests
             new FakeLiqPayPort(),
             paymentRepo,
             orderRepo,
-            new OrderCacheInvalidationService(new NoopCachePort()),
+            OrderTestDoubles.CreateCoordinator(new OrderCacheInvalidationService(new NoopCachePort()), new OutboxRepository(db)),
             new OrderPaymentStateApplier(),
-            new OutboxRepository(db),
             new OrderStatusHistoryWriter(new OrderStatusHistoryRepository(db)),
             new InboxDeduplicator(db),
-            new NoopAppNotificationScheduler());
+            new NoopAppNotificationScheduler(),
+            new NoopCheckoutInventoryService(),
+            new NoopOrderFinancialsWriter());
 
         var first = await handler.Handle(new HandleLiqPayWebhookCommand(payload, "sig-1", "idem-a"), CancellationToken.None);
         var second = await handler.Handle(new HandleLiqPayWebhookCommand(payload, "sig-1", "idem-b"), CancellationToken.None);
@@ -77,12 +79,15 @@ public sealed class IntegrationPaymentsSqliteTests
             Payment.Create(PaymentId.From(0), order.Id, PaymentMethodKind.LiqPay, new Money(220), "UAH", "ORD-SQL-PAY-2", PaymentTransactionStatus.Completed, JsonBlob.Empty),
             CancellationToken.None);
 
-        var handler = new RequestRefundCommandHandler(
+        var handler = new RequestRefundCommandHandler(new PaymentRefundExecutor(
             paymentRepo,
             refundRepo,
             orderRepo,
             new FakeLiqPayPort(),
-            new OrderStatusHistoryWriter(new OrderStatusHistoryRepository(db)));
+            new OrderStatusHistoryWriter(new OrderStatusHistoryRepository(db)),
+            new OrderPaymentStateApplier(),
+            OrderTestDoubles.CreateCoordinator(new OrderCacheInvalidationService(new NoopCachePort()), new OutboxRepository(db)),
+            new NoopOrderFinancialsWriter()));
 
         var result = await handler.Handle(new RequestRefundCommand(payment.Id.Value, 120m, "manual refund", Guid.NewGuid()), CancellationToken.None);
 
@@ -111,10 +116,10 @@ public sealed class IntegrationPaymentsSqliteTests
             paymentRepo,
             orderRepo,
             new FakeLiqPayPort { StatusResponse = "failure" },
-            new OrderCacheInvalidationService(new NoopCachePort()),
+            OrderTestDoubles.CreateCoordinator(new OrderCacheInvalidationService(new NoopCachePort()), new OutboxRepository(db)),
             new OrderPaymentStateApplier(),
-            new OutboxRepository(db),
-            new OrderStatusHistoryWriter(new OrderStatusHistoryRepository(db)));
+            new OrderStatusHistoryWriter(new OrderStatusHistoryRepository(db)),
+            new NoopCheckoutInventoryService());
 
         var result = await handler.Handle(new SyncPaymentStatusCommand(payment.Id.Value), CancellationToken.None);
         var savedPayment = await paymentRepo.GetByIdAsync(payment.Id, CancellationToken.None);

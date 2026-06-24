@@ -2,18 +2,28 @@ using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Notifications;
 using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Orders.Authorization;
+using Marketplace.Application.Orders.Policies;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Orders.Commands.CancelOrder;
+using Marketplace.Application.Orders.Options;
+using Marketplace.Application.Orders.Policies;
 using Marketplace.Application.Orders.Commands.UpdateOrderStatus;
 using Marketplace.Application.Orders.Services;
+using Marketplace.Application.Shipping.DTOs;
+using Marketplace.Application.Shipping.Services;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Entities;
 using Marketplace.Domain.Orders.Enums;
 using Marketplace.Domain.Orders.Repositories;
+using Marketplace.Domain.Shared.Kernel;
+using Marketplace.Domain.Shipping.Entities;
+using Marketplace.Domain.Shipping.Enums;
 using Marketplace.Infrastructure.Persistence;
 using Marketplace.Infrastructure.Persistence.Repositories;
+using Marketplace.Tests.Common.Fakes;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Marketplace.Tests;
 
@@ -27,15 +37,15 @@ public sealed class IntegrationOrdersSqliteTests
         var orderRepo = new OrderRepository(db);
         var statusHistoryRepo = new OrderStatusHistoryRepository(db);
         var outbox = new OutboxRepository(db);
-        var cache = new SpyCachePort();
+        var cache = new VersionTrackingCachePort();
         var notificationSpy = new SpyAppNotificationScheduler();
-
         var order = await orderRepo.AddAsync(BuildOrder(OrderStatus.Paid), CancellationToken.None);
+
         var handler = new UpdateOrderStatusCommandHandler(
             orderRepo,
             new AllowAccessService(),
-            new OrderCacheInvalidationService(cache),
-            outbox,
+            new NoopShipmentFulfillmentService(),
+            OrderTestDoubles.CreateCoordinator(new OrderCacheInvalidationService(cache), outbox),
             new OrderStatusHistoryWriter(statusHistoryRepo),
             notificationSpy);
 
@@ -62,6 +72,7 @@ public sealed class IntegrationOrdersSqliteTests
         Assert.Equal(3, outboxRows.Count);
         Assert.Equal(3, notificationSpy.Requests.Count);
         Assert.Contains(cache.RemovedKeys, x => x == OrderCacheKeys.Detail(order.Id.Value));
+        Assert.True(cache.VersionValues[OrderCacheKeys.MyListVersion(order.CustomerId)] >= 4);
     }
 
     [Fact]
@@ -71,19 +82,22 @@ public sealed class IntegrationOrdersSqliteTests
         var orderRepo = new OrderRepository(db);
         var statusHistoryRepo = new OrderStatusHistoryRepository(db);
         var outbox = new OutboxRepository(db);
-        var cache = new SpyCachePort();
+        var cache = new VersionTrackingCachePort();
+        var order = await orderRepo.AddAsync(BuildOrder(OrderStatus.Pending), CancellationToken.None);
         var handler = new CancelOrderCommandHandler(
             orderRepo,
             new AllowAccessService(),
-            new OrderCacheInvalidationService(cache),
-            outbox,
+            new OrderCancellationPolicy(Options.Create(new OrderCancellationOptions())),
+            OrderTestDoubles.CreateCoordinator(new OrderCacheInvalidationService(cache), outbox),
             new OrderStatusHistoryWriter(statusHistoryRepo),
-            new SpyAppNotificationScheduler());
+            new SpyAppNotificationScheduler(),
+            new NoopCheckoutInventoryService());
 
-        var order = await orderRepo.AddAsync(BuildOrder(OrderStatus.Pending), CancellationToken.None);
+        var versionBefore = await new OrderCacheInvalidationService(cache).GetListVersionAsync("my", order.CustomerId, null, CancellationToken.None);
         var result = await handler.Handle(
-            new CancelOrderCommand(order.Id.Value, Guid.NewGuid(), false, "idem-order-cancel-1"),
+            new CancelOrderCommand(order.Id.Value, order.CustomerId, false, OrderCancellationReasonCode.ChangedMind, "test", "idem-order-cancel-1"),
             CancellationToken.None);
+        var versionAfter = await new OrderCacheInvalidationService(cache).GetListVersionAsync("my", order.CustomerId, null, CancellationToken.None);
 
         var saved = await orderRepo.GetByIdAsync(order.Id, CancellationToken.None);
         var history = await statusHistoryRepo.ListByOrderIdAsync(order.Id, CancellationToken.None);
@@ -94,6 +108,7 @@ public sealed class IntegrationOrdersSqliteTests
         Assert.Equal(OrderStatus.Cancelled, saved!.Status);
         Assert.Single(history);
         Assert.Single(outboxRows);
+        Assert.True(versionAfter > versionBefore);
     }
 
     [Fact]
@@ -106,12 +121,97 @@ public sealed class IntegrationOrdersSqliteTests
         _ = await orderRepo.AddAsync(BuildOrder(OrderStatus.Pending, actorA), CancellationToken.None);
         _ = await orderRepo.AddAsync(BuildOrder(OrderStatus.Pending, actorB), CancellationToken.None);
 
-        var listA = await orderRepo.ListAsync(new OrderListFilter(actorA, null, null, null, null, null, null, 1, 20), CancellationToken.None);
-        var listB = await orderRepo.ListAsync(new OrderListFilter(actorB, null, null, null, null, null, null, 1, 20), CancellationToken.None);
+        var listA = await orderRepo.ListAsync(new OrderListFilter(actorA, null, null, null, null, null, null, null, 1, 20), CancellationToken.None);
+        var listB = await orderRepo.ListAsync(new OrderListFilter(actorB, null, null, null, null, null, null, null, 1, 20), CancellationToken.None);
 
         Assert.Single(listA.Items);
         Assert.Single(listB.Items);
         Assert.NotEqual(listA.Items[0].CustomerId, listB.Items[0].CustomerId);
+    }
+
+    [Fact]
+    public async Task ListAsync_Filters_By_CompanyId_For_Admin_Scope()
+    {
+        await using var db = await CreateSqliteContextAsync();
+        var orderRepo = new OrderRepository(db);
+        var companyA = Guid.NewGuid();
+        var companyB = Guid.NewGuid();
+        _ = await orderRepo.AddAsync(BuildOrder(OrderStatus.Pending, companyId: companyA), CancellationToken.None);
+        _ = await orderRepo.AddAsync(BuildOrder(OrderStatus.Pending, companyId: companyB), CancellationToken.None);
+
+        var list = await orderRepo.ListAsync(
+            new OrderListFilter(null, companyA, null, null, null, null, null, null, 1, 20),
+            CancellationToken.None);
+
+        Assert.Single(list.Items);
+        Assert.Equal(companyA, list.Items[0].CompanyId.Value);
+    }
+
+    [Fact]
+    public async Task ListAsync_Filters_By_CompanyMemberUserId_Via_Status_History()
+    {
+        await using var db = await CreateSqliteContextAsync();
+        var orderRepo = new OrderRepository(db);
+        var companyId = Guid.NewGuid();
+        var managerId = Guid.NewGuid();
+        var otherManagerId = Guid.NewGuid();
+        var orderWithManager = await orderRepo.AddAsync(BuildOrder(OrderStatus.Processing, companyId: companyId), CancellationToken.None);
+        var orderWithoutManager = await orderRepo.AddAsync(BuildOrder(OrderStatus.Paid, companyId: companyId), CancellationToken.None);
+
+        await SeedStatusHistoryAsync(db, orderWithManager.Id.Value, managerId, OrderStatus.Pending, OrderStatus.Processing);
+        await SeedStatusHistoryAsync(db, orderWithoutManager.Id.Value, otherManagerId, OrderStatus.Pending, OrderStatus.Paid);
+
+        var list = await orderRepo.ListAsync(
+            new OrderListFilter(null, companyId, managerId, null, null, null, null, null, 1, 20),
+            CancellationToken.None);
+
+        Assert.Single(list.Items);
+        Assert.Equal(orderWithManager.Id.Value, list.Items[0].Id.Value);
+    }
+
+    [Fact]
+    public async Task ListAsync_Filters_By_Statuses_And_Search()
+    {
+        await using var db = await CreateSqliteContextAsync();
+        var orderRepo = new OrderRepository(db);
+        var companyId = Guid.NewGuid();
+        var uniqueNumber = $"ORD-SEARCH-{Guid.NewGuid():N}"[..20];
+        _ = await orderRepo.AddAsync(BuildOrder(OrderStatus.Pending, companyId: companyId, orderNumber: uniqueNumber), CancellationToken.None);
+        _ = await orderRepo.AddAsync(BuildOrder(OrderStatus.Delivered, companyId: companyId), CancellationToken.None);
+
+        var byStatus = await orderRepo.ListAsync(
+            new OrderListFilter(null, companyId, null, [OrderStatus.Pending], null, null, null, null, 1, 20),
+            CancellationToken.None);
+        var bySearch = await orderRepo.ListAsync(
+            new OrderListFilter(null, companyId, null, null, null, null, uniqueNumber, null, 1, 20),
+            CancellationToken.None);
+
+        Assert.Single(byStatus.Items);
+        Assert.Equal(OrderStatus.Pending, byStatus.Items[0].Status);
+        Assert.Single(bySearch.Items);
+        Assert.Equal(uniqueNumber, bySearch.Items[0].OrderNumber);
+    }
+
+    private static async Task SeedStatusHistoryAsync(
+        ApplicationDbContext db,
+        long orderId,
+        Guid changedByUserId,
+        OrderStatus oldStatus,
+        OrderStatus newStatus)
+    {
+        var now = DateTime.UtcNow;
+        db.OrderStatusHistory.Add(new Marketplace.Infrastructure.Persistence.Entities.OrderStatusHistoryRecord
+        {
+            OrderId = orderId,
+            OldStatus = (short)oldStatus,
+            NewStatus = (short)newStatus,
+            ChangedByUserId = changedByUserId,
+            Source = "manual",
+            ChangedAt = now,
+            CreatedAt = now,
+            UpdatedAt = now
+        });
+        await db.SaveChangesAsync();
     }
 
     private static async Task<ApplicationDbContext> CreateSqliteContextAsync()
@@ -126,14 +226,14 @@ public sealed class IntegrationOrdersSqliteTests
         return context;
     }
 
-    private static Order BuildOrder(OrderStatus status, Guid? customerId = null)
+    private static Order BuildOrder(OrderStatus status, Guid? customerId = null, Guid? companyId = null, string? orderNumber = null)
     {
         var now = DateTime.UtcNow;
         return Order.Reconstitute(
             OrderId.From(0),
-            $"ORD-SQL-{Guid.NewGuid():N}"[..16],
+            orderNumber ?? $"ORD-SQL-{Guid.NewGuid():N}"[..16],
             customerId ?? Guid.NewGuid(),
-            CompanyId.From(Guid.NewGuid()),
+            CompanyId.From(companyId ?? Guid.NewGuid()),
             status,
             new Money(100),
             new Money(100),
@@ -161,6 +261,15 @@ public sealed class IntegrationOrdersSqliteTests
 
         public Task<bool> CanReadCompanyScopeAsync(Guid companyId, Guid actorUserId, bool isActorAdmin, CancellationToken ct = default)
             => Task.FromResult(true);
+
+        public Task<OrderCancellationActor> ResolveCancellationActorAsync(Order order, Guid actorUserId, bool isActorAdmin, CancellationToken ct = default)
+        {
+            if (isActorAdmin)
+                return Task.FromResult(OrderCancellationActor.Admin);
+            if (order.CustomerId == actorUserId)
+                return Task.FromResult(OrderCancellationActor.Buyer);
+            return Task.FromResult(OrderCancellationActor.CompanyMember);
+        }
     }
 
     private sealed class SpyAppNotificationScheduler : IAppNotificationScheduler
@@ -174,25 +283,29 @@ public sealed class IntegrationOrdersSqliteTests
         }
     }
 
-    private sealed class SpyCachePort : IAppCachePort
+    private sealed class NoopShipmentFulfillmentService : IShipmentFulfillmentService
     {
-        private readonly Dictionary<string, object> _items = new();
-        public List<string> RemovedKeys { get; } = [];
+        public Task<Result<Shipment>> CreateShipmentAsync(
+            Order order,
+            WarehouseId? warehouseId,
+            IReadOnlyList<CreateShipmentLineRequest> lines,
+            string? trackingNumber,
+            Guid actorUserId,
+            CancellationToken ct = default) =>
+            Task.FromResult(Result<Shipment>.Failure("not used"));
 
-        public Task<T?> GetAsync<T>(string key, CancellationToken ct = default) where T : class
-            => Task.FromResult(_items.TryGetValue(key, out var value) ? value as T : null);
+        public Task<Result> ApplyCarrierEventAsync(
+            ShippingCarrierCode carrier,
+            string eventKey,
+            string payloadHash,
+            string rawPayload,
+            CancellationToken ct = default) =>
+            Task.FromResult(Result.Success());
 
-        public Task SetAsync<T>(string key, T value, TimeSpan ttl, CancellationToken ct = default) where T : class
-        {
-            _items[key] = value!;
-            return Task.CompletedTask;
-        }
+        public Task<ShipmentFulfillmentSummary> BuildSummaryAsync(OrderId orderId, CancellationToken ct = default) =>
+            Task.FromResult(new ShipmentFulfillmentSummary(0, 0, 0, false, false));
 
-        public Task RemoveAsync(string key, CancellationToken ct = default)
-        {
-            RemovedKeys.Add(key);
-            _items.Remove(key);
-            return Task.CompletedTask;
-        }
+        public Task<FulfillmentReadinessDto> BuildReadinessDtoAsync(OrderId orderId, CancellationToken ct = default) =>
+            Task.FromResult(new FulfillmentReadinessDto(1, 1, 0, true, false, [], [], []));
     }
 }

@@ -127,7 +127,7 @@ public sealed class ApiRegressionIdempotencyTests
         var sender = new RecordingSender { NextResult = Result.Success() };
         var controller = BuildOrdersController(sender, new FixedIdempotencyStore(HttpIdempotencyBeginState.Started));
 
-        var result = await controller.Cancel(1, CancellationToken.None);
+        var result = await controller.Cancel(1, new CancelOrderRequest(OrderCancellationReasonCode.ChangedMind, null), CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }

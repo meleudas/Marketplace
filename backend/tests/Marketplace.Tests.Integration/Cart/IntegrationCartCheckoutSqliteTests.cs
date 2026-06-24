@@ -1,4 +1,5 @@
 using Marketplace.Application.Carts.Commands.CheckoutCart;
+using Marketplace.Application.Inventory.Services;
 using Marketplace.Application.Carts.DTOs;
 using Marketplace.Application.Carts.Ports;
 using Marketplace.Application.Common.Ports;
@@ -20,6 +21,7 @@ using Marketplace.Infrastructure.Persistence;
 using Marketplace.Infrastructure.Persistence.Repositories;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Marketplace.Tests.Common.Fakes;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Marketplace.Tests;
@@ -34,6 +36,7 @@ public sealed class IntegrationCartCheckoutSqliteTests
         await using var db = await CreateSqliteContextAsync();
         var fixture = await SeedCheckoutFixtureAsync(db);
 
+        var outbox = new OutboxRepository(db);
         var handler = new CheckoutCartCommandHandler(
             new CartRepository(db),
             new CartItemRepository(db),
@@ -44,10 +47,11 @@ public sealed class IntegrationCartCheckoutSqliteTests
             new PaymentRepository(db),
             new FakeLiqPayPort(),
             new NoopCachePort(),
-            new OrderCacheInvalidationService(new NoopCachePort()),
-            new OutboxRepository(db),
+            OrderTestDoubles.CreateCoordinator(new OrderCacheInvalidationService(new NoopCachePort()), outbox),
+            new NoopCheckoutInventoryService(),
             new NoopOrderStatusHistoryWriter(),
             new WarehouseStockRepository(db),
+            new WarehouseAllocationPlanner(new WarehouseRepository(db), new WarehouseStockRepository(db)),
             new NoopAppNotificationScheduler(),
             new NoopCartStockWatchRepository(),
             new ShippingMethodRepository(db),
@@ -88,10 +92,11 @@ public sealed class IntegrationCartCheckoutSqliteTests
             new PaymentRepository(db),
             new FakeLiqPayPort(),
             new NoopCachePort(),
-            new OrderCacheInvalidationService(new NoopCachePort()),
-            new ThrowingOutboxWriter(),
+            OrderTestDoubles.CreateCoordinator(new OrderCacheInvalidationService(new NoopCachePort()), new ThrowingOutboxWriter()),
+            new NoopCheckoutInventoryService(),
             new NoopOrderStatusHistoryWriter(),
             new WarehouseStockRepository(db),
+            new WarehouseAllocationPlanner(new WarehouseRepository(db), new WarehouseStockRepository(db)),
             new NoopAppNotificationScheduler(),
             new NoopCartStockWatchRepository(),
             new ShippingMethodRepository(db),
@@ -180,6 +185,17 @@ public sealed class IntegrationCartCheckoutSqliteTests
             CancellationToken.None);
 
         var stockRepository = new WarehouseStockRepository(db);
+        var warehouseRepository = new WarehouseRepository(db);
+        await warehouseRepository.AddAsync(
+            Marketplace.Domain.Inventory.Entities.Warehouse.Create(
+                WarehouseId.From(1),
+                CompanyId.From(companyId),
+                "Main",
+                "MAIN",
+                Address.Empty,
+                "UTC",
+                1),
+            CancellationToken.None);
         await stockRepository.AddAsync(
             WarehouseStock.Reconstitute(
                 WarehouseStockId.From(0),
@@ -237,6 +253,9 @@ public sealed class IntegrationCartCheckoutSqliteTests
 
     private sealed class NoopOrderStatusHistoryWriter : IOrderStatusHistoryWriter
     {
+        public Task RecordCreatedAsync(Order order, Guid actorUserId, string source, string? correlationId = null, CancellationToken ct = default)
+            => Task.CompletedTask;
+
         public Task WriteIfChangedAsync(Order order, OrderStatus oldStatus, Guid actorUserId, string source, string? comment = null, string? correlationId = null, CancellationToken ct = default)
             => Task.CompletedTask;
     }
@@ -280,14 +299,10 @@ public sealed class IntegrationCartCheckoutSqliteTests
         public Task MarkFailedAsync(Guid id, string error, DateTime nextAttemptAtUtc, CancellationToken ct = default) => Task.CompletedTask;
         public Task MarkDeadLetterAsync(Guid id, string reason, string category, CancellationToken ct = default) => Task.CompletedTask;
         public Task RequeueDeadLetterAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListDeadLettersAsync(int page, int pageSize, CancellationToken ct = default)
+            => OutboxWriterFakeDefaults.EmptyListAsync(page, pageSize, ct);
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListStuckAsync(DateTime utcNow, int page, int pageSize, CancellationToken ct = default)
+            => OutboxWriterFakeDefaults.EmptyListAsync(page, pageSize, ct);
     }
 
-    private sealed class NoopCouponCheckoutService : ICouponCheckoutService
-    {
-        public Task<CheckoutCouponDiscountResult> ResolveDiscountAsync(Guid actorUserId, CartId cartId, CompanyId companyId, decimal subtotal, CancellationToken ct = default)
-            => Task.FromResult(new CheckoutCouponDiscountResult(0, null, null));
-
-        public Task ConsumeAsync(Guid actorUserId, OrderId orderId, long couponId, string couponCode, decimal discountAmount, CancellationToken ct = default)
-            => Task.CompletedTask;
-    }
 }

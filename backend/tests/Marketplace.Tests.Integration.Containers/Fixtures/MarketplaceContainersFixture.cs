@@ -1,5 +1,7 @@
+using Marketplace.Application;
 using Marketplace.Infrastructure;
 using Marketplace.Infrastructure.Persistence;
+using Marketplace.Tests.Common.Seed;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -63,6 +65,9 @@ public sealed class MarketplaceContainersFixture : IAsyncLifetime
         await Marketplace.Infrastructure.DependencyInjection.InitializeDatabaseAsync(scope.ServiceProvider);
     }
 
+    public Task ApplySeedDataAsync(CancellationToken cancellationToken = default) =>
+        TestSeedDataLoader.ApplyAsync(PostgresConnectionString, cancellationToken);
+
     public async Task DisposeAsync()
     {
         await Task.WhenAll(
@@ -81,6 +86,7 @@ public sealed class MarketplaceContainersFixture : IAsyncLifetime
                 ["ConnectionStrings:Redis"] = RedisConnectionString,
                 ["Elasticsearch:Enabled"] = "true",
                 ["Elasticsearch:Url"] = ElasticsearchUrl,
+                ["Elasticsearch:ProductsIndex"] = "products-v2-test",
                 ["Storage:Enabled"] = "true",
                 ["Storage:Endpoint"] = MinioEndpoint,
                 ["Storage:AccessKey"] = "minioadmin",
@@ -99,12 +105,21 @@ public sealed class MarketplaceContainersFixture : IAsyncLifetime
                 ["WebPush:Enabled"] = "false",
                 ["AppNotifications:EmailEnabled"] = "false",
                 ["AppNotifications:TelegramEnabled"] = "false",
+                ["Shipping:Enabled"] = "true",
+                ["Shipping:NovaPoshtaEnabled"] = "true",
+                ["NovaPoshta:Enabled"] = "true",
+                ["Coupons:ReadEnabled"] = "true",
+                ["Chats:Enabled"] = "true",
+                ["Chats:ModerationEnabled"] = "true",
+                ["BehaviorAnalytics:BehaviorTrackingEnabled"] = "true",
+                ["ClickHouse:Enabled"] = "false",
             })
             .Build();
 
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(configuration);
         services.AddLogging();
+        services.AddApplication();
         services.AddInfrastructure(configuration);
         return services.BuildServiceProvider();
     }

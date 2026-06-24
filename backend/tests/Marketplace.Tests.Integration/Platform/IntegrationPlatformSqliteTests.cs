@@ -1,6 +1,6 @@
+using Marketplace.Application.Common.Ports;
 using Marketplace.Infrastructure.Persistence;
 using Marketplace.Infrastructure.Persistence.Repositories;
-using Marketplace.Application.Common.Ports;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -36,6 +36,45 @@ public sealed class IntegrationPlatformSqliteTests
         Assert.Null(requeued.DeadLetterReason);
         Assert.Equal(0, requeued.Attempts);
         Assert.NotNull(requeued.NextAttemptAtUtc);
+    }
+
+    [Fact]
+    public async Task OutboxRepository_ListDeadLetters_Returns_DeadLettered_Messages()
+    {
+        await using var db = await CreateSqliteContextAsync();
+        var repo = new OutboxRepository(db);
+        await repo.AppendAsync("Order", "1", "OrderCreated", "{}", CancellationToken.None);
+        var message = Assert.Single(await repo.ListPendingAsync(10, DateTime.UtcNow, CancellationToken.None));
+        await repo.MarkDeadLetterAsync(message.Id, "fatal", "exhausted", CancellationToken.None);
+
+        var (items, total) = await repo.ListDeadLettersAsync(1, 20, CancellationToken.None);
+
+        Assert.Equal(1, total);
+        Assert.Single(items);
+        Assert.Equal("exhausted", items[0].DeadLetterCategory);
+    }
+
+    [Fact]
+    public async Task IntegrationRetryStore_Upsert_Resolve_Lifecycle_Works()
+    {
+        await using var db = await CreateSqliteContextAsync();
+        var store = new IntegrationRetryRepository(db);
+        await store.UpsertAsync(
+            new IntegrationRetryUpsert(
+                IntegrationRetryKinds.PaymentSync,
+                "Payment",
+                "42",
+                "{\"paymentId\":42}",
+                "sync failed"),
+            DateTime.UtcNow,
+            CancellationToken.None);
+
+        var due = await store.ListDueAsync(10, DateTime.UtcNow, CancellationToken.None);
+        var entry = Assert.Single(due);
+        await store.MarkResolvedAsync(entry.Id, CancellationToken.None);
+
+        var after = await store.ListDueAsync(10, DateTime.UtcNow, CancellationToken.None);
+        Assert.Empty(after);
     }
 
     [Fact]

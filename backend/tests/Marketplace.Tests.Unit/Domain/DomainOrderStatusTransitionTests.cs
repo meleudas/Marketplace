@@ -25,7 +25,7 @@ public class DomainOrderStatusTransitionTests
     public void Order_Cancel_Rejects_From_Shipped()
     {
         var order = BuildOrder(OrderStatus.Shipped);
-        Assert.ThrowsAny<Exception>(() => order.Cancel());
+        Assert.ThrowsAny<Exception>(() => order.Cancel(OrderCancellationReasonCode.ChangedMind));
     }
 
     [Fact]
@@ -58,8 +58,8 @@ public class DomainOrderStatusTransitionTests
         var fromPending = BuildOrder(OrderStatus.Pending);
         var fromPaid = BuildOrder(OrderStatus.Paid);
 
-        fromPending.Cancel();
-        fromPaid.Cancel();
+        fromPending.Cancel(OrderCancellationReasonCode.ChangedMind);
+        fromPaid.Cancel(OrderCancellationReasonCode.ChangedMind);
 
         Assert.Equal(OrderStatus.Cancelled, fromPending.Status);
         Assert.Equal(OrderStatus.Cancelled, fromPaid.Status);
@@ -72,9 +72,18 @@ public class DomainOrderStatusTransitionTests
         var fromCancelled = BuildOrder(OrderStatus.Cancelled);
         var fromRefunded = BuildOrder(OrderStatus.Refunded);
 
-        Assert.ThrowsAny<Exception>(() => fromDelivered.Cancel());
-        Assert.ThrowsAny<Exception>(() => fromCancelled.Cancel());
-        Assert.ThrowsAny<Exception>(() => fromRefunded.Cancel());
+        Assert.ThrowsAny<Exception>(() => fromDelivered.Cancel(OrderCancellationReasonCode.FraudSuspected));
+        Assert.ThrowsAny<Exception>(() => fromCancelled.Cancel(OrderCancellationReasonCode.ChangedMind));
+        Assert.ThrowsAny<Exception>(() => fromRefunded.Cancel(OrderCancellationReasonCode.ChangedMind));
+    }
+
+    [Fact]
+    public void Order_Admin_Can_Cancel_Shipped_With_Override()
+    {
+        var order = BuildOrder(OrderStatus.Shipped);
+        order.Cancel(OrderCancellationReasonCode.FraudSuspected, "ops review", adminOverride: true);
+        Assert.Equal(OrderStatus.Cancelled, order.Status);
+        Assert.Equal(OrderCancellationReasonCode.FraudSuspected, order.CancellationReasonCode);
     }
 
     private static Order BuildOrder(OrderStatus status)

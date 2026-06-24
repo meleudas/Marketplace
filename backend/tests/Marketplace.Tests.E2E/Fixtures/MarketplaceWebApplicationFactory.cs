@@ -16,7 +16,12 @@ public sealed class MarketplaceWebApplicationFactory : WebApplicationFactory<Pro
     {
         // Testing — щоб Program.cs не викликав повторну міграцію при CreateClient (лише фікстура).
         builder.UseEnvironment("Testing");
-        builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(_settings));
+
+        var testConfiguration = new ConfigurationBuilder()
+            .AddInMemoryCollection(_settings)
+            .Build();
+
+        builder.UseConfiguration(testConfiguration);
     }
 
     public async Task InitializeDatabaseAsync()

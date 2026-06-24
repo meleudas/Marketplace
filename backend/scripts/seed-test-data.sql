@@ -9,6 +9,9 @@
 -- Includes: Identity + marketplace_users, categories, companies (uuid), members, contracts,
 -- products (active + pending moderation), inventory, carts + cart_stock_watches,
 -- orders + status history + payments/refunds, reviews,
+-- P4 multi-warehouse (allocations, split stock, order 4), shipments,
+-- finance (order_financials, seller_ledger, settlement_batches, seller_payouts, payout IBAN),
+-- coupons, returns, chats,
 -- notifications (in-app), push_subscriptions, outbox/inbox samples.
 
 \set ON_ERROR_STOP on
@@ -30,6 +33,22 @@ BEGIN
     IF to_regclass('public.company_reviews') IS NOT NULL THEN DELETE FROM company_reviews; END IF;
     IF to_regclass('public.product_reviews') IS NOT NULL THEN DELETE FROM product_reviews; END IF;
     IF to_regclass('public.refunds') IS NOT NULL THEN DELETE FROM refunds; END IF;
+    IF to_regclass('public.seller_payouts') IS NOT NULL THEN DELETE FROM seller_payouts; END IF;
+    IF to_regclass('public.seller_ledger_entries') IS NOT NULL THEN DELETE FROM seller_ledger_entries; END IF;
+    IF to_regclass('public.settlement_batches') IS NOT NULL THEN DELETE FROM settlement_batches; END IF;
+    IF to_regclass('public.order_financials') IS NOT NULL THEN DELETE FROM order_financials; END IF;
+    IF to_regclass('public.shipping_events') IS NOT NULL THEN DELETE FROM shipping_events; END IF;
+    IF to_regclass('public.shipment_items') IS NOT NULL THEN DELETE FROM shipment_items; END IF;
+    IF to_regclass('public.shipments') IS NOT NULL THEN DELETE FROM shipments; END IF;
+    IF to_regclass('public.order_fulfillment_allocations') IS NOT NULL THEN DELETE FROM order_fulfillment_allocations; END IF;
+    IF to_regclass('public.return_line_items') IS NOT NULL THEN DELETE FROM return_line_items; END IF;
+    IF to_regclass('public.return_requests') IS NOT NULL THEN DELETE FROM return_requests; END IF;
+    IF to_regclass('public.chat_messages') IS NOT NULL THEN DELETE FROM chat_messages; END IF;
+    IF to_regclass('public.chat_read_states') IS NOT NULL THEN DELETE FROM chat_read_states; END IF;
+    IF to_regclass('public.chat_participants') IS NOT NULL THEN DELETE FROM chat_participants; END IF;
+    IF to_regclass('public.chats') IS NOT NULL THEN DELETE FROM chats; END IF;
+    IF to_regclass('public.coupon_usages') IS NOT NULL THEN DELETE FROM coupon_usages; END IF;
+    IF to_regclass('public.coupons') IS NOT NULL THEN DELETE FROM coupons; END IF;
     IF to_regclass('public.payments') IS NOT NULL THEN DELETE FROM payments; END IF;
     IF to_regclass('public.order_addresses') IS NOT NULL THEN DELETE FROM order_addresses; END IF;
     IF to_regclass('public.order_items') IS NOT NULL THEN DELETE FROM order_items; END IF;
@@ -641,10 +660,11 @@ BEGIN
         INSERT INTO warehouse_stocks (
             "Id", "CompanyId", "WarehouseId", "ProductId", "OnHand", "Reserved", "ReorderPoint", "Version", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
         ) VALUES
-        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 1, 50, 5, 10, 1, NOW(), NOW(), FALSE, NULL),
+        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 1, 50, 6, 10, 1, NOW(), NOW(), FALSE, NULL),
         (2, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 2, 0, 0, 3, 1, NOW(), NOW(), FALSE, NULL),
         (3, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 2, 3, 200, 0, 20, 1, NOW(), NOW(), FALSE, NULL),
-        (4, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 3, 4, 30, 2, 5, 1, NOW(), NOW(), FALSE, NULL);
+        (4, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 3, 4, 30, 2, 5, 1, NOW(), NOW(), FALSE, NULL),
+        (5, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 2, 1, 30, 1, 10, 1, NOW(), NOW(), FALSE, NULL);
 
         INSERT INTO stock_movements (
             "Id", "CompanyId", "WarehouseId", "ProductId", "Type", "Quantity", "OperationId", "Reference", "Reason", "ActorUserId",
@@ -660,6 +680,10 @@ BEGIN
             "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
         ) VALUES
         (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 1, 'SEED-RES-DEMO', 5, 0, NOW() + INTERVAL '1 day', 'seed-demo',
+         NOW(), NOW(), FALSE, NULL),
+        (2, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 1, 'order-4-product-1-wh-1', 1, 2, NOW() + INTERVAL '7 days', 'order-4',
+         NOW(), NOW(), FALSE, NULL),
+        (3, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 2, 1, 'order-4-product-1-wh-2', 1, 2, NOW() + INTERVAL '7 days', 'order-4',
          NOW(), NOW(), FALSE, NULL);
         END IF;
     END IF;
@@ -671,6 +695,16 @@ BEGIN
         ) VALUES
         (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Tech Store LLC', 1, '12345678', '123456789', 'TS-CERT-001', TRUE, 7.5000, NOW(), NOW(), FALSE, NULL),
         (2, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Home Comfort LLC', 1, '87654321', '987654321', 'HC-CERT-001', FALSE, 6.2500, NOW(), NOW(), FALSE, NULL);
+
+        IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+             WHERE table_schema = 'public' AND table_name = 'company_legal_profiles' AND column_name = 'PayoutIban'
+        ) THEN
+            UPDATE company_legal_profiles SET
+                "PayoutIban" = 'UA213223130000026007233566001',
+                "PayoutRecipientName" = 'Tech Store LLC'
+             WHERE "CompanyId" = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+        END IF;
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'company_contracts') THEN
@@ -735,7 +769,9 @@ BEGIN
         (2, 'ORD-SEED-0002', '33333333-3333-3333-3333-333333333333', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 3, 14997.00, 14997.00, 0.00, 0.00, 0.00,
          1, 2, 'Buyer order — Shipped (phone + earbuds)', 'NP-SEED-0002', NOW() - INTERVAL '1 day', NULL, NULL, NULL, NOW() - INTERVAL '3 days', NOW(), FALSE, NULL),
         (3, 'ORD-SEED-0003', '33333333-3333-3333-3333-333333333333', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 4, 899.00, 799.00, 100.00, 0.00, 0.00,
-         1, 2, 'Buyer order from Home Comfort — Delivered', 'NP-SEED-0003', NOW() - INTERVAL '7 days', NOW() - INTERVAL '2 days', NULL, NULL, NOW() - INTERVAL '10 days', NOW(), FALSE, NULL);
+         1, 2, 'Buyer order from Home Comfort — Delivered', 'NP-SEED-0003', NOW() - INTERVAL '7 days', NOW() - INTERVAL '2 days', NULL, NULL, NOW() - INTERVAL '10 days', NOW(), FALSE, NULL),
+        (4, 'ORD-SEED-0004', '33333333-3333-3333-3333-333333333333', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 25998.00, 25998.00, 0.00, 0.00, 0.00,
+         1, 2, 'Buyer order — Paid, split fulfillment (2x phone)', NULL, NULL, NULL, NULL, NULL, NOW() - INTERVAL '6 hours', NOW(), FALSE, NULL);
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'order_items') THEN
@@ -750,6 +786,8 @@ BEGIN
         (3, 2, 3, 'Seed Earbuds Gamma', 'https://placehold.co/200x200/png?text=Earbuds', 1, 1999.00, 0.00, 1999.00, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
          NOW(), NOW(), FALSE, NULL),
         (4, 3, 4, 'Seed Kettle Home', 'https://placehold.co/200x200/png?text=Kettle', 1, 799.00, 0.00, 799.00, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+         NOW(), NOW(), FALSE, NULL),
+        (5, 4, 1, 'Seed Phone Alpha', 'https://placehold.co/200x200/png?text=Phone', 2, 12999.00, 0.00, 25998.00, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
          NOW(), NOW(), FALSE, NULL);
     END IF;
 
@@ -763,7 +801,9 @@ BEGIN
         (3, 2, 0, 'Buyer', 'One', '+380000000003', 'Buyer delivery 5', 'Kyiv', 'Kyiv', '01005', 'UA', NOW(), NOW(), FALSE, NULL),
         (4, 2, 1, 'Buyer', 'One', '+380000000003', 'Buyer billing 5', 'Kyiv', 'Kyiv', '01005', 'UA', NOW(), NOW(), FALSE, NULL),
         (5, 3, 0, 'Buyer', 'One', '+380000000003', 'Lviv delivery 12', 'Lviv', 'Lviv', '79001', 'UA', NOW(), NOW(), FALSE, NULL),
-        (6, 3, 1, 'Buyer', 'One', '+380000000003', 'Lviv billing 12', 'Lviv', 'Lviv', '79001', 'UA', NOW(), NOW(), FALSE, NULL);
+        (6, 3, 1, 'Buyer', 'One', '+380000000003', 'Lviv billing 12', 'Lviv', 'Lviv', '79001', 'UA', NOW(), NOW(), FALSE, NULL),
+        (7, 4, 0, 'Buyer', 'One', '+380000000003', 'Kyiv delivery 8', 'Kyiv', 'Kyiv', '01008', 'UA', NOW(), NOW(), FALSE, NULL),
+        (8, 4, 1, 'Buyer', 'One', '+380000000003', 'Kyiv billing 8', 'Kyiv', 'Kyiv', '01008', 'UA', NOW(), NOW(), FALSE, NULL);
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'order_status_history') THEN
@@ -779,7 +819,8 @@ BEGIN
         (6, 3, 0, 1, 'Paid', '33333333-3333-3333-3333-333333333333', 'seed', 'seed-ord-3-paid', NOW() - INTERVAL '10 days', NOW(), NOW(), FALSE, NULL),
         (7, 3, 1, 2, 'Processing', '33333333-3333-3333-3333-333333333333', 'seed', 'seed-ord-3-processing', NOW() - INTERVAL '8 days', NOW(), NOW(), FALSE, NULL),
         (8, 3, 2, 3, 'Shipped', '99999999-9999-9999-9999-999999999999', 'seed', 'seed-ord-3-shipped', NOW() - INTERVAL '7 days', NOW(), NOW(), FALSE, NULL),
-        (9, 3, 3, 4, 'Delivered', '99999999-9999-9999-9999-999999999999', 'seed', 'seed-ord-3-delivered', NOW() - INTERVAL '2 days', NOW(), NOW(), FALSE, NULL);
+        (9, 3, 3, 4, 'Delivered', '99999999-9999-9999-9999-999999999999', 'seed', 'seed-ord-3-delivered', NOW() - INTERVAL '2 days', NOW(), NOW(), FALSE, NULL),
+        (10, 4, 0, 1, 'Paid via LiqPay', '33333333-3333-3333-3333-333333333333', 'seed', 'seed-ord-4-paid', NOW() - INTERVAL '6 hours', NOW(), NOW(), FALSE, NULL);
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'payments') THEN
@@ -789,7 +830,8 @@ BEGIN
         ) VALUES
         (1, 1, 2, 26098.00, 'UAH', 'liqpay-seed-transaction-001', 1, '{"provider":"liqpay","seed":true,"status":"success"}', NOW() - INTERVAL '5 days', NOW(), NOW(), FALSE, NULL),
         (2, 2, 2, 14997.00, 'UAH', 'liqpay-seed-transaction-002', 1, '{"provider":"liqpay","seed":true,"status":"success"}', NOW() - INTERVAL '3 days', NOW(), NOW(), FALSE, NULL),
-        (3, 3, 2, 899.00, 'UAH', 'liqpay-seed-transaction-003', 1, '{"provider":"liqpay","seed":true,"status":"success"}', NOW() - INTERVAL '10 days', NOW(), NOW(), FALSE, NULL);
+        (3, 3, 2, 899.00, 'UAH', 'liqpay-seed-transaction-003', 1, '{"provider":"liqpay","seed":true,"status":"success"}', NOW() - INTERVAL '10 days', NOW(), NOW(), FALSE, NULL),
+        (4, 4, 2, 25998.00, 'UAH', 'liqpay-seed-transaction-004', 1, '{"provider":"liqpay","seed":true,"status":"success"}', NOW() - INTERVAL '6 hours', NOW(), NOW(), FALSE, NULL);
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'refunds') THEN
@@ -797,6 +839,159 @@ BEGIN
             "Id", "PaymentId", "OrderId", "Amount", "Reason", "Status", "ProcessedByUserId", "ProcessedAt", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
         ) VALUES
         (1, 1, 1, 500.00, 'Seed partial refund', 1, '11111111-1111-1111-1111-111111111111', NOW(), NOW(), NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'order_fulfillment_allocations') THEN
+        INSERT INTO order_fulfillment_allocations (
+            "Id", "OrderId", "OrderItemId", "CompanyId", "WarehouseId", "ProductId", "Quantity", "ReservationId", "Status",
+            "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 4, 5, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 1, 1, 2, 2, NOW(), NOW(), FALSE, NULL),
+        (2, 4, 5, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 2, 1, 1, 3, 2, NOW(), NOW(), FALSE, NULL),
+        (3, 2, 2, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 1, 1, NULL, 3, NOW() - INTERVAL '1 day', NOW(), FALSE, NULL),
+        (4, 2, 3, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 2, 3, 1, NULL, 3, NOW() - INTERVAL '1 day', NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'shipments') THEN
+        INSERT INTO shipments (
+            "Id", "OrderId", "CustomerId", "ShipmentNumber", "ShippingMethodId", "WarehouseId", "CarrierCode", "Status",
+            "TrackingNumber", "LastSyncedAtUtc", "RawPayload", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 2, '33333333-3333-3333-3333-333333333333', 1, 1, 1, 0, 2,
+         'NP-SEED-0002-A', NOW() - INTERVAL '1 day', '{"seed":true,"warehouse":"MAIN-KYIV"}', NOW() - INTERVAL '1 day', NOW(), FALSE, NULL),
+        (2, 2, '33333333-3333-3333-3333-333333333333', 2, 1, 2, 0, 2,
+         'NP-SEED-0002-B', NOW() - INTERVAL '1 day', '{"seed":true,"warehouse":"SEC-LVIV"}', NOW() - INTERVAL '1 day', NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'shipment_items') THEN
+        INSERT INTO shipment_items ("Id", "ShipmentId", "OrderItemId", "Quantity", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt")
+        VALUES
+        (1, 1, 2, 1, NOW() - INTERVAL '1 day', NOW(), FALSE, NULL),
+        (2, 2, 3, 1, NOW() - INTERVAL '1 day', NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'shipping_events') THEN
+        INSERT INTO shipping_events (
+            "Id", "CarrierCode", "EventKey", "PayloadHash", "RawPayload", "ReceivedAtUtc", "ShipmentId", "OrderId",
+            "TrackingNumber", "DeliveryStatus", "OccurredAtUtc", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 0, 'seed-np-0002-a-shipped', 'hash-seed-np-0002-a', '{"status":"in_transit","seed":true}', NOW() - INTERVAL '1 day',
+         1, 2, 'NP-SEED-0002-A', 2, NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day', NOW(), FALSE, NULL),
+        (2, 0, 'seed-np-0002-b-shipped', 'hash-seed-np-0002-b', '{"status":"in_transit","seed":true}', NOW() - INTERVAL '1 day',
+         2, 2, 'NP-SEED-0002-B', 2, NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day', NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'order_financials') THEN
+        INSERT INTO order_financials (
+            "Id", "OrderId", "PaymentId", "CompanyId", "Currency", "MerchandiseSubtotal", "DiscountAmount", "MerchandiseBase",
+            "CommissionPercent", "PlatformFee", "SellerMerchandiseNet", "ShippingAmount", "SellerPayoutEligible",
+            "PostedAtUtc", "CreatedAt", "UpdatedAt"
+        ) VALUES
+        (1, 2, 2, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'UAH', 14997.00, 0.00, 14997.00, 7.5000, 1124.78, 13872.22, 0.00, 13872.22,
+         NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days', NOW()),
+        (2, 3, 3, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'UAH', 799.00, 0.00, 799.00, 6.2500, 49.94, 749.06, 100.00, 849.06,
+         NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days', NOW());
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'settlement_batches') THEN
+        INSERT INTO settlement_batches (
+            "Id", "CompanyId", "PeriodStartUtc", "PeriodEndUtc", "Status", "TotalAmount", "Currency",
+            "ClosedAtUtc", "PaidAtUtc", "CreatedAt", "UpdatedAt"
+        ) VALUES
+        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NOW() - INTERVAL '14 days', NOW() - INTERVAL '7 days', 2, 13872.22, 'UAH',
+         NOW() - INTERVAL '7 days', NULL, NOW() - INTERVAL '14 days', NOW()),
+        (2, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', NOW() - INTERVAL '21 days', NOW() - INTERVAL '14 days', 4, 849.06, 'UAH',
+         NOW() - INTERVAL '14 days', NOW() - INTERVAL '13 days', NOW() - INTERVAL '21 days', NOW()),
+        (3, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', NOW() - INTERVAL '7 days', NOW() - INTERVAL '1 day', 5, 0.00, 'UAH',
+         NOW() - INTERVAL '1 day', NULL, NOW() - INTERVAL '7 days', NOW());
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'seller_payouts') THEN
+        INSERT INTO seller_payouts (
+            "Id", "CompanyId", "SettlementBatchId", "Status", "Amount", "Currency", "ProviderReference",
+            "Iban", "RecipientName", "InitiatedAtUtc", "CompletedAtUtc", "FailureReason", "CreatedAt", "UpdatedAt"
+        ) VALUES
+        (1, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 2, 3, 849.06, 'UAH', 'MANUAL-SEED-001',
+         NULL, 'Home Comfort LLC', NOW() - INTERVAL '14 days', NOW() - INTERVAL '13 days', NULL, NOW() - INTERVAL '14 days', NOW());
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'seller_ledger_entries') THEN
+        INSERT INTO seller_ledger_entries (
+            "Id", "CompanyId", "OrderId", "OrderFinancialsId", "SettlementBatchId", "SellerPayoutId",
+            "EntryType", "Status", "Amount", "Currency", "Description", "AvailableAtUtc", "SettledAtUtc", "CreatedAt", "UpdatedAt"
+        ) VALUES
+        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 2, 1, 1, NULL, 1, 2, 13872.22, 'UAH', 'Sale for order ORD-SEED-0002',
+         NOW() - INTERVAL '1 day', NULL, NOW() - INTERVAL '3 days', NOW()),
+        (2, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 2, 1, 1, NULL, 2, 2, 1124.78, 'UAH', 'Platform fee for order ORD-SEED-0002',
+         NOW() - INTERVAL '1 day', NULL, NOW() - INTERVAL '3 days', NOW()),
+        (3, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 3, 2, 2, 1, 1, 3, 849.06, 'UAH', 'Sale for order ORD-SEED-0003',
+         NOW() - INTERVAL '2 days', NOW() - INTERVAL '13 days', NOW() - INTERVAL '10 days', NOW()),
+        (4, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 3, 2, 2, 1, 2, 3, 49.94, 'UAH', 'Platform fee for order ORD-SEED-0003',
+         NOW() - INTERVAL '2 days', NOW() - INTERVAL '13 days', NOW() - INTERVAL '10 days', NOW()),
+        (5, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, NULL, NULL, NULL, 3, 2, -500.00, 'UAH', 'Seed partial refund',
+         NOW(), NULL, NOW(), NOW());
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'coupons') THEN
+        INSERT INTO coupons (
+            "Id", "Code", "Description", "DiscountAmount", "DiscountType", "MinOrderAmount", "UsageLimit", "UsageCount",
+            "UserUsageLimit", "ExpiresAtUtc", "StartsAtUtc", "ApplicableCategoriesRaw", "ApplicableProductsRaw",
+            "ApplicableCompaniesRaw", "IsActive", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 'SEED10', 'Seed 10% off Tech Store', 10.00, 0, NULL, 100, 0, 1,
+         NOW() + INTERVAL '365 days', NOW() - INTERVAL '30 days', NULL, NULL,
+         '["aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"]'::jsonb, TRUE, NOW(), NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'return_requests') THEN
+        INSERT INTO return_requests (
+            "Id", "OrderId", "CustomerId", "CompanyId", "Status", "ReasonCode", "Comment",
+            "ApprovedByUserId", "RejectedReason", "ReceivedAtUtc", "RefundId", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 3, '33333333-3333-3333-3333-333333333333', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 0, 2,
+         'Received wrong kettle model', NULL, NULL, NULL, NULL, NOW() - INTERVAL '1 day', NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'return_line_items') THEN
+        INSERT INTO return_line_items ("Id", "ReturnRequestId", "OrderItemId", "Quantity", "Reason", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt")
+        VALUES (1, 1, 4, 1, 'WrongItem', NOW() - INTERVAL '1 day', NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'chats') THEN
+        INSERT INTO chats (
+            "Id", "Type", "Status", "InitiatorUserId", "OrderId", "ProductId", "LastMessageText", "LastMessageSenderId",
+            "LastMessageCreatedAt", "IsActive", "Meta", "ParticipantsSnapshot", "RawPayload", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        ('c1000001-0000-4000-8000-000000000001', 2, 0, '33333333-3333-3333-3333-333333333333', 2, NULL,
+         'When will the earbuds shipment arrive?', '33333333-3333-3333-3333-333333333333', NOW() - INTERVAL '20 hours',
+         TRUE, '{"seed":true}', NULL, NULL, NOW() - INTERVAL '1 day', NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'chat_participants') THEN
+        INSERT INTO chat_participants (
+            "ChatId", "UserId", "Role", "CompanyId", "JoinedAt", "LeftAt", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        ('c1000001-0000-4000-8000-000000000001', '33333333-3333-3333-3333-333333333333', 0, NULL, NOW() - INTERVAL '1 day', NULL, NOW() - INTERVAL '1 day', NOW(), FALSE, NULL),
+        ('c1000001-0000-4000-8000-000000000001', '22222222-2222-2222-2222-222222222222', 1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NOW() - INTERVAL '1 day', NULL, NOW() - INTERVAL '1 day', NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'chat_messages') THEN
+        INSERT INTO chat_messages (
+            "Id", "ChatId", "SenderId", "Text", "Attachments", "Status", "ReadAt", "DeletedBy", "ReplyToMessageId",
+            "RawPayload", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+        ) VALUES
+        (1, 'c1000001-0000-4000-8000-000000000001', '33333333-3333-3333-3333-333333333333',
+         'Hi, I see two tracking numbers for my order ORD-SEED-0002.', '[]', 0, NULL, '{}', NULL, NULL,
+         NOW() - INTERVAL '22 hours', NOW(), FALSE, NULL),
+        (2, 'c1000001-0000-4000-8000-000000000001', '33333333-3333-3333-3333-333333333333',
+         'When will the earbuds shipment arrive?', '[]', 0, NULL, '{}', NULL, NULL,
+         NOW() - INTERVAL '20 hours', NOW(), FALSE, NULL);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'chat_read_states') THEN
+        INSERT INTO chat_read_states ("ChatId", "UserId", "LastReadMessageId", "UpdatedAt")
+        VALUES
+        ('c1000001-0000-4000-8000-000000000001', '22222222-2222-2222-2222-222222222222', 1, NOW() - INTERVAL '18 hours');
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'product_reviews') THEN
@@ -1083,6 +1278,78 @@ BEGIN
         seq_name := pg_get_serial_sequence('cart_stock_watches', 'Id');
         IF seq_name IS NOT NULL THEN
             PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM cart_stock_watches), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'order_fulfillment_allocations') THEN
+        seq_name := pg_get_serial_sequence('order_fulfillment_allocations', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM order_fulfillment_allocations), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'shipments') THEN
+        seq_name := pg_get_serial_sequence('shipments', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM shipments), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'shipment_items') THEN
+        seq_name := pg_get_serial_sequence('shipment_items', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM shipment_items), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'shipping_events') THEN
+        seq_name := pg_get_serial_sequence('shipping_events', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM shipping_events), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'order_financials') THEN
+        seq_name := pg_get_serial_sequence('order_financials', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM order_financials), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'settlement_batches') THEN
+        seq_name := pg_get_serial_sequence('settlement_batches', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM settlement_batches), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'seller_payouts') THEN
+        seq_name := pg_get_serial_sequence('seller_payouts', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM seller_payouts), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'seller_ledger_entries') THEN
+        seq_name := pg_get_serial_sequence('seller_ledger_entries', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM seller_ledger_entries), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'coupons') THEN
+        seq_name := pg_get_serial_sequence('coupons', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM coupons), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'return_requests') THEN
+        seq_name := pg_get_serial_sequence('return_requests', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM return_requests), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'return_line_items') THEN
+        seq_name := pg_get_serial_sequence('return_line_items', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM return_line_items), true);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'chat_messages') THEN
+        seq_name := pg_get_serial_sequence('chat_messages', 'Id');
+        IF seq_name IS NOT NULL THEN
+            PERFORM setval(seq_name, (SELECT COALESCE(MAX("Id"), 1) FROM chat_messages), true);
         END IF;
     END IF;
 END $$;

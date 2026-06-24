@@ -2,12 +2,14 @@ using System.Security.Claims;
 using Marketplace.API.Controllers;
 using Marketplace.API.Options;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Tests.Common.Fakes;
 using Marketplace.Application.Favorites.DTOs;
 using Marketplace.Application.Orders.DTOs;
 using Marketplace.Application.Notifications.Commands.MarkNotificationRead;
 using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Notifications.Queries.GetMyNotifications;
 using Marketplace.Application.Orders.Commands.CancelOrder;
+using Marketplace.Domain.Orders.Enums;
 using Marketplace.Domain.Users.ValueObjects;
 using Marketplace.Infrastructure.Identity;
 using Marketplace.Infrastructure.Identity.Services;
@@ -48,7 +50,7 @@ public sealed class SecurityRegressionTests
         var sender = new RecordingSender { NextResult = Result.Success() };
         var controller = BuildAuthorizedOrdersController(sender);
 
-        var result = await controller.Cancel(7, CancellationToken.None);
+        var result = await controller.Cancel(7, new CancelOrderRequest(OrderCancellationReasonCode.ChangedMind, null), CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -69,7 +71,7 @@ public sealed class SecurityRegressionTests
             }
         };
 
-        var result = await controller.ListCompany(Guid.NewGuid(), null, null, null, null, null, 1, 20, CancellationToken.None);
+        var result = await controller.ListCompany(Guid.NewGuid(), null, null, null, null, null, null, 1, 20, CancellationToken.None);
 
         Assert.IsType<UnauthorizedResult>(result);
     }
@@ -482,5 +484,9 @@ public sealed class SecurityRegressionTests
         public Task MarkFailedAsync(Guid id, string error, DateTime nextAttemptAtUtc, CancellationToken ct = default) => Task.CompletedTask;
         public Task MarkDeadLetterAsync(Guid id, string reason, string category, CancellationToken ct = default) => Task.CompletedTask;
         public Task RequeueDeadLetterAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListDeadLettersAsync(int page, int pageSize, CancellationToken ct = default)
+            => OutboxWriterFakeDefaults.EmptyListAsync(page, pageSize, ct);
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListStuckAsync(DateTime utcNow, int page, int pageSize, CancellationToken ct = default)
+            => OutboxWriterFakeDefaults.EmptyListAsync(page, pageSize, ct);
     }
 }

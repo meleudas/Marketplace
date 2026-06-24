@@ -22,6 +22,25 @@ public sealed class HealthE2ETests
     }
 
     [Fact]
+    public async Task Get_Health_Ready_Returns_Ok_With_Checks()
+    {
+        var client = _fixture.Factory.CreateClient();
+        var response = await client.GetAsync("/health/ready");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("postgres", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("checks", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Get_Health_Live_Returns_Ok()
+    {
+        var client = _fixture.Factory.CreateClient();
+        var response = await client.GetAsync("/health/live");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Get_LiqPay_Config_Health_Returns_Ok()
     {
         var client = _fixture.Factory.CreateClient();

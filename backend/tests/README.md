@@ -22,7 +22,15 @@ dotnet test backend/tests/Marketplace.Tests.Integration
 # Full (Docker Desktop required)
 dotnet test backend/tests/Marketplace.Tests.Integration.Containers --filter "Layer=IntegrationContainers"
 dotnet test backend/tests/Marketplace.Tests.E2E --filter "Layer=E2E"
+
+# Seeded P4 scenarios (requires Testcontainers)
+dotnet test backend/tests/Marketplace.Tests.E2E --filter "Layer=E2E&Suite=Seed"
+
+# Catalog smoke — all discovered controller routes (no HTTP 500)
+dotnet test backend/tests/Marketplace.Tests.E2E --filter "Suite=ApiCatalogSmoke"
 ```
+
+Seed data is loaded from `backend/scripts/seed-test-data.sql` via `TestSeedDataLoader` in `Marketplace.Tests.Common` (users: `buyer@marketplace.test`, `seller@marketplace.test`, `admin@marketplace.test`, password `Admin123!`).
 
 Filter by domain suite: `--filter "Suite=CartCheckout"`.
 
