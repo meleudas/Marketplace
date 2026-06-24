@@ -7,8 +7,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "Health check..."
+Write-Host "Health check (liveness)..."
 Invoke-RestMethod -Uri "$ApiBaseUrl/health" | Out-Null
+
+Write-Host "Health check (readiness)..."
+$ready = Invoke-RestMethod -Uri "$ApiBaseUrl/health/ready"
+if ($null -eq $ready.status) { throw "/health/ready did not return status." }
 
 Write-Host "Prometheus targets..."
 $targets = Invoke-RestMethod -Uri "$PrometheusUrl/api/v1/targets"

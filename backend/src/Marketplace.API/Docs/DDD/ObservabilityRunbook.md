@@ -12,7 +12,7 @@
 
 Локальний запуск: `docker compose -f docker-compose.yml -f docker-compose.observability.yml --profile observability up -d` і `OTEL_ENABLED=true` у `.env` (див. [09-local-docker-compose-runbook.md](../../../../../docs/platform-engineering/09-local-docker-compose-runbook.md)).
 
-Перевірка стеку: `backend/scripts/observability-smoke.ps1`. Sonar: `backend/scripts/sonar-scan.ps1`. Grafana alerts: `observability/grafana/provisioning/alerting/rules.yaml` (11 правил).
+Перевірка стеку: `backend/scripts/observability-smoke.ps1`. Sonar: `backend/scripts/sonar-scan.ps1`. Grafana alerts: `observability/grafana/provisioning/alerting/rules.yaml` (13 правил).
 
 ## Metrics endpoint (legacy)
 
@@ -35,14 +35,25 @@
 - `product_operations_total`, `product_errors_total`, `product_latency_ms`
 - `review_operations_total`, `review_errors_total`, `review_latency_ms`
 - `shipping_operations_total`, `shipping_errors_total`, `shipping_latency_ms`
+- `shipment_created_total`, `shipment_delivery_status_total{status}`, `shipping_webhook_events_total`
 - `coupon_operations_total`, `coupon_errors_total`, `coupon_validation_failures_total`
 - `hangfire_jobs_total{job="inventory-expire-reservations"}`, `hangfire_job_errors_total{job="inventory-expire-reservations"}`, `hangfire_job_latency_ms{job="inventory-expire-reservations"}`
 - `notification_dispatch_total`, `notification_dispatch_errors_total`, `notification_dispatch_latency_ms`
 - `notification_channel_deliveries_total`, `notification_channel_errors_total`
+- `notification_dispatch_dead_letter_total{template_key}` — вичерпані retry для `notification_dispatch` (окремо від `integration_retry_dead_letter_total`)
 - `outbox_dispatch_total`, `outbox_dispatch_errors_total`, `outbox_dead_letter_total`
+- `integration_retry_attempts_total{kind}`, `integration_retry_dead_letter_total{kind}`
 - `idempotency_begin_total`, `idempotency_conflicts_total`, `idempotency_replays_total`
+- `rate_limit_rejected_total{group}` — HTTP middleware rejections (`auth`, `auth-email`, `checkout`, `review`, `payment_webhook`, `payment_admin`)
+- `commission_posted_total`, `seller_ledger_entries_total{entry_type}`, `seller_payout_total{status}`, `settlement_batch_total{status}`
+- `hangfire_jobs_total{job="finance-settlement-batch"}`, `hangfire_jobs_total{job="finance-seller-payout"}`
 
-## Suggested alerts
+## Settlement / payout alerts
+
+- `seller_payout_total{status="Failed"}` spike → перевірити IBAN у payout-profile, LiqPay `PayoutEnabled`, логи `finance-seller-payout`.
+- `settlement_batch_total{status="Failed"}` → failed batch потребує admin `mark-paid` або повторного approve.
+- `seller_ledger_entries_total` без зростання `commission_posted_total` після webhook success → перевірити `OrderFinancialsWriter` / payment completed path.
+- Деталі: [Docs/Finance/Settlement.md](../Finance/Settlement.md).
 
 - cache miss ratio spikes (`miss / (hit + miss)`) over baseline.
 - webhook or payment p95 latency increase (`*_latency_ms` histogram).
@@ -70,18 +81,24 @@
 - reviews read/write p95 latency degradation (`review_latency_ms`) for `reviews_list_product`, `reviews_create_product`, `reviews_update_product`, `reviews_delete_product`, `reviews_list_company`, `reviews_create_company`, `reviews_update_company`, `reviews_delete_company`, `reviews_reply_product`, `reviews_reply_company`, `reviews_moderate_product`, `reviews_moderate_company`.
 - reviews access anomalies: burst of `review_errors_total{reason="unauthorized|forbidden"}` above baseline.
 - reviews data-quality anomalies: growth of `review_errors_total{reason="not_found|application_failure"}` for moderate/update/delete operations.
+- rate limit abuse spike: sustained growth of `rate_limit_rejected_total{group="auth|auth-email"}` (credential stuffing / registration spam) or `group="checkout|review"` (buyer abuse).
 - inventory reservation expiry failures: `hangfire_job_errors_total{job="inventory-expire-reservations"}` > 0 for 10m.
 - inventory reservation expiry latency degradation: p95 `hangfire_job_latency_ms{job="inventory-expire-reservations"}` above baseline.
 - outbox dispatch failures: `hangfire_job_errors_total{job="outbox-dispatch"}` sustained growth for 10m.
 - outbox DLQ growth: `outbox_dead_letter_total{category="permanent|exhausted"}` above baseline.
+- integration retry DLQ: `integration_retry_dead_letter_total{kind}` (kinds: `payment_sync`, `inventory_expire`, `notification_dispatch`).
+- stuck outbox: admin `GET /admin/outbox/stuck` або SQL count where `processed_at IS NULL AND dead_lettered_at IS NULL AND next_attempt_at < now()-15m AND attempts > 0`.
 - outbox transient retry storm: `outbox_dispatch_errors_total{category="transient"}` burst over baseline.
 - idempotency anomalies: growth of `idempotency_conflicts_total{reason="request_mismatch|in_progress"}` above baseline.
 - high replay ratio in idempotent endpoints: `idempotency_replays_total` sharp increase post-release.
 - payments sync job failures: `hangfire_job_errors_total{job="payments-sync-pending"}` > 0 for 10m.
 - notifications dispatch error burst: `notification_dispatch_errors_total` growth over baseline for 10m.
 - notifications dispatch latency degradation: p95 `notification_dispatch_latency_ms` above baseline.
-- channel-level failures: `notification_channel_errors_total{channel="Push|Email|Telegram|InApp"}` sustained growth.
-- delivery health drift: ratio of `notification_channel_deliveries_total{status="failed"}` to total deliveries above baseline.
+- channel-level failures: `notification_channel_errors_total{channel="Push|Email|Telegram|Sms|InApp"}` sustained growth.
+- delivery health drift: ratio of `notification_channel_deliveries_total{status="failed"}` to total deliveries above baseline (email/telegram/sms channels).
+- notification dispatch DLQ: `notification_dispatch_dead_letter_total` spike після вичерпання `IntegrationRetry:MaxAttempts` для `notification_dispatch`.
+- **Retry queue:** `integration_retry` Hangfire job (`IntegrationRetryJobs.DispatchDueAsync`) перевідправляє `notification_dispatch` через `IAppNotificationRedispatcher` → `AppNotificationJobs.DispatchAsync`. Payload містить `templateKey`, `correlationId`, `channels`, `audience`, `targetUserId`, `targetCompanyId`, `payloadJson`.
+- **SMS pilot:** `AppNotifications:SmsEnabled` (default `false`); канал `Sms` у `UserOrderStatus` для `Shipped`/`Delivered`.
 - shipping quote/webhook failures: growth of `shipping_errors_total{operation="quote|novaposhta_webhook|sync_status"}`.
 - coupons validation/apply failures: growth of `coupon_errors_total{operation="coupon_validate|coupon_apply|coupon_remove"}`.
 - coupons brute-force signal: spike in `coupon_validation_failures_total`.
@@ -180,3 +197,32 @@
 4. Після інциденту:
    - звірити `GET /admin/coupons/{id}/usage` з `coupon_usages`,
    - перевірити стабілізацію `coupon_errors_total` і `coupon_validation_failures_total`.
+
+## Rate limiting incident runbook
+
+1. Перевірити `rate_limit_rejected_total{group}` у Grafana — який endpoint group росте.
+2. Для легітимного spike (маркетинг, flash sale):
+   - тимчасово підняти `RateLimiting:Checkout:PermitLimit` або `RateLimiting:Auth:PermitLimit` у appsettings,
+   - переконатися, що `ConnectionStrings:Redis` заданий у multi-instance prod (інакше ліміти per-node).
+3. Для abuse (auth brute-force, webhook flood):
+   - залишити або знизити ліміти; перевірити WAF / IP block на ingress,
+   - `auth-email` group захищає login/register per-email (5/min default).
+4. Вимкнення (лише emergency): `RateLimiting:Enabled=false` — не замінює Identity lockout.
+
+## Health / readiness runbook
+
+| Probe | Endpoint | Required for ready | Degraded meaning |
+|-------|----------|-------------------|------------------|
+| `postgres` | `/health/ready` | **так** (503 якщо down) | — |
+| `redis` | `/health/ready` | ні | cache/rate-limit fallback на memory per instance |
+| `elasticsearch` | `/health/ready` | ні | catalog search fallback (`catalog_search_fallback_total`) |
+| `storage` | `/health/ready` | ні (якщо `Storage:Enabled=false` — healthy skip) | uploads/media degraded |
+| `queue` | `/health/ready` | ні (warning only v1) | outbox backlog `pending>500` або oldest age >30 min |
+
+**Дії:**
+1. `GET /health/ready` — якщо `503`, перевірити `checks.postgres` (DB connectivity, migrations).
+2. Redis degraded — перевірити `ConnectionStrings:Redis`, redeploy після відновлення; моніторити cache miss ratio.
+3. Elasticsearch degraded — `Elasticsearch:Enabled=false` тимчасово або відновити кластер; перевірити `catalog_search_fallback_total`.
+4. Storage degraded — MinIO/S3 credentials, `Storage:Endpoint`, bucket policy.
+5. Queue degraded — `GET /admin/outbox` stats, DLQ replay; перевірити Hangfire worker + `outbox_dispatch_errors_total`.
+6. Liveness (`/health`, `/health/live`) лише для restart pod — не використовувати для traffic routing.

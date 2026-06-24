@@ -211,6 +211,35 @@ groups:
         annotations:
           summary: Notification dispatch error rate elevated
 
+      - uid: notification-channel-failures
+        title: Notification channel delivery failures
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: sum(rate(notification_channel_deliveries_total{status="failed",channel=~"Email|Telegram|Sms"}[10m]))
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [0.05]
+                    type: gt
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Elevated failed deliveries for Email/Telegram/SMS channels
+
       - uid: idempotency-conflicts
         title: Idempotency conflicts
         condition: C
@@ -442,3 +471,61 @@ groups:
           severity: warning
         annotations:
           summary: Analytics pipeline latency lag above threshold
+
+      - uid: health-ready-down
+        title: API readiness probe down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: probe_success{job="marketplace-api", instance=~".*", probe_path="/health/ready"} == 0
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Marketplace API /health/ready probe failing for 5 minutes
+
+      - uid: outbox-backlog-high
+        title: Outbox backlog high
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              expr: increase(outbox_dispatch_errors_total[15m]) > 5 or increase(outbox_dead_letter_total[1h]) > 10
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    params: [0]
+                    type: gt
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Outbox dispatch errors or dead-letter growth indicates queue backlog
