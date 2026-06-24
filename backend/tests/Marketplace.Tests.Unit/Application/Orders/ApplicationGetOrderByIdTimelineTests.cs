@@ -1,6 +1,7 @@
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Common.Options;
 using Marketplace.Application.Orders.Authorization;
+using Marketplace.Application.Orders.Policies;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Orders.Queries.GetOrderById;
 using Marketplace.Domain.Common.ValueObjects;
@@ -8,6 +9,9 @@ using Marketplace.Domain.Orders.Entities;
 using Marketplace.Domain.Orders.Enums;
 using Marketplace.Domain.Orders.Repositories;
 using Marketplace.Domain.Payments.Repositories;
+using Marketplace.Domain.Returns.Entities;
+using Marketplace.Domain.Returns.Repositories;
+using Marketplace.Tests.Common.Fakes;
 using Microsoft.Extensions.Options;
 
 namespace Marketplace.Tests;
@@ -45,6 +49,9 @@ public sealed class ApplicationGetOrderByIdTimelineTests
             new StubStatusHistoryRepo(order.Id),
             new StubPaymentRepo(),
             new StubRefundRepo(),
+            new StubReturnRequestRepo(),
+            new StubReturnLineItemRepo(),
+            new NoopShipmentFulfillmentService(),
             new AllowAllOrderAccessService(),
             new NullCache(),
             new NoopOrderCacheInvalidationService(),
@@ -60,6 +67,9 @@ public sealed class ApplicationGetOrderByIdTimelineTests
 
     private sealed class AllowAllOrderAccessService : IOrderAccessService
     {
+        public Task<OrderCancellationActor> ResolveCancellationActorAsync(Order order, Guid actorUserId, bool isActorAdmin, CancellationToken ct = default)
+            => Task.FromResult(OrderCancellationActor.Buyer);
+
         public Task<bool> CanReadCompanyScopeAsync(Guid companyId, Guid actorUserId, bool isActorAdmin, CancellationToken ct = default) => Task.FromResult(true);
         public Task<bool> HasAccessAsync(Order order, Guid actorUserId, bool isActorAdmin, OrderPermission permission, CancellationToken ct = default) => Task.FromResult(true);
     }
@@ -127,6 +137,23 @@ public sealed class ApplicationGetOrderByIdTimelineTests
         public Task<IReadOnlyList<Marketplace.Domain.Payments.Entities.Payment>> ListByStatusAsync(Marketplace.Domain.Payments.Enums.PaymentTransactionStatus status, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Marketplace.Domain.Payments.Entities.Payment>>([]);
         public Task<Marketplace.Domain.Payments.Entities.Payment> AddAsync(Marketplace.Domain.Payments.Entities.Payment payment, CancellationToken ct = default) => Task.FromResult(payment);
         public Task UpdateAsync(Marketplace.Domain.Payments.Entities.Payment payment, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class StubReturnRequestRepo : IReturnRequestRepository
+    {
+        public Task<ReturnRequest?> GetByIdAsync(ReturnRequestId id, CancellationToken ct = default) => Task.FromResult<ReturnRequest?>(null);
+        public Task<IReadOnlyList<ReturnRequest>> ListByCustomerAsync(Guid customerId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<ReturnRequest>>([]);
+        public Task<IReadOnlyList<ReturnRequest>> ListByCompanyAsync(CompanyId companyId, Domain.Returns.Enums.ReturnRequestStatus? status, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<ReturnRequest>>([]);
+        public Task<IReadOnlyList<ReturnRequest>> ListByOrderIdAsync(OrderId orderId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<ReturnRequest>>([]);
+        public Task<ReturnRequest> AddAsync(ReturnRequest entity, CancellationToken ct = default) => Task.FromResult(entity);
+        public Task UpdateAsync(ReturnRequest entity, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class StubReturnLineItemRepo : IReturnLineItemRepository
+    {
+        public Task<IReadOnlyList<ReturnLineItem>> ListByReturnRequestIdAsync(ReturnRequestId returnRequestId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<ReturnLineItem>>([]);
+        public Task<IReadOnlyList<ReturnLineItem>> ListByOrderIdAsync(OrderId orderId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<ReturnLineItem>>([]);
+        public Task AddRangeAsync(IReadOnlyList<ReturnLineItem> items, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class StubRefundRepo : IRefundRepository

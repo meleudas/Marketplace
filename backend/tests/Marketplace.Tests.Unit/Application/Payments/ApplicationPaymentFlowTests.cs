@@ -9,6 +9,8 @@ using Marketplace.Application.Payments.Services;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Orders.Cache;
+using Marketplace.Application.Orders.Services;
+using Marketplace.Tests.Common.Fakes;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Entities;
 using Marketplace.Domain.Orders.Enums;
@@ -34,16 +36,18 @@ public class ApplicationPaymentFlowTests
         _ = await paymentRepo.AddAsync(Payment.Create(PaymentId.From(0), order.Id, PaymentMethodKind.LiqPay, new Money(100), "UAH", "ORD-1", PaymentTransactionStatus.Pending, JsonBlob.Empty));
 
         var payload = Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"order_id\":\"ORD-1\",\"status\":\"success\"}"));
+        var coordinator = OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), new InMemoryOutboxWriter());
         var handler = new HandleLiqPayWebhookCommandHandler(
             new FakeLiqPayPort(),
             paymentRepo,
             orderRepo,
-            new NoopOrderCacheInvalidationService(),
+            coordinator,
             new OrderPaymentStateApplier(),
-            new InMemoryOutboxWriter(),
             new NoopOrderStatusHistoryWriter(),
             new StatefulInboxDeduplicator(),
-            new NoopAppNotificationScheduler());
+            new NoopAppNotificationScheduler(),
+            new NoopCheckoutInventoryService(),
+            new NoopOrderFinancialsWriter());
         var result = await handler.Handle(new HandleLiqPayWebhookCommand(payload, "sig", "idem-key"), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -63,16 +67,18 @@ public class ApplicationPaymentFlowTests
         _ = await paymentRepo.AddAsync(Payment.Create(PaymentId.From(0), order.Id, PaymentMethodKind.LiqPay, new Money(100), "UAH", "ORD-BAD-SIG", PaymentTransactionStatus.Pending, JsonBlob.Empty));
 
         var payload = Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"order_id\":\"ORD-BAD-SIG\",\"status\":\"success\"}"));
+        var coordinator = OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), new InMemoryOutboxWriter());
         var handler = new HandleLiqPayWebhookCommandHandler(
             new FakeLiqPayPort { VerifySignatureResult = false },
             paymentRepo,
             orderRepo,
-            new NoopOrderCacheInvalidationService(),
+            coordinator,
             new OrderPaymentStateApplier(),
-            new InMemoryOutboxWriter(),
             new NoopOrderStatusHistoryWriter(),
             new StatefulInboxDeduplicator(),
-            new NoopAppNotificationScheduler());
+            new NoopAppNotificationScheduler(),
+            new NoopCheckoutInventoryService(),
+            new NoopOrderFinancialsWriter());
 
         var result = await handler.Handle(new HandleLiqPayWebhookCommand(payload, "bad-signature", "idem-key"), CancellationToken.None);
 
@@ -95,16 +101,18 @@ public class ApplicationPaymentFlowTests
         _ = await paymentRepo.AddAsync(Payment.Create(PaymentId.From(0), order.Id, PaymentMethodKind.LiqPay, new Money(100), "UAH", "ORD-DUP", PaymentTransactionStatus.Pending, JsonBlob.Empty));
 
         var payload = Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"order_id\":\"ORD-DUP\",\"status\":\"success\"}"));
+        var coordinator = OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), outbox);
         var handler = new HandleLiqPayWebhookCommandHandler(
             new FakeLiqPayPort(),
             paymentRepo,
             orderRepo,
-            new NoopOrderCacheInvalidationService(),
+            coordinator,
             new OrderPaymentStateApplier(),
-            outbox,
             new NoopOrderStatusHistoryWriter(),
             inbox,
-            new NoopAppNotificationScheduler());
+            new NoopAppNotificationScheduler(),
+            new NoopCheckoutInventoryService(),
+            new NoopOrderFinancialsWriter());
 
         var first = await handler.Handle(new HandleLiqPayWebhookCommand(payload, "sig-1", "idem-a"), CancellationToken.None);
         var second = await handler.Handle(new HandleLiqPayWebhookCommand(payload, "sig-1", "idem-b"), CancellationToken.None);
@@ -127,16 +135,18 @@ public class ApplicationPaymentFlowTests
         _ = await paymentRepo.AddAsync(Payment.Create(PaymentId.From(0), order.Id, PaymentMethodKind.LiqPay, new Money(100), "UAH", "ORD-DOWN", PaymentTransactionStatus.Completed, JsonBlob.Empty));
 
         var payload = Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"order_id\":\"ORD-DOWN\",\"status\":\"failure\"}"));
+        var coordinator = OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), new InMemoryOutboxWriter());
         var handler = new HandleLiqPayWebhookCommandHandler(
             new FakeLiqPayPort(),
             paymentRepo,
             orderRepo,
-            new NoopOrderCacheInvalidationService(),
+            coordinator,
             new OrderPaymentStateApplier(),
-            new InMemoryOutboxWriter(),
             new NoopOrderStatusHistoryWriter(),
             new StatefulInboxDeduplicator(),
-            new NoopAppNotificationScheduler());
+            new NoopAppNotificationScheduler(),
+            new NoopCheckoutInventoryService(),
+            new NoopOrderFinancialsWriter());
 
         var result = await handler.Handle(new HandleLiqPayWebhookCommand(payload, "sig", "idem-key"), CancellationToken.None);
 
@@ -159,16 +169,18 @@ public class ApplicationPaymentFlowTests
 
         var payload = Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"order_id\":\"ORD-WN-1\",\"status\":\"success\"}"));
         var spy = new SpyAppNotificationScheduler();
+        var coordinator = OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), new InMemoryOutboxWriter());
         var handler = new HandleLiqPayWebhookCommandHandler(
             new FakeLiqPayPort(),
             paymentRepo,
             orderRepo,
-            new NoopOrderCacheInvalidationService(),
+            coordinator,
             new OrderPaymentStateApplier(),
-            new InMemoryOutboxWriter(),
             new NoopOrderStatusHistoryWriter(),
             new StatefulInboxDeduplicator(),
-            spy);
+            spy,
+            new NoopCheckoutInventoryService(),
+            new NoopOrderFinancialsWriter());
         var result = await handler.Handle(new HandleLiqPayWebhookCommand(payload, "sig", "idem-pay-notify-1"), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -196,12 +208,23 @@ public class ApplicationPaymentFlowTests
             null, null, null, null, null, null, DateTime.UtcNow, DateTime.UtcNow, false, null));
         var payment = await paymentRepo.AddAsync(Payment.Create(PaymentId.From(0), order.Id, PaymentMethodKind.LiqPay, new Money(200), "UAH", "ORD-2", PaymentTransactionStatus.Completed, JsonBlob.Empty));
 
-        var handler = new RequestRefundCommandHandler(paymentRepo, refundRepo, orderRepo, new FakeLiqPayPort(), new NoopOrderStatusHistoryWriter());
+        var cacheSpy = new SpyOrderCacheInvalidationService();
+        var coordinator = OrderTestDoubles.CreateCoordinator(cacheSpy, new InMemoryOutboxWriter());
+        var handler = new RequestRefundCommandHandler(new PaymentRefundExecutor(
+            paymentRepo,
+            refundRepo,
+            orderRepo,
+            new FakeLiqPayPort(),
+            new NoopOrderStatusHistoryWriter(),
+            new OrderPaymentStateApplier(),
+            coordinator,
+            new NoopOrderFinancialsWriter()));
         var result = await handler.Handle(new RequestRefundCommand(payment.Id.Value, 100m, "Customer request", Guid.NewGuid()), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Single(refundRepo.Items);
         Assert.Equal(OrderStatus.Refunded, (await orderRepo.GetByIdAsync(order.Id))!.Status);
+        Assert.Equal(1, cacheSpy.InvalidateCount);
     }
 
     [Fact]
@@ -216,12 +239,15 @@ public class ApplicationPaymentFlowTests
             null, null, null, null, null, null, DateTime.UtcNow, DateTime.UtcNow, false, null));
         var payment = await paymentRepo.AddAsync(Payment.Create(PaymentId.From(0), order.Id, PaymentMethodKind.LiqPay, new Money(200), "UAH", "ORD-RF-ERR", PaymentTransactionStatus.Completed, JsonBlob.Empty));
 
-        var handler = new RequestRefundCommandHandler(
+        var handler = new RequestRefundCommandHandler(new PaymentRefundExecutor(
             paymentRepo,
             refundRepo,
             orderRepo,
             new FakeLiqPayPort { RefundSuccess = false, RefundError = "provider timeout" },
-            new NoopOrderStatusHistoryWriter());
+            new NoopOrderStatusHistoryWriter(),
+            new OrderPaymentStateApplier(),
+            OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), new InMemoryOutboxWriter()),
+            new NoopOrderFinancialsWriter()));
 
         var result = await handler.Handle(new RequestRefundCommand(payment.Id.Value, 100m, "Customer request", Guid.NewGuid()), CancellationToken.None);
 
@@ -245,10 +271,10 @@ public class ApplicationPaymentFlowTests
             paymentRepo,
             orderRepo,
             new FakeLiqPayPort(),
-            new NoopOrderCacheInvalidationService(),
+            OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), new InMemoryOutboxWriter()),
             new OrderPaymentStateApplier(),
-            new InMemoryOutboxWriter(),
-            new NoopOrderStatusHistoryWriter());
+            new NoopOrderStatusHistoryWriter(),
+            new NoopCheckoutInventoryService());
         var result = await handler.Handle(new SyncPaymentStatusCommand(payment.Id.Value), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -271,10 +297,10 @@ public class ApplicationPaymentFlowTests
             paymentRepo,
             orderRepo,
             new FakeLiqPayPort { StatusResponse = "failure" },
-            new NoopOrderCacheInvalidationService(),
+            OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), new InMemoryOutboxWriter()),
             new OrderPaymentStateApplier(),
-            new InMemoryOutboxWriter(),
-            new NoopOrderStatusHistoryWriter());
+            new NoopOrderStatusHistoryWriter(),
+            new NoopCheckoutInventoryService());
         var result = await handler.Handle(new SyncPaymentStatusCommand(payment.Id.Value), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -360,6 +386,20 @@ public class ApplicationPaymentFlowTests
         public Task UpdateAsync(Refund refund, CancellationToken ct = default) => Task.CompletedTask;
     }
 
+    private sealed class SpyOrderCacheInvalidationService : IOrderCacheInvalidationService
+    {
+        public int InvalidateCount { get; private set; }
+
+        public Task<long> GetListVersionAsync(string scope, Guid? actorUserId, Guid? companyId, CancellationToken ct = default) => Task.FromResult(1L);
+        public Task TrackDetailKeyAsync(long orderId, string cacheKey, TimeSpan ttl, CancellationToken ct = default) => Task.CompletedTask;
+        public Task TrackListKeyAsync(string scope, Guid? actorUserId, Guid? companyId, string cacheKey, TimeSpan ttl, CancellationToken ct = default) => Task.CompletedTask;
+        public Task InvalidateOrderAsync(long orderId, Guid customerId, Guid companyId, CancellationToken ct = default)
+        {
+            InvalidateCount++;
+            return Task.CompletedTask;
+        }
+    }
+
     private sealed class NoopOrderCacheInvalidationService : IOrderCacheInvalidationService
     {
         public Task<long> GetListVersionAsync(string scope, Guid? actorUserId, Guid? companyId, CancellationToken ct = default) => Task.FromResult(1L);
@@ -414,10 +454,17 @@ public class ApplicationPaymentFlowTests
         public Task MarkFailedAsync(Guid id, string error, DateTime nextAttemptAtUtc, CancellationToken ct = default) => Task.CompletedTask;
         public Task MarkDeadLetterAsync(Guid id, string reason, string category, CancellationToken ct = default) => Task.CompletedTask;
         public Task RequeueDeadLetterAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListDeadLettersAsync(int page, int pageSize, CancellationToken ct = default)
+            => OutboxWriterFakeDefaults.EmptyListAsync(page, pageSize, ct);
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListStuckAsync(DateTime utcNow, int page, int pageSize, CancellationToken ct = default)
+            => OutboxWriterFakeDefaults.EmptyListAsync(page, pageSize, ct);
     }
 
     private sealed class NoopOrderStatusHistoryWriter : Marketplace.Application.Orders.Services.IOrderStatusHistoryWriter
     {
+        public Task RecordCreatedAsync(Order order, Guid actorUserId, string source, string? correlationId = null, CancellationToken ct = default)
+            => Task.CompletedTask;
+
         public Task WriteIfChangedAsync(Order order, OrderStatus oldStatus, Guid actorUserId, string source, string? comment = null, string? correlationId = null, CancellationToken ct = default)
             => Task.CompletedTask;
     }

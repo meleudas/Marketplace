@@ -1,9 +1,10 @@
 using Marketplace.Application.Catalog.Cache;
 using Marketplace.Application.Common.Exceptions;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Tests.Common.Fakes;
 using Marketplace.Application.Inventory.Authorization;
-using Marketplace.Application.Inventory.Commands.ReceiveStock;
 using Marketplace.Application.Inventory.Commands.ReleaseReservation;
+using Marketplace.Application.Inventory.Commands.ReceiveStock;
 using Marketplace.Application.Inventory.Commands.ReserveStock;
 using Marketplace.Application.Inventory.Commands.ShipStock;
 using Marketplace.Application.Inventory.Commands.TransferStock;
@@ -91,12 +92,15 @@ public class ApplicationInventoryHandlersTests
         var handler = new ReleaseReservationCommandHandler(
             new StubInventoryAccessService(true),
             reservationRepo,
-            stockRepo,
-            new InMemoryProductRepository(),
-            new SpyCachePort(),
-            new StubOutboxWriter(),
-            new NoOpTransactionPort(),
-            new SpyRestockNotifier());
+            new InventoryReservationReleaseService(
+                stockRepo,
+                reservationRepo,
+                new InMemoryStockMovementRepository(),
+                new InMemoryProductRepository(),
+                new SpyCachePort(),
+                new StubOutboxWriter(),
+                new NoOpTransactionPort(),
+                new SpyRestockNotifier()));
 
         var result = await handler.Handle(
             new ReleaseReservationCommand(companyId, reservationCode, Guid.NewGuid(), false),
@@ -299,6 +303,20 @@ public class ApplicationInventoryHandlersTests
         public void Seed(InventoryReservation reservation)
             => _items[(reservation.CompanyId.Value, reservation.ReservationCode)] = reservation;
 
+        public Task<InventoryReservation?> GetByIdAsync(InventoryReservationId id, CancellationToken ct = default)
+        {
+            var reservation = _items.Values.FirstOrDefault(x => x.Id == id);
+            return Task.FromResult(reservation);
+        }
+
+        public Task<IReadOnlyList<InventoryReservation>> ListActiveByReferenceAsync(CompanyId companyId, string reference, CancellationToken ct = default)
+        {
+            var list = _items.Values
+                .Where(x => x.CompanyId == companyId && x.Reference == reference && x.Status == InventoryReservationStatus.Active)
+                .ToList();
+            return Task.FromResult<IReadOnlyList<InventoryReservation>>(list);
+        }
+
         public Task<InventoryReservation?> GetByCodeAsync(CompanyId companyId, string reservationCode, CancellationToken ct = default)
         {
             _items.TryGetValue((companyId.Value, reservationCode), out var reservation);
@@ -426,6 +444,10 @@ public class ApplicationInventoryHandlersTests
         public Task MarkFailedAsync(Guid id, string error, DateTime nextAttemptAtUtc, CancellationToken ct = default) => Task.CompletedTask;
         public Task MarkDeadLetterAsync(Guid id, string reason, string category, CancellationToken ct = default) => Task.CompletedTask;
         public Task RequeueDeadLetterAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListDeadLettersAsync(int page, int pageSize, CancellationToken ct = default)
+            => OutboxWriterFakeDefaults.EmptyListAsync(page, pageSize, ct);
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListStuckAsync(DateTime utcNow, int page, int pageSize, CancellationToken ct = default)
+            => OutboxWriterFakeDefaults.EmptyListAsync(page, pageSize, ct);
     }
 
     private sealed class NoOpTransactionPort : IAppTransactionPort

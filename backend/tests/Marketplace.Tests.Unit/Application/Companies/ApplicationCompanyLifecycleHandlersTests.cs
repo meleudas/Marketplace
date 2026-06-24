@@ -160,5 +160,12 @@ public class ApplicationCompanyLifecycleHandlersTests
             _activeByCompany[rate.CompanyId.Value] = rate;
             return Task.CompletedTask;
         }
+
+        public Task<CompanyCommissionRate?> GetActiveAtAsync(CompanyId companyId, DateTime asOfUtc, CancellationToken ct = default)
+            => GetActiveByCompanyIdAsync(companyId, ct);
+
+        public Task<IReadOnlyList<CompanyCommissionRate>> ListByCompanyIdAsync(CompanyId companyId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<CompanyCommissionRate>>(
+                _activeByCompany.TryGetValue(companyId.Value, out var rate) ? [rate] : []);
     }
 }

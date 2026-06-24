@@ -32,9 +32,9 @@ public sealed class ApplicationOrderCacheInvalidationServiceTests
         const long orderId = 42;
 
         var detailKey = OrderCacheKeys.Detail(orderId);
-        var listKeyAdmin = OrderCacheKeys.List(1, "admin", null, null, null, null, null, null, null, 1, 20);
-        var listKeyCompany = OrderCacheKeys.List(1, "company", null, companyId, null, null, null, null, null, 1, 20);
-        var listKeyMy = OrderCacheKeys.List(1, "my", userId, null, null, null, null, null, null, 1, 20);
+        var listKeyAdmin = OrderCacheKeys.List(1, "admin", null, null, null, null, null, null, null, null, 1, 20);
+        var listKeyCompany = OrderCacheKeys.List(1, "company", null, companyId, null, null, null, null, null, null, 1, 20);
+        var listKeyMy = OrderCacheKeys.List(1, "my", userId, null, null, null, null, null, null, null, 1, 20);
 
         await cache.SetAsync(detailKey, new Box("detail"), TimeSpan.FromMinutes(5), CancellationToken.None);
         await cache.SetAsync(listKeyAdmin, new Box("admin"), TimeSpan.FromMinutes(5), CancellationToken.None);

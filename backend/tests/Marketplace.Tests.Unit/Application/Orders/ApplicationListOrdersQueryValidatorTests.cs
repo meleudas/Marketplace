@@ -19,8 +19,31 @@ public class ApplicationListOrdersQueryValidatorTests
             null,
             null,
             null,
+            null,
             1,
             200);
+
+        var result = validator.Validate(query);
+        Assert.False(result.IsValid);
+    }
+
+    [Fact]
+    public void Rejects_CompanyMemberId_For_My_Scope()
+    {
+        var validator = new ListOrdersQueryValidator();
+        var query = new ListOrdersQuery(
+            OrderListScope.My,
+            Guid.NewGuid(),
+            false,
+            null,
+            Guid.NewGuid(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            1,
+            20);
 
         var result = validator.Validate(query);
         Assert.False(result.IsValid);

@@ -326,6 +326,9 @@ public class ApplicationAdminCatalogHandlersTests
                     legalProfile.CertificateNumber,
                     legalProfile.IsVatPayer,
                     legalProfile.InitialCommissionPercent,
+                    legalProfile.PayoutIban,
+                    legalProfile.PayoutRecipientName,
+                    legalProfile.PayoutProviderAccountId,
                     legalProfile.CreatedAt,
                     legalProfile.UpdatedAt,
                     legalProfile.IsDeleted,
@@ -414,6 +417,13 @@ public class ApplicationAdminCatalogHandlersTests
             _activeByCompany[rate.CompanyId.Value] = rate;
             return Task.CompletedTask;
         }
+
+        public Task<CompanyCommissionRate?> GetActiveAtAsync(CompanyId companyId, DateTime asOfUtc, CancellationToken ct = default)
+            => GetActiveByCompanyIdAsync(companyId, ct);
+
+        public Task<IReadOnlyList<CompanyCommissionRate>> ListByCompanyIdAsync(CompanyId companyId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<CompanyCommissionRate>>(
+                _activeByCompany.TryGetValue(companyId.Value, out var rate) ? [rate] : []);
     }
 
     private sealed class NoOpCachePort : IAppCachePort

@@ -2,6 +2,10 @@ using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Notifications;
 using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Orders.Authorization;
+using Marketplace.Application.Orders.Options;
+using Marketplace.Application.Orders.Policies;
+using Marketplace.Application.Orders.Services;
+using Marketplace.Tests.Common.Fakes;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Orders.Commands.CancelOrder;
 using Marketplace.Application.Orders.Commands.UpdateOrderStatus;
@@ -10,6 +14,7 @@ using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Entities;
 using Marketplace.Domain.Orders.Enums;
 using Marketplace.Domain.Orders.Repositories;
+using Microsoft.Extensions.Options;
 
 namespace Marketplace.Tests;
 
@@ -21,11 +26,12 @@ public sealed class ApplicationOrderHandlersTests
     {
         var order = BuildOrder(status: OrderStatus.Paid);
         var repo = new InMemoryOrderRepository(order);
+        var outbox = new SpyOutboxWriter();
         var handler = new UpdateOrderStatusCommandHandler(
             repo,
             new StubOrderAccessService(false),
-            new NoopOrderCacheInvalidationService(),
-            new SpyOutboxWriter(),
+            new NoopShipmentFulfillmentService(),
+            OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), outbox),
             new SpyOrderStatusHistoryWriter(),
             new SpyAppNotificationScheduler());
 
@@ -42,11 +48,12 @@ public sealed class ApplicationOrderHandlersTests
     {
         var order = BuildOrder(status: OrderStatus.Pending);
         var repo = new InMemoryOrderRepository(order);
+        var outbox = new SpyOutboxWriter();
         var handler = new UpdateOrderStatusCommandHandler(
             repo,
             new StubOrderAccessService(true),
-            new NoopOrderCacheInvalidationService(),
-            new SpyOutboxWriter(),
+            new NoopShipmentFulfillmentService(),
+            OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), outbox),
             new SpyOrderStatusHistoryWriter(),
             new SpyAppNotificationScheduler());
 
@@ -69,8 +76,8 @@ public sealed class ApplicationOrderHandlersTests
         var handler = new UpdateOrderStatusCommandHandler(
             repo,
             new StubOrderAccessService(true),
-            new NoopOrderCacheInvalidationService(),
-            outbox,
+            new NoopShipmentFulfillmentService(),
+            OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), outbox),
             history,
             notifications);
 
@@ -91,16 +98,18 @@ public sealed class ApplicationOrderHandlersTests
     {
         var order = BuildOrder(status: OrderStatus.Pending);
         var repo = new InMemoryOrderRepository(order);
+        var outbox = new SpyOutboxWriter();
         var handler = new CancelOrderCommandHandler(
             repo,
             new StubOrderAccessService(false),
-            new NoopOrderCacheInvalidationService(),
-            new SpyOutboxWriter(),
+            new OrderCancellationPolicy(Options.Create(new OrderCancellationOptions())),
+            OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), outbox),
             new SpyOrderStatusHistoryWriter(),
-            new SpyAppNotificationScheduler());
+            new SpyAppNotificationScheduler(),
+            new NoopCheckoutInventoryService());
 
         var result = await handler.Handle(
-            new CancelOrderCommand(order.Id.Value, Guid.NewGuid(), false, "idem-orders-4"),
+            new CancelOrderCommand(order.Id.Value, Guid.NewGuid(), false, OrderCancellationReasonCode.ChangedMind, null, "idem-orders-4"),
             CancellationToken.None);
 
         Assert.True(result.IsFailure);
@@ -115,16 +124,18 @@ public sealed class ApplicationOrderHandlersTests
         var outbox = new SpyOutboxWriter();
         var history = new SpyOrderStatusHistoryWriter();
         var notifications = new SpyAppNotificationScheduler();
+        var actorId = order.CustomerId;
         var handler = new CancelOrderCommandHandler(
             repo,
             new StubOrderAccessService(true),
-            new NoopOrderCacheInvalidationService(),
-            outbox,
+            new OrderCancellationPolicy(Options.Create(new OrderCancellationOptions())),
+            OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), outbox),
             history,
-            notifications);
+            notifications,
+            new NoopCheckoutInventoryService());
 
         var result = await handler.Handle(
-            new CancelOrderCommand(order.Id.Value, Guid.NewGuid(), false, "idem-orders-5"),
+            new CancelOrderCommand(order.Id.Value, actorId, false, OrderCancellationReasonCode.ChangedMind, null, "idem-orders-5"),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -199,6 +210,15 @@ public sealed class ApplicationOrderHandlersTests
 
         public Task<bool> CanReadCompanyScopeAsync(Guid companyId, Guid actorUserId, bool isActorAdmin, CancellationToken ct = default)
             => Task.FromResult(_allow);
+
+        public Task<OrderCancellationActor> ResolveCancellationActorAsync(Order order, Guid actorUserId, bool isActorAdmin, CancellationToken ct = default)
+        {
+            if (isActorAdmin)
+                return Task.FromResult(OrderCancellationActor.Admin);
+            if (order.CustomerId == actorUserId)
+                return Task.FromResult(OrderCancellationActor.Buyer);
+            return Task.FromResult(OrderCancellationActor.CompanyMember);
+        }
     }
 
     private sealed class NoopOrderCacheInvalidationService : IOrderCacheInvalidationService
@@ -226,11 +246,18 @@ public sealed class ApplicationOrderHandlersTests
         public Task MarkFailedAsync(Guid id, string error, DateTime nextAttemptAtUtc, CancellationToken ct = default) => Task.CompletedTask;
         public Task MarkDeadLetterAsync(Guid id, string reason, string category, CancellationToken ct = default) => Task.CompletedTask;
         public Task RequeueDeadLetterAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListDeadLettersAsync(int page, int pageSize, CancellationToken ct = default)
+            => OutboxWriterFakeDefaults.EmptyListAsync(page, pageSize, ct);
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListStuckAsync(DateTime utcNow, int page, int pageSize, CancellationToken ct = default)
+            => OutboxWriterFakeDefaults.EmptyListAsync(page, pageSize, ct);
     }
 
     private sealed class SpyOrderStatusHistoryWriter : IOrderStatusHistoryWriter
     {
         public List<(OrderStatus OldStatus, OrderStatus NewStatus)> Entries { get; } = [];
+
+        public Task RecordCreatedAsync(Order order, Guid actorUserId, string source, string? correlationId, CancellationToken ct = default)
+            => Task.CompletedTask;
 
         public Task WriteIfChangedAsync(Order order, OrderStatus oldStatus, Guid actorUserId, string source, string? comment = null, string? correlationId = null, CancellationToken ct = default)
         {

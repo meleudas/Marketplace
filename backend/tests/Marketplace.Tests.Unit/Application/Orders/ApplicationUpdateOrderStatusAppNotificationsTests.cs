@@ -3,14 +3,19 @@ using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Notifications;
 using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Orders.Authorization;
+using Marketplace.Application.Orders.Policies;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Orders.Commands.CancelOrder;
+using Marketplace.Application.Orders.Options;
+using Marketplace.Application.Orders.Policies;
 using Marketplace.Application.Orders.Commands.UpdateOrderStatus;
 using Marketplace.Application.Orders.Services;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Entities;
 using Marketplace.Domain.Orders.Enums;
 using Marketplace.Domain.Orders.Repositories;
+using Marketplace.Tests.Common.Fakes;
+using Microsoft.Extensions.Options;
 
 namespace Marketplace.Tests;
 
@@ -55,8 +60,8 @@ public sealed class ApplicationUpdateOrderStatusAppNotificationsTests
         var handler = new UpdateOrderStatusCommandHandler(
             orderRepo,
             new AllowAllOrderAccess(),
-            new NoopOrderCacheInvalidationService(),
-            new NoopOutboxWriter(),
+            new NoopShipmentFulfillmentService(),
+            OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), new NoopOutboxWriter()),
             new NoopOrderStatusHistoryWriter(),
             spy);
 
@@ -121,8 +126,8 @@ public sealed class ApplicationUpdateOrderStatusAppNotificationsTests
         var handler = new UpdateOrderStatusCommandHandler(
             orderRepo,
             new AllowAllOrderAccess(),
-            new NoopOrderCacheInvalidationService(),
-            new NoopOutboxWriter(),
+            new NoopShipmentFulfillmentService(),
+            OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), new NoopOutboxWriter()),
             new NoopOrderStatusHistoryWriter(),
             spy);
 
@@ -181,8 +186,8 @@ public sealed class ApplicationUpdateOrderStatusAppNotificationsTests
         var handler = new UpdateOrderStatusCommandHandler(
             orderRepo,
             new AllowAllOrderAccess(),
-            new NoopOrderCacheInvalidationService(),
-            new NoopOutboxWriter(),
+            new NoopShipmentFulfillmentService(),
+            OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), new NoopOutboxWriter()),
             new NoopOrderStatusHistoryWriter(),
             spy);
 
@@ -241,13 +246,14 @@ public sealed class ApplicationUpdateOrderStatusAppNotificationsTests
         var handler = new CancelOrderCommandHandler(
             orderRepo,
             new AllowAllOrderAccess(),
-            new NoopOrderCacheInvalidationService(),
-            new NoopOutboxWriter(),
+            new OrderCancellationPolicy(Options.Create(new OrderCancellationOptions())),
+            OrderTestDoubles.CreateCoordinator(new NoopOrderCacheInvalidationService(), new NoopOutboxWriter()),
             new NoopOrderStatusHistoryWriter(),
-            spy);
+            spy,
+            new NoopCheckoutInventoryService());
 
         var result = await handler.Handle(
-            new CancelOrderCommand(orderRepo.LastId, Guid.NewGuid(), IsActorAdmin: true, IdempotencyKey: "idem-cancel-1"),
+            new CancelOrderCommand(orderRepo.LastId, Guid.NewGuid(), IsActorAdmin: true, OrderCancellationReasonCode.CustomerRequest, null, "idem-cancel-1"),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -277,6 +283,9 @@ public sealed class ApplicationUpdateOrderStatusAppNotificationsTests
 
         public Task<bool> CanReadCompanyScopeAsync(Guid companyId, Guid actorUserId, bool isActorAdmin, CancellationToken ct = default) =>
             Task.FromResult(true);
+
+        public Task<OrderCancellationActor> ResolveCancellationActorAsync(Order order, Guid actorUserId, bool isActorAdmin, CancellationToken ct = default) =>
+            Task.FromResult(isActorAdmin ? OrderCancellationActor.Admin : OrderCancellationActor.CompanyMember);
     }
 
     private sealed class NoopOrderCacheInvalidationService : IOrderCacheInvalidationService
@@ -295,10 +304,17 @@ public sealed class ApplicationUpdateOrderStatusAppNotificationsTests
         public Task MarkFailedAsync(Guid id, string error, DateTime nextAttemptAtUtc, CancellationToken ct = default) => Task.CompletedTask;
         public Task MarkDeadLetterAsync(Guid id, string reason, string category, CancellationToken ct = default) => Task.CompletedTask;
         public Task RequeueDeadLetterAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListDeadLettersAsync(int page, int pageSize, CancellationToken ct = default)
+            => OutboxWriterFakeDefaults.EmptyListAsync(page, pageSize, ct);
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListStuckAsync(DateTime utcNow, int page, int pageSize, CancellationToken ct = default)
+            => OutboxWriterFakeDefaults.EmptyListAsync(page, pageSize, ct);
     }
 
     private sealed class NoopOrderStatusHistoryWriter : IOrderStatusHistoryWriter
     {
+        public Task RecordCreatedAsync(Order order, Guid actorUserId, string source, string? correlationId = null, CancellationToken ct = default) =>
+            Task.CompletedTask;
+
         public Task WriteIfChangedAsync(Order order, OrderStatus oldStatus, Guid actorUserId, string source, string? comment = null, string? correlationId = null, CancellationToken ct = default) =>
             Task.CompletedTask;
     }
