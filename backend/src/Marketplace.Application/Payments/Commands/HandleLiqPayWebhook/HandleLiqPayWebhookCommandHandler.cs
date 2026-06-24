@@ -2,13 +2,16 @@ using System.Text;
 using System.Text.Json;
 using System.Security.Cryptography;
 using Marketplace.Application.Common.Observability;
-using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Finance.Services;
+using Marketplace.Application.Inventory.Services;
 using Marketplace.Application.Notifications;
 using Marketplace.Application.Notifications.Ports;
-using Marketplace.Application.Orders.Cache;
+using Marketplace.Application.Orders.Services;
 using Marketplace.Application.Payments.Ports;
 using Marketplace.Application.Payments.Services;
-using Marketplace.Application.Orders.Services;
+using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Common;
+using Marketplace.Domain.Behavior.Enums;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Repositories;
 using Marketplace.Domain.Payments.Enums;
@@ -23,33 +26,39 @@ public sealed class HandleLiqPayWebhookCommandHandler : IRequestHandler<HandleLi
     private readonly ILiqPayPort _liqPayPort;
     private readonly IPaymentRepository _paymentRepository;
     private readonly IOrderRepository _orderRepository;
-    private readonly IOrderCacheInvalidationService _orderCacheInvalidation;
+    private readonly OrderMutationCoordinator _orderMutationCoordinator;
     private readonly IOrderPaymentStateApplier _paymentStateApplier;
-    private readonly IOutboxWriter _outbox;
     private readonly IOrderStatusHistoryWriter _historyWriter;
     private readonly IInboxDeduplicator _inbox;
     private readonly IAppNotificationScheduler _appNotifications;
+    private readonly ICheckoutInventoryService _checkoutInventory;
+    private readonly IOrderFinancialsWriter _orderFinancialsWriter;
+    private readonly IOutboxWriter _outbox;
 
     public HandleLiqPayWebhookCommandHandler(
         ILiqPayPort liqPayPort,
         IPaymentRepository paymentRepository,
         IOrderRepository orderRepository,
-        IOrderCacheInvalidationService orderCacheInvalidation,
+        OrderMutationCoordinator orderMutationCoordinator,
         IOrderPaymentStateApplier paymentStateApplier,
-        IOutboxWriter outbox,
         IOrderStatusHistoryWriter historyWriter,
         IInboxDeduplicator inbox,
-        IAppNotificationScheduler appNotifications)
+        IAppNotificationScheduler appNotifications,
+        ICheckoutInventoryService checkoutInventory,
+        IOrderFinancialsWriter orderFinancialsWriter,
+        IOutboxWriter? outbox = null)
     {
         _liqPayPort = liqPayPort;
         _paymentRepository = paymentRepository;
         _orderRepository = orderRepository;
-        _orderCacheInvalidation = orderCacheInvalidation;
+        _orderMutationCoordinator = orderMutationCoordinator;
         _paymentStateApplier = paymentStateApplier;
-        _outbox = outbox;
         _historyWriter = historyWriter;
         _inbox = inbox;
         _appNotifications = appNotifications;
+        _checkoutInventory = checkoutInventory;
+        _orderFinancialsWriter = orderFinancialsWriter;
+        _outbox = outbox ?? NoOpOutboxWriter.Instance;
     }
 
     public async Task<Result> Handle(HandleLiqPayWebhookCommand request, CancellationToken ct)
@@ -81,24 +90,10 @@ public sealed class HandleLiqPayWebhookCommandHandler : IRequestHandler<HandleLi
             if (IsStatusDowngrade(payment.Status, mappedStatus))
                 return Result.Success();
             if (payment.Status == mappedStatus)
-                return Result.Success(); // idempotent duplicate webhook
+                return Result.Success();
 
             payment.UpdateProviderState(mappedStatus, transactionId, new JsonBlob(json.GetRawText()));
             await _paymentRepository.UpdateAsync(payment, ct);
-            await _outbox.AppendAsync(
-                "Payment",
-                payment.Id.Value.ToString(),
-                "PaymentStatusChanged",
-                JsonSerializer.Serialize(new
-                {
-                    messageId = Guid.NewGuid(),
-                    paymentId = payment.Id.Value,
-                    orderId = payment.OrderId.Value,
-                    transactionId,
-                    status = mappedStatus.ToString(),
-                    source = "webhook"
-                }),
-                ct);
 
             var order = await _orderRepository.GetByIdAsync(payment.OrderId, ct);
             if (order is not null)
@@ -114,7 +109,33 @@ public sealed class HandleLiqPayWebhookCommandHandler : IRequestHandler<HandleLi
                     "webhook",
                     correlationId: transactionId,
                     ct: ct);
-                await _orderCacheInvalidation.InvalidateOrderAsync(order.Id.Value, order.CustomerId, order.CompanyId.Value, ct);
+
+                await _orderMutationCoordinator.PublishPaymentStatusChangedAsync(
+                    payment.Id.Value,
+                    order.Id.Value,
+                    order.CustomerId,
+                    order.CompanyId.Value,
+                    mappedStatus.ToString(),
+                    "webhook",
+                    transactionId,
+                    ct);
+
+                if (mappedStatus == PaymentTransactionStatus.Completed)
+                {
+                    await _checkoutInventory.ConfirmForOrderAsync(order.Id, order.CompanyId, ct);
+                    await _orderFinancialsWriter.PostOnPaymentCompletedAsync(payment.Id, ct);
+                    await PublishPurchaseCompletedEventAsync(order, transactionId ?? string.Empty, ct);
+                }
+
+                if (mappedStatus == PaymentTransactionStatus.Failed)
+                {
+                    await _checkoutInventory.ReleaseForOrderAsync(
+                        order.Id,
+                        order.CompanyId,
+                        null,
+                        "payment-failed",
+                        ct);
+                }
 
                 if (mappedStatus is PaymentTransactionStatus.Completed
                     or PaymentTransactionStatus.Failed
@@ -184,4 +205,23 @@ public sealed class HandleLiqPayWebhookCommandHandler : IRequestHandler<HandleLi
             PaymentTransactionStatus.Refunded => 3,
             _ => 0
         };
+
+    private Task PublishPurchaseCompletedEventAsync(Marketplace.Domain.Orders.Entities.Order order, string transactionId, CancellationToken ct)
+    {
+        var messageId = DomainEventIds.ForPaymentStatus(order.Id.Value, BehaviorEventType.PurchaseCompleted.ToString(), "liqpay");
+        var payload = JsonSerializer.Serialize(new
+        {
+            messageId,
+            eventId = 0,
+            eventType = BehaviorEventType.PurchaseCompleted.ToString(),
+            occurredAtUtc = DateTime.UtcNow,
+            userId = order.CustomerId,
+            sessionId = $"user:{order.CustomerId:N}",
+            source = "payments:liqpay:webhook",
+            schemaVersion = 1,
+            eventKey = $"purchase|{order.Id.Value}|{transactionId}",
+            payloadJson = JsonSerializer.Serialize(new { orderId = order.Id.Value, transactionId })
+        });
+        return _outbox.AppendAsync("BehaviorEvent", order.Id.Value.ToString(), "behavior.event.ingested", payload, ct);
+    }
 }

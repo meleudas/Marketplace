@@ -1,6 +1,8 @@
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Common;
 using Marketplace.Application.Favorites.Cache;
 using Marketplace.Application.Favorites.DTOs;
+using Marketplace.Domain.Behavior.Enums;
 using Marketplace.Domain.Catalog.Enums;
 using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
@@ -8,6 +10,7 @@ using Marketplace.Domain.Favorites.Entities;
 using Marketplace.Domain.Favorites.Repositories;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
+using System.Text.Json;
 
 namespace Marketplace.Application.Favorites.Commands.AddFavoriteProduct;
 
@@ -16,12 +19,18 @@ public sealed class AddFavoriteProductCommandHandler : IRequestHandler<AddFavori
     private readonly IFavoriteRepository _favoriteRepository;
     private readonly IProductRepository _productRepository;
     private readonly IAppCachePort _cache;
+    private readonly IOutboxWriter _outbox;
 
-    public AddFavoriteProductCommandHandler(IFavoriteRepository favoriteRepository, IProductRepository productRepository, IAppCachePort cache)
+    public AddFavoriteProductCommandHandler(
+        IFavoriteRepository favoriteRepository,
+        IProductRepository productRepository,
+        IAppCachePort cache,
+        IOutboxWriter? outbox = null)
     {
         _favoriteRepository = favoriteRepository;
         _productRepository = productRepository;
         _cache = cache;
+        _outbox = outbox ?? NoOpOutboxWriter.Instance;
     }
 
     public async Task<Result<FavoriteItemDto>> Handle(AddFavoriteProductCommand request, CancellationToken ct)
@@ -81,6 +90,7 @@ public sealed class AddFavoriteProductCommandHandler : IRequestHandler<AddFavori
             }
 
             await _cache.RemoveAsync(FavoritesCacheKeys.ListByUser(request.ActorUserId), ct);
+            await PublishFavoriteEventAsync(request.ActorUserId, request.ProductId, ct);
             return Result<FavoriteItemDto>.Success(
                 new FavoriteItemDto(favorite.Id.Value, favorite.ProductId.Value, favorite.AddedAt, favorite.PriceAtAdd?.Amount, favorite.IsAvailable));
         }
@@ -88,5 +98,24 @@ public sealed class AddFavoriteProductCommandHandler : IRequestHandler<AddFavori
         {
             return Result<FavoriteItemDto>.Failure("Failed to add favorite");
         }
+    }
+
+    private Task PublishFavoriteEventAsync(Guid actorUserId, long productId, CancellationToken ct)
+    {
+        var messageId = DomainEventIds.ForBehaviorEvent(DateTime.UtcNow.Ticks ^ productId);
+        var payload = JsonSerializer.Serialize(new
+        {
+            messageId,
+            eventId = 0,
+            eventType = BehaviorEventType.FavoriteAdd.ToString(),
+            occurredAtUtc = DateTime.UtcNow,
+            userId = actorUserId,
+            sessionId = $"user:{actorUserId:N}",
+            source = "favorites:add",
+            schemaVersion = 1,
+            eventKey = $"favorite|{actorUserId:N}|{productId}",
+            payloadJson = JsonSerializer.Serialize(new { productId })
+        });
+        return _outbox.AppendAsync("BehaviorEvent", actorUserId.ToString("N"), "behavior.event.ingested", payload, ct);
     }
 }

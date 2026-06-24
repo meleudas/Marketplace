@@ -2,6 +2,7 @@ using Marketplace.Application.Behavior.Commands.TrackCatalogInteraction;
 using Marketplace.Application.Behavior.Options;
 using Marketplace.Application.Behavior.Services;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Tests.Common.Fakes;
 using Marketplace.Domain.Behavior.Entities;
 using Marketplace.Domain.Behavior.Enums;
 using Marketplace.Domain.Behavior.Repositories;
@@ -67,5 +68,9 @@ public sealed class ApplicationBehaviorAnalyticsCommandTests
         public Task MarkFailedAsync(Guid id, string error, DateTime nextAttemptAtUtc, CancellationToken ct = default) => Task.CompletedTask;
         public Task MarkDeadLetterAsync(Guid id, string reason, string category, CancellationToken ct = default) => Task.CompletedTask;
         public Task RequeueDeadLetterAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListDeadLettersAsync(int page, int pageSize, CancellationToken ct = default)
+            => OutboxWriterFakeDefaults.EmptyListAsync(page, pageSize, ct);
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListStuckAsync(DateTime utcNow, int page, int pageSize, CancellationToken ct = default)
+            => OutboxWriterFakeDefaults.EmptyListAsync(page, pageSize, ct);
     }
 }

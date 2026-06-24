@@ -6,11 +6,13 @@ using Marketplace.Domain.Behavior.Entities;
 using Marketplace.Domain.Behavior.Enums;
 using Marketplace.Domain.Behavior.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
+using Marketplace.Application.Common;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 namespace Marketplace.Application.Behavior.Commands.TrackCatalogInteraction;
 
@@ -78,7 +80,20 @@ public sealed class TrackCatalogInteractionCommandHandler : IRequestHandler<Trac
 
         var entity = BehaviorEvent.Create(request.ActorUserId, request.SessionId, type, key, new JsonBlob(payload), request.Source, now, now);
         var saved = await _repository.AddAsync(entity, ct);
-        await _outbox.AppendAsync("BehaviorEvent", saved.Id.Value.ToString(), "behavior.event.ingested", payload, ct);
+        var eventPayload = JsonSerializer.Serialize(new
+        {
+            messageId = DomainEventIds.ForBehaviorEvent(saved.Id.Value),
+            eventId = saved.Id.Value,
+            eventType = saved.EventType.ToString(),
+            occurredAtUtc = saved.OccurredAtUtc,
+            userId = saved.UserId,
+            sessionId = saved.SessionId,
+            source = saved.Source,
+            schemaVersion = saved.EventVersion.Value,
+            eventKey = saved.EventKey,
+            payloadJson = payload
+        });
+        await _outbox.AppendAsync("BehaviorEvent", saved.Id.Value.ToString(), "behavior.event.ingested", eventPayload, ct);
         return Result.Success();
     }
 
