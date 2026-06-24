@@ -33,6 +33,7 @@ public sealed record ShippingQuoteDto(
 public sealed record ShipmentDto(
     long Id,
     long OrderId,
+    int ShipmentNumber,
     long ShippingMethodId,
     string CarrierCode,
     string Status,
@@ -40,3 +41,52 @@ public sealed record ShipmentDto(
     DateTime? LastSyncedAtUtc,
     DateTime CreatedAt,
     DateTime UpdatedAt);
+
+public sealed record ShipmentSummaryDto(
+    long Id,
+    long OrderId,
+    int ShipmentNumber,
+    string Status,
+    string? TrackingNumber,
+    int TotalQuantity,
+    DateTime CreatedAt);
+
+public sealed record ShipmentItemDto(long OrderItemId, int Quantity);
+
+public sealed record ShippingEventDto(
+    string CarrierCode,
+    string EventKey,
+    string? TrackingNumber,
+    string? DeliveryStatus,
+    DateTime OccurredAtUtc);
+
+public sealed record ShipmentDetailDto(
+    long Id,
+    long OrderId,
+    int ShipmentNumber,
+    long ShippingMethodId,
+    string CarrierCode,
+    string Status,
+    string? TrackingNumber,
+    DateTime? LastSyncedAtUtc,
+    DateTime CreatedAt,
+    DateTime UpdatedAt,
+    IReadOnlyList<ShipmentItemDto> Items,
+    IReadOnlyList<ShippingEventDto> Events);
+
+public sealed record WarehouseFulfillmentGroupDto(
+    long WarehouseId,
+    string WarehouseName,
+    IReadOnlyList<PendingShipmentItemDto> Items);
+
+public sealed record FulfillmentReadinessDto(
+    int TotalOrderItems,
+    int FullyShippedItems,
+    int FullyDeliveredItems,
+    bool IsFullyShipped,
+    bool IsFullyDelivered,
+    IReadOnlyList<PendingShipmentItemDto> PendingItems,
+    IReadOnlyList<WarehouseFulfillmentGroupDto> PendingByWarehouse,
+    IReadOnlyList<ShipmentSummaryDto> Shipments);
+
+public sealed record PendingShipmentItemDto(long OrderItemId, int OrderedQuantity, int ShippedQuantity, int RemainingQuantity);

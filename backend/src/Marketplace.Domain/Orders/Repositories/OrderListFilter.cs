@@ -5,6 +5,7 @@ namespace Marketplace.Domain.Orders.Repositories;
 public sealed record OrderListFilter(
     Guid? CustomerId,
     Guid? CompanyId,
+    Guid? CompanyMemberUserId,
     IReadOnlyList<OrderStatus>? Statuses,
     DateTime? CreatedFromUtc,
     DateTime? CreatedToUtc,

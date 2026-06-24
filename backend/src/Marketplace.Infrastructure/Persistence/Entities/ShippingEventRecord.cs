@@ -8,6 +8,11 @@ public sealed class ShippingEventRecord
     public string PayloadHash { get; set; } = string.Empty;
     public string RawPayload { get; set; } = "{}";
     public DateTime ReceivedAtUtc { get; set; }
+    public long? ShipmentId { get; set; }
+    public long? OrderId { get; set; }
+    public string? TrackingNumber { get; set; }
+    public short? DeliveryStatus { get; set; }
+    public DateTime? OccurredAtUtc { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public bool IsDeleted { get; set; }

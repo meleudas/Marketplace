@@ -14,9 +14,12 @@ public sealed class ShipmentConfiguration : IEntityTypeConfiguration<ShipmentRec
         builder.Property(x => x.RawPayload).HasColumnType("jsonb").IsRequired();
         builder.Property(x => x.IsDeleted).HasDefaultValue(false);
 
-        builder.HasIndex(x => x.OrderId).IsUnique();
+        builder.HasIndex(x => x.WarehouseId);
+        builder.HasIndex(x => x.OrderId);
+        builder.HasIndex(x => x.WarehouseId);
         builder.HasIndex(x => x.CustomerId);
         builder.HasIndex(x => x.Status);
+        builder.HasIndex(x => x.TrackingNumber);
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

@@ -33,6 +33,7 @@ internal static class ShippingMappers
         new(
             entity.Id.Value,
             entity.OrderId.Value,
+            entity.ShipmentNumber,
             entity.ShippingMethodId.Value,
             entity.CarrierCode.ToString(),
             entity.Status.ToString(),

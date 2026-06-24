@@ -13,6 +13,43 @@ public sealed class ShippingEvent : AuditableSoftDeleteAggregateRoot<ShippingEve
     public string PayloadHash { get; private set; } = string.Empty;
     public JsonBlob RawPayload { get; private set; } = JsonBlob.Empty;
     public DateTime ReceivedAtUtc { get; private set; }
+    public ShipmentId? ShipmentId { get; private set; }
+    public OrderId? OrderId { get; private set; }
+    public string? TrackingNumber { get; private set; }
+    public DeliveryStatus? DeliveryStatus { get; private set; }
+    public DateTime? OccurredAtUtc { get; private set; }
+
+    public static ShippingEvent CreateFromWebhook(
+        ShippingEventId id,
+        ShippingCarrierCode carrierCode,
+        string eventKey,
+        string payloadHash,
+        JsonBlob rawPayload,
+        ShipmentId? shipmentId,
+        OrderId? orderId,
+        string? trackingNumber,
+        DeliveryStatus? deliveryStatus,
+        DateTime? occurredAtUtc)
+    {
+        var now = DateTime.UtcNow;
+        return new ShippingEvent
+        {
+            Id = id,
+            CarrierCode = carrierCode,
+            EventKey = eventKey,
+            PayloadHash = payloadHash,
+            RawPayload = rawPayload,
+            ReceivedAtUtc = now,
+            ShipmentId = shipmentId,
+            OrderId = orderId,
+            TrackingNumber = trackingNumber,
+            DeliveryStatus = deliveryStatus,
+            OccurredAtUtc = occurredAtUtc ?? now,
+            CreatedAt = now,
+            UpdatedAt = now,
+            IsDeleted = false
+        };
+    }
 
     public static ShippingEvent Reconstitute(
         ShippingEventId id,
@@ -21,6 +58,11 @@ public sealed class ShippingEvent : AuditableSoftDeleteAggregateRoot<ShippingEve
         string payloadHash,
         JsonBlob rawPayload,
         DateTime receivedAtUtc,
+        ShipmentId? shipmentId,
+        OrderId? orderId,
+        string? trackingNumber,
+        DeliveryStatus? deliveryStatus,
+        DateTime? occurredAtUtc,
         DateTime createdAt,
         DateTime updatedAt,
         bool isDeleted,
@@ -33,6 +75,11 @@ public sealed class ShippingEvent : AuditableSoftDeleteAggregateRoot<ShippingEve
             PayloadHash = payloadHash,
             RawPayload = rawPayload,
             ReceivedAtUtc = receivedAtUtc,
+            ShipmentId = shipmentId,
+            OrderId = orderId,
+            TrackingNumber = trackingNumber,
+            DeliveryStatus = deliveryStatus,
+            OccurredAtUtc = occurredAtUtc,
             CreatedAt = createdAt,
             UpdatedAt = updatedAt,
             IsDeleted = isDeleted,

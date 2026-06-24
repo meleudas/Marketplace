@@ -19,10 +19,20 @@ public sealed class ShipmentRepository : IShipmentRepository
         return row is null ? null : ToDomain(row);
     }
 
-    public async Task<Shipment?> GetByOrderIdAsync(OrderId orderId, CancellationToken ct = default)
+    public async Task<Shipment?> GetByTrackingNumberAsync(string trackingNumber, CancellationToken ct = default)
     {
-        var row = await _context.Shipments.AsNoTracking().FirstOrDefaultAsync(x => x.OrderId == orderId.Value, ct);
+        var row = await _context.Shipments.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.TrackingNumber == trackingNumber, ct);
         return row is null ? null : ToDomain(row);
+    }
+
+    public async Task<IReadOnlyList<Shipment>> ListByOrderIdAsync(OrderId orderId, CancellationToken ct = default)
+    {
+        var rows = await _context.Shipments.AsNoTracking()
+            .Where(x => x.OrderId == orderId.Value)
+            .OrderBy(x => x.ShipmentNumber)
+            .ToListAsync(ct);
+        return rows.Select(ToDomain).ToList();
     }
 
     public async Task<IReadOnlyList<Shipment>> ListByCustomerAsync(Guid userId, CancellationToken ct = default)
@@ -30,6 +40,19 @@ public sealed class ShipmentRepository : IShipmentRepository
         var rows = await _context.Shipments.AsNoTracking()
             .Where(x => x.CustomerId == userId)
             .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(ct);
+        return rows.Select(ToDomain).ToList();
+    }
+
+    public async Task<int> CountByOrderIdAsync(OrderId orderId, CancellationToken ct = default)
+        => await _context.Shipments.AsNoTracking().CountAsync(x => x.OrderId == orderId.Value, ct);
+
+    public async Task<IReadOnlyList<Shipment>> ListByStatusAsync(DeliveryStatus status, int limit, CancellationToken ct = default)
+    {
+        var rows = await _context.Shipments.AsNoTracking()
+            .Where(x => x.Status == (short)status && !string.IsNullOrEmpty(x.TrackingNumber))
+            .OrderBy(x => x.LastSyncedAtUtc ?? x.UpdatedAt)
+            .Take(limit)
             .ToListAsync(ct);
         return rows.Select(ToDomain).ToList();
     }
@@ -47,9 +70,8 @@ public sealed class ShipmentRepository : IShipmentRepository
         var row = await _context.Shipments.FirstOrDefaultAsync(x => x.Id == entity.Id.Value, ct)
             ?? throw new InvalidOperationException($"Shipment '{entity.Id.Value}' was not found.");
 
-        row.OrderId = entity.OrderId.Value;
-        row.CustomerId = entity.CustomerId;
-        row.ShippingMethodId = entity.ShippingMethodId.Value;
+        row.ShipmentNumber = entity.ShipmentNumber;
+        row.WarehouseId = entity.WarehouseId?.Value;
         row.CarrierCode = (short)entity.CarrierCode;
         row.Status = (short)entity.Status;
         row.TrackingNumber = entity.TrackingNumber;
@@ -67,7 +89,9 @@ public sealed class ShipmentRepository : IShipmentRepository
             ShipmentId.From(row.Id),
             OrderId.From(row.OrderId),
             row.CustomerId,
+            row.ShipmentNumber,
             ShippingMethodId.From(row.ShippingMethodId),
+            row.WarehouseId is null ? null : WarehouseId.From(row.WarehouseId.Value),
             (ShippingCarrierCode)row.CarrierCode,
             (DeliveryStatus)row.Status,
             row.TrackingNumber,
@@ -84,7 +108,9 @@ public sealed class ShipmentRepository : IShipmentRepository
             Id = entity.Id.Value,
             OrderId = entity.OrderId.Value,
             CustomerId = entity.CustomerId,
+            ShipmentNumber = entity.ShipmentNumber,
             ShippingMethodId = entity.ShippingMethodId.Value,
+            WarehouseId = entity.WarehouseId?.Value,
             CarrierCode = (short)entity.CarrierCode,
             Status = (short)entity.Status,
             TrackingNumber = entity.TrackingNumber,
