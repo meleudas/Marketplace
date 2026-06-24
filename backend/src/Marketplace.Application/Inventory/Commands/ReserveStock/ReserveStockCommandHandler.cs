@@ -1,8 +1,10 @@
 using Marketplace.Application.Inventory.Authorization;
 using Marketplace.Application.Catalog.Cache;
-using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Common;
 using Marketplace.Application.Common.Exceptions;
+using Marketplace.Application.Common.Ports;
 using Marketplace.Domain.Catalog.Repositories;
+using Marketplace.Domain.Common.Exceptions;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Inventory.Entities;
 using Marketplace.Domain.Inventory.Enums;
@@ -56,6 +58,7 @@ public sealed class ReserveStockCommandHandler : IRequestHandler<ReserveStockCom
                 return Result.Success();
 
             InventoryReservation? reservation = null;
+            var failed = false;
             for (var attempt = 0; attempt < 3; attempt++)
             {
                 try
@@ -95,10 +98,39 @@ public sealed class ReserveStockCommandHandler : IRequestHandler<ReserveStockCom
                     }, ct);
                     break;
                 }
+                catch (DomainException ex)
+                {
+                    return Result.Failure(ex.Message);
+                }
                 catch (ConcurrencyConflictException) when (attempt < 2)
                 {
                     await Task.Delay(25 * (attempt + 1), ct);
                 }
+                catch (Exception)
+                {
+                    failed = true;
+                    break;
+                }
+            }
+
+            if (failed)
+            {
+                await _outbox.AppendAsync(
+                    "InventoryReservation",
+                    request.ReservationCode,
+                    "InventoryFailed",
+                    System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        messageId = DomainEventIds.ForInventoryEvent(0, $"failed:{request.ReservationCode}"),
+                        companyId = request.CompanyId,
+                        warehouseId = request.WarehouseId,
+                        productId = request.ProductId,
+                        quantity = request.Quantity,
+                        reservationCode = request.ReservationCode,
+                        reason = "reserve_failed"
+                    }),
+                    ct);
+                return Result.Failure("Failed to reserve stock");
             }
 
             if (reservation is null)
@@ -110,7 +142,7 @@ public sealed class ReserveStockCommandHandler : IRequestHandler<ReserveStockCom
                 "InventoryReserved",
                 System.Text.Json.JsonSerializer.Serialize(new
                 {
-                    messageId = Guid.NewGuid(),
+                    messageId = DomainEventIds.ForInventoryEvent(reservation.Id.Value, "reserved"),
                     reservationId = reservation.Id.Value,
                     companyId = request.CompanyId,
                     warehouseId = request.WarehouseId,

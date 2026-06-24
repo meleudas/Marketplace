@@ -2,11 +2,12 @@ using Marketplace.Application.Carts.Cache;
 using Marketplace.Application.Common.Observability;
 using Marketplace.Application.Carts.DTOs;
 using Marketplace.Application.Carts.Ports;
+using Marketplace.Application.Common;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Coupons.Services;
 using Marketplace.Application.Notifications;
 using Marketplace.Application.Notifications.Ports;
-using Marketplace.Application.Orders.Cache;
+using Marketplace.Application.Inventory.Services;
 using Marketplace.Application.Orders.Services;
 using Marketplace.Application.Payments.Ports;
 using Marketplace.Domain.Cart.Repositories;
@@ -38,10 +39,11 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
     private readonly IPaymentRepository _paymentRepository;
     private readonly ILiqPayPort _liqPayPort;
     private readonly IAppCachePort _cache;
-    private readonly IOrderCacheInvalidationService _orderCacheInvalidation;
-    private readonly IOutboxWriter _outbox;
+    private readonly OrderMutationCoordinator _orderMutationCoordinator;
+    private readonly ICheckoutInventoryService _checkoutInventory;
     private readonly IOrderStatusHistoryWriter _historyWriter;
-    private readonly IWarehouseStockRepository _warehouseStockRepository;
+        private readonly IWarehouseStockRepository _warehouseStockRepository;
+        private readonly WarehouseAllocationPlanner _warehouseAllocationPlanner;
     private readonly IAppNotificationScheduler _appNotifications;
     private readonly ICartStockWatchRepository _cartStockWatches;
     private readonly IShippingMethodRepository _shippingMethodRepository;
@@ -59,10 +61,11 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
         IPaymentRepository paymentRepository,
         ILiqPayPort liqPayPort,
         IAppCachePort cache,
-        IOrderCacheInvalidationService orderCacheInvalidation,
-        IOutboxWriter outbox,
+        OrderMutationCoordinator orderMutationCoordinator,
+        ICheckoutInventoryService checkoutInventory,
         IOrderStatusHistoryWriter historyWriter,
         IWarehouseStockRepository warehouseStockRepository,
+        WarehouseAllocationPlanner warehouseAllocationPlanner,
         IAppNotificationScheduler appNotifications,
         ICartStockWatchRepository cartStockWatches,
         IShippingMethodRepository shippingMethodRepository,
@@ -79,10 +82,11 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
         _paymentRepository = paymentRepository;
         _liqPayPort = liqPayPort;
         _cache = cache;
-        _orderCacheInvalidation = orderCacheInvalidation;
-        _outbox = outbox;
+        _orderMutationCoordinator = orderMutationCoordinator;
+        _checkoutInventory = checkoutInventory;
         _historyWriter = historyWriter;
         _warehouseStockRepository = warehouseStockRepository;
+        _warehouseAllocationPlanner = warehouseAllocationPlanner;
         _appNotifications = appNotifications;
         _cartStockWatches = cartStockWatches;
         _shippingMethodRepository = shippingMethodRepository;
@@ -122,15 +126,50 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
 
             foreach (var grouped in cartItems.GroupBy(x => (companyId: productMap[x.ProductId.Value].CompanyId, x.ProductId)))
             {
-                var stocks = await _warehouseStockRepository.ListByProductAsync(grouped.Key.companyId, grouped.Key.ProductId, ct);
-                var available = stocks.Sum(x => x.Available);
+                var companyId = grouped.Key.companyId;
+                var productId = grouped.Key.ProductId;
                 var requested = grouped.Sum(x => x.Quantity);
-                if (available < requested)
+                var plan = await _warehouseAllocationPlanner.PlanAsync(
+                    companyId,
+                    [new WarehouseAllocationLineRequest(productId, requested)],
+                    ct);
+                if (!plan.IsValid)
                     return Result<CheckoutResultDto>.Failure("Insufficient stock for checkout");
             }
 
+            var revalidation = await _couponCheckoutService.RevalidateForCheckoutAsync(
+                request.ActorUserId,
+                cart.Id,
+                cartItems,
+                productMap,
+                ct);
+            if (!revalidation.IsValid)
+                return Result<CheckoutResultDto>.Failure($"{revalidation.ErrorCode}: {revalidation.Message}");
+
+            var couponLines = cartItems
+                .Select(item =>
+                {
+                    var product = productMap[item.ProductId.Value];
+                    return new Marketplace.Application.Coupons.Validation.CouponCartLine(
+                        item.ProductId.Value,
+                        product.CategoryId.Value,
+                        product.CompanyId.Value,
+                        item.Quantity,
+                        item.PriceAtMoment.Amount);
+                })
+                .ToList();
+            var checkoutCouponPlan = await _couponCheckoutService.ResolveCheckoutPlanAsync(
+                request.ActorUserId,
+                cart.Id,
+                couponLines,
+                ct);
+            if (!checkoutCouponPlan.IsValid)
+                return Result<CheckoutResultDto>.Failure($"{checkoutCouponPlan.ErrorCode}: {checkoutCouponPlan.Message}");
+
             var now = DateTime.UtcNow;
             var createdOrders = new List<CreatedOrderDto>();
+            var ordersToReleaseStock = new List<(long OrderId, Guid CompanyId)>();
+            OrderId? primaryOrderId = null;
 
             await _tx.ExecuteAsync(async txCt =>
             {
@@ -139,13 +178,8 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
                     var orderNumber = $"ORD-{now:yyyyMMddHHmmss}-{Random.Shared.Next(1000, 9999)}";
                     var subtotal = companyGroup.Sum(x => x.PriceAtMoment.Amount * x.Quantity);
                     var shippingCost = shippingMethod.Price.Amount;
-                    var couponDiscount = await _couponCheckoutService.ResolveDiscountAsync(
-                        request.ActorUserId,
-                        cart.Id,
-                        CompanyId.From(companyGroup.Key),
-                        subtotal,
-                        txCt);
-                    var total = subtotal + shippingCost - couponDiscount.DiscountAmount;
+                    var couponDiscountAmount = checkoutCouponPlan.Plan.GetDiscountForCompany(companyGroup.Key);
+                    var total = subtotal + shippingCost - couponDiscountAmount;
                     if (total < 0)
                         total = 0;
 
@@ -158,7 +192,7 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
                         new Money(total),
                         new Money(subtotal),
                         new Money(shippingCost),
-                        new Money(couponDiscount.DiscountAmount),
+                        new Money(couponDiscountAmount),
                         Money.Zero,
                         shippingMethod.Id,
                         request.PaymentMethod,
@@ -174,17 +208,14 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
                         null);
 
                     var savedOrder = await _orderRepository.AddAsync(order, txCt);
+                    primaryOrderId ??= savedOrder.Id;
 
-                    if (couponDiscount is { CouponId: not null, CouponCode: not null, DiscountAmount: > 0 })
-                    {
-                        await _couponCheckoutService.ConsumeAsync(
-                            request.ActorUserId,
-                            savedOrder.Id,
-                            couponDiscount.CouponId.Value,
-                            couponDiscount.CouponCode,
-                            couponDiscount.DiscountAmount,
-                            txCt);
-                    }
+                    await _historyWriter.RecordCreatedAsync(
+                        savedOrder,
+                        request.ActorUserId,
+                        "checkout",
+                        correlationId: savedOrder.OrderNumber,
+                        txCt);
 
                     var orderItems = companyGroup
                         .Select(item =>
@@ -210,6 +241,16 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
                         .ToList();
 
                     await _orderItemRepository.AddRangeAsync(orderItems, txCt);
+
+                    var savedItems = await _orderItemRepository.ListByOrderIdAsync(savedOrder.Id, txCt);
+                    var reserveLines = savedItems
+                        .Select(item => (item.Id, item.ProductId, item.Quantity))
+                        .ToList();
+                    await _checkoutInventory.ReserveForOrderAsync(
+                        savedOrder.Id,
+                        savedOrder.CompanyId,
+                        reserveLines,
+                        txCt);
 
                     var address = OrderAddressSnapshot.Reconstitute(
                         OrderAddressId.From(0),
@@ -297,6 +338,7 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
                                 "checkout",
                                 correlationId: liqPayResult.TransactionId,
                                 ct: txCt);
+                            ordersToReleaseStock.Add((savedOrder.Id.Value, savedOrder.CompanyId.Value));
                         }
                     }
 
@@ -309,23 +351,10 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
                         savedOrder.TotalPrice.Amount,
                         paymentDto));
 
-                    await _orderCacheInvalidation.InvalidateOrderAsync(
-                        savedOrder.Id.Value,
-                        savedOrder.CustomerId,
-                        savedOrder.CompanyId.Value,
-                        txCt);
-                    await _outbox.AppendAsync(
-                        "Order",
-                        savedOrder.Id.Value.ToString(),
+                    await _orderMutationCoordinator.PublishOrderChangedAsync(
+                        savedOrder,
                         "OrderCreated",
-                        System.Text.Json.JsonSerializer.Serialize(new
-                        {
-                            messageId = Guid.NewGuid(),
-                            orderId = savedOrder.Id.Value,
-                            customerId = savedOrder.CustomerId,
-                            companyId = savedOrder.CompanyId.Value,
-                            orderNumber = savedOrder.OrderNumber
-                        }),
+                        $"checkout:{savedOrder.OrderNumber}",
                         txCt);
 
                     await _appNotifications.ScheduleAsync(
@@ -364,9 +393,33 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
                         txCt);
                 }
 
+                if (primaryOrderId is not null
+                    && checkoutCouponPlan is { CouponId: not null, CouponCode: not null }
+                    && checkoutCouponPlan.Plan.TotalDiscount > 0)
+                {
+                    await _couponCheckoutService.ConsumeOnceAsync(
+                        request.ActorUserId,
+                        primaryOrderId,
+                        cart.Id,
+                        checkoutCouponPlan.CouponId.Value,
+                        checkoutCouponPlan.CouponCode,
+                        checkoutCouponPlan.Plan.TotalDiscount,
+                        txCt);
+                }
+
                 await _cartItemRepository.SoftDeleteByCartIdAsync(cart.Id, now, txCt);
                 await _cartStockWatches.DeleteAllForUserAsync(request.ActorUserId, txCt);
             }, ct);
+
+            foreach (var (orderId, companyId) in ordersToReleaseStock)
+            {
+                await _checkoutInventory.ReleaseForOrderAsync(
+                    OrderId.From(orderId),
+                    CompanyId.From(companyId),
+                    request.ActorUserId,
+                    "checkout-payment-failed",
+                    ct);
+            }
 
             try
             {
@@ -378,6 +431,10 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
             }
 
             return Result<CheckoutResultDto>.Success(new CheckoutResultDto(createdOrders));
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Insufficient stock", StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<CheckoutResultDto>.Failure("Insufficient stock for checkout");
         }
         catch (Exception ex)
         {

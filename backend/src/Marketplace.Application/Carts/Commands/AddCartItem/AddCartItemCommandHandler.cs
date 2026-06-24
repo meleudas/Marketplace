@@ -4,6 +4,8 @@ using Marketplace.Application.Carts.Mappings;
 using Marketplace.Application.Carts.Services;
 using Marketplace.Application.Common.Observability;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Common;
+using Marketplace.Domain.Behavior.Enums;
 using Marketplace.Domain.Cart.Entities;
 using Marketplace.Domain.Cart.Enums;
 using Marketplace.Domain.Cart.Repositories;
@@ -12,6 +14,7 @@ using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
+using System.Text.Json;
 
 namespace Marketplace.Application.Carts.Commands.AddCartItem;
 
@@ -22,19 +25,22 @@ public sealed class AddCartItemCommandHandler : IRequestHandler<AddCartItemComma
     private readonly IProductRepository _productRepository;
     private readonly IAppCachePort _cache;
     private readonly ICartStockWatchSyncService _cartStockWatchSync;
+    private readonly IOutboxWriter _outbox;
 
     public AddCartItemCommandHandler(
         ICartRepository cartRepository,
         ICartItemRepository cartItemRepository,
         IProductRepository productRepository,
         IAppCachePort cache,
-        ICartStockWatchSyncService cartStockWatchSync)
+        ICartStockWatchSyncService cartStockWatchSync,
+        IOutboxWriter? outbox = null)
     {
         _cartRepository = cartRepository;
         _cartItemRepository = cartItemRepository;
         _productRepository = productRepository;
         _cache = cache;
         _cartStockWatchSync = cartStockWatchSync;
+        _outbox = outbox ?? NoOpOutboxWriter.Instance;
     }
 
     public async Task<Result<CartDto>> Handle(AddCartItemCommand request, CancellationToken ct)
@@ -97,6 +103,7 @@ public sealed class AddCartItemCommandHandler : IRequestHandler<AddCartItemComma
             await _cartRepository.UpdateAsync(cart, ct);
             await _cache.RemoveAsync(CartCacheKeys.ActiveByUser(request.ActorUserId), ct);
             await _cartStockWatchSync.SyncWatchForUserCartProductAsync(request.ActorUserId, cart.Id, product.Id, ct);
+            await PublishCartAddEventAsync(request.ActorUserId, request.ProductId, request.Quantity, ct);
 
             var items = await _cartItemRepository.ListByCartIdAsync(cart.Id, ct);
             return Result<CartDto>.Success(CartMapping.ToDto(cart, items));
@@ -105,5 +112,24 @@ public sealed class AddCartItemCommandHandler : IRequestHandler<AddCartItemComma
         {
             return Result<CartDto>.Failure($"Failed to add item to cart: {ex.Message}");
         }
+    }
+
+    private Task PublishCartAddEventAsync(Guid actorUserId, long productId, int quantity, CancellationToken ct)
+    {
+        var messageId = DomainEventIds.ForBehaviorEvent(DateTime.UtcNow.Ticks ^ productId ^ quantity);
+        var payload = JsonSerializer.Serialize(new
+        {
+            messageId,
+            eventId = 0,
+            eventType = BehaviorEventType.AddToCart.ToString(),
+            occurredAtUtc = DateTime.UtcNow,
+            userId = actorUserId,
+            sessionId = $"user:{actorUserId:N}",
+            source = "cart:add",
+            schemaVersion = 1,
+            eventKey = $"cart|{actorUserId:N}|{productId}|{quantity}",
+            payloadJson = JsonSerializer.Serialize(new { productId, quantity })
+        });
+        return _outbox.AppendAsync("BehaviorEvent", actorUserId.ToString("N"), "behavior.event.ingested", payload, ct);
     }
 }

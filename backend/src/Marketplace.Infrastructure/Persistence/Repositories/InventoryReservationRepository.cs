@@ -13,6 +13,13 @@ public sealed class InventoryReservationRepository : IInventoryReservationReposi
 
     public InventoryReservationRepository(ApplicationDbContext context) => _context = context;
 
+    public async Task<InventoryReservation?> GetByIdAsync(InventoryReservationId id, CancellationToken ct = default)
+    {
+        var row = await _context.InventoryReservations.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id.Value, ct);
+        return row is null ? null : ToDomain(row);
+    }
+
     public async Task<InventoryReservation?> GetByCodeAsync(CompanyId companyId, string reservationCode, CancellationToken ct = default)
     {
         var row = await _context.InventoryReservations.AsNoTracking()
@@ -24,6 +31,16 @@ public sealed class InventoryReservationRepository : IInventoryReservationReposi
     {
         var rows = await _context.InventoryReservations.AsNoTracking()
             .Where(x => x.Status == (short)InventoryReservationStatus.Active && x.ExpiresAt <= utcNow)
+            .ToListAsync(ct);
+        return rows.Select(ToDomain).ToList();
+    }
+
+    public async Task<IReadOnlyList<InventoryReservation>> ListActiveByReferenceAsync(CompanyId companyId, string reference, CancellationToken ct = default)
+    {
+        var rows = await _context.InventoryReservations.AsNoTracking()
+            .Where(x => x.CompanyId == companyId.Value
+                && x.Reference == reference
+                && x.Status == (short)InventoryReservationStatus.Active)
             .ToListAsync(ct);
         return rows.Select(ToDomain).ToList();
     }
