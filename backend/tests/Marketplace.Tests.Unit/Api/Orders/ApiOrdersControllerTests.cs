@@ -57,9 +57,11 @@ public class ApiOrdersControllerTests
         var controller = BuildController(sender);
 
         controller.ControllerContext.HttpContext.Request.Headers["Idempotency-Key"] = "test-key";
-        _ = await controller.Cancel(7, CancellationToken.None);
+        _ = await controller.Cancel(7, new CancelOrderRequest(OrderCancellationReasonCode.ChangedMind, null), CancellationToken.None);
 
         Assert.IsType<CancelOrderCommand>(sender.LastRequest);
+        var cmd = (CancelOrderCommand)sender.LastRequest!;
+        Assert.Equal(OrderCancellationReasonCode.ChangedMind, cmd.ReasonCode);
     }
 
     [Fact]
@@ -128,7 +130,7 @@ public class ApiOrdersControllerTests
         var sender = new RecordingSender { NextResult = Result.Success() };
         var controller = BuildController(sender);
 
-        var result = await controller.Cancel(7, CancellationToken.None);
+        var result = await controller.Cancel(7, new CancelOrderRequest(OrderCancellationReasonCode.ChangedMind, null), CancellationToken.None);
 
         var bad = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("Idempotency-Key header is required.", bad.Value);

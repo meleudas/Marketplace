@@ -26,6 +26,8 @@ public sealed class Order : AuditableSoftDeleteAggregateRoot<OrderId>
     public DateTime? DeliveredAt { get; private set; }
     public DateTime? CancelledAt { get; private set; }
     public DateTime? RefundedAt { get; private set; }
+    public OrderCancellationReasonCode? CancellationReasonCode { get; private set; }
+    public string? CancellationComment { get; private set; }
 
     public static Order Reconstitute(
         OrderId id,
@@ -49,7 +51,9 @@ public sealed class Order : AuditableSoftDeleteAggregateRoot<OrderId>
         DateTime createdAt,
         DateTime updatedAt,
         bool isDeleted,
-        DateTime? deletedAt) =>
+        DateTime? deletedAt,
+        OrderCancellationReasonCode? cancellationReasonCode = null,
+        string? cancellationComment = null) =>
         new()
         {
             Id = id,
@@ -70,6 +74,8 @@ public sealed class Order : AuditableSoftDeleteAggregateRoot<OrderId>
             DeliveredAt = deliveredAt,
             CancelledAt = cancelledAt,
             RefundedAt = refundedAt,
+            CancellationReasonCode = cancellationReasonCode,
+            CancellationComment = cancellationComment,
             CreatedAt = createdAt,
             UpdatedAt = updatedAt,
             IsDeleted = isDeleted,
@@ -129,13 +135,17 @@ public sealed class Order : AuditableSoftDeleteAggregateRoot<OrderId>
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Cancel()
+    public void Cancel(OrderCancellationReasonCode reasonCode, string? comment = null, bool adminOverride = false)
     {
         EnsureNotDeleted();
-        if (Status is OrderStatus.Delivered or OrderStatus.Refunded or OrderStatus.Cancelled or OrderStatus.Shipped)
+        if (!adminOverride && Status is OrderStatus.Delivered or OrderStatus.Refunded or OrderStatus.Cancelled or OrderStatus.Shipped)
+            throw new DomainException("Invalid status transition");
+        if (adminOverride && Status is OrderStatus.Refunded or OrderStatus.Cancelled)
             throw new DomainException("Invalid status transition");
         Status = OrderStatus.Cancelled;
         CancelledAt = DateTime.UtcNow;
+        CancellationReasonCode = reasonCode;
+        CancellationComment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
         UpdatedAt = DateTime.UtcNow;
     }
 

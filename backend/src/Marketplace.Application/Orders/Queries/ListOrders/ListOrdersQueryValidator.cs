@@ -12,5 +12,7 @@ public sealed class ListOrdersQueryValidator : AbstractValidator<ListOrdersQuery
             .WithMessage("Sort must be one of: created_desc, created_asc, total_desc, total_asc");
         RuleFor(x => x).Must(x => !x.CreatedFromUtc.HasValue || !x.CreatedToUtc.HasValue || x.CreatedFromUtc <= x.CreatedToUtc)
             .WithMessage("CreatedFromUtc must be less than or equal to CreatedToUtc");
+        RuleFor(x => x).Must(x => !x.CompanyMemberUserId.HasValue || x.Scope is OrderListScope.Company or OrderListScope.Admin)
+            .WithMessage("companyMemberId is only allowed for company or admin scope");
     }
 }

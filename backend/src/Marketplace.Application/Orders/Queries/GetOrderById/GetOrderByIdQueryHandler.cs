@@ -3,9 +3,12 @@ using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Orders.Authorization;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Orders.DTOs;
+using Marketplace.Application.Returns.DTOs;
+using Marketplace.Application.Shipping.Services;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Repositories;
 using Marketplace.Domain.Payments.Repositories;
+using Marketplace.Domain.Returns.Repositories;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
 using Microsoft.Extensions.Options;
@@ -20,6 +23,9 @@ public sealed class GetOrderByIdQueryHandler : IRequestHandler<GetOrderByIdQuery
     private readonly IOrderStatusHistoryRepository _orderStatusHistoryRepository;
     private readonly IPaymentRepository _paymentRepository;
     private readonly IRefundRepository _refundRepository;
+    private readonly IReturnRequestRepository _returnRepository;
+    private readonly IReturnLineItemRepository _returnLineItemRepository;
+    private readonly IShipmentFulfillmentService _fulfillment;
     private readonly IOrderAccessService _access;
     private readonly IAppCachePort _cache;
     private readonly CacheTtlOptions _ttl;
@@ -32,6 +38,9 @@ public sealed class GetOrderByIdQueryHandler : IRequestHandler<GetOrderByIdQuery
         IOrderStatusHistoryRepository orderStatusHistoryRepository,
         IPaymentRepository paymentRepository,
         IRefundRepository refundRepository,
+        IReturnRequestRepository returnRepository,
+        IReturnLineItemRepository returnLineItemRepository,
+        IShipmentFulfillmentService fulfillment,
         IOrderAccessService access,
         IAppCachePort cache,
         IOrderCacheInvalidationService cacheInvalidation,
@@ -43,6 +52,9 @@ public sealed class GetOrderByIdQueryHandler : IRequestHandler<GetOrderByIdQuery
         _orderStatusHistoryRepository = orderStatusHistoryRepository;
         _paymentRepository = paymentRepository;
         _refundRepository = refundRepository;
+        _returnRepository = returnRepository;
+        _returnLineItemRepository = returnLineItemRepository;
+        _fulfillment = fulfillment;
         _access = access;
         _cache = cache;
         _cacheInvalidation = cacheInvalidation;
@@ -75,7 +87,13 @@ public sealed class GetOrderByIdQueryHandler : IRequestHandler<GetOrderByIdQuery
         var addresses = await _orderAddressRepository.ListByOrderIdAsync(order.Id, ct);
         var payment = await _paymentRepository.GetByOrderIdAsync(order.Id, ct);
         var refunds = await _refundRepository.ListByOrderIdAsync(order.Id, ct);
-        var statusHistory = await _orderStatusHistoryRepository.ListByOrderIdAsync(order.Id, ct);
+        var returnRequests = await _returnRepository.ListByOrderIdAsync(order.Id, ct);
+        var returnLines = await _returnLineItemRepository.ListByOrderIdAsync(order.Id, ct);
+        var linesByReturn = returnLines.GroupBy(x => x.ReturnRequestId.Value).ToDictionary(g => g.Key, g => g.ToList());
+        var fulfillment = await _fulfillment.BuildReadinessDtoAsync(order.Id, ct);
+        var statusHistory = (await _orderStatusHistoryRepository.ListByOrderIdAsync(order.Id, ct))
+            .OrderBy(x => x.ChangedAt)
+            .ToList();
 
         var dto = new OrderDetailsDto(
             order.Id.Value,
@@ -98,6 +116,7 @@ public sealed class GetOrderByIdQueryHandler : IRequestHandler<GetOrderByIdQuery
             order.CreatedAt,
             order.UpdatedAt,
             items.Select(x => new OrderItemDto(
+                x.Id.Value,
                 x.ProductId.Value,
                 x.ProductName,
                 x.ProductImage,
@@ -131,17 +150,40 @@ public sealed class GetOrderByIdQueryHandler : IRequestHandler<GetOrderByIdQuery
                 x.ProcessedByUserId,
                 x.ProcessedAt,
                 x.CreatedAt)).ToList(),
+            returnRequests.Select(r =>
+            {
+                var lines = linesByReturn.GetValueOrDefault(r.Id.Value, []);
+                return new ReturnSnapshotDto(
+                    r.Id.Value,
+                    r.Status.ToString(),
+                    r.ReasonCode.ToString(),
+                    r.CreatedAt,
+                    r.ReceivedAtUtc,
+                    r.RefundId,
+                    lines.Select(l => new ReturnLineItemDto(l.OrderItemId.Value, l.Quantity, l.Reason)).ToList());
+            }).ToList(),
             statusHistory.Select(x => new OrderStatusHistoryDto(
                 x.OldStatus.ToString(),
                 x.NewStatus.ToString(),
                 x.ChangedByUserId,
+                ResolveActorRole(x.ChangedByUserId, order),
                 x.Source,
                 x.Comment,
                 x.CorrelationId,
-                x.ChangedAt)).ToList());
+                x.ChangedAt)).ToList(),
+            fulfillment);
 
         await _cache.SetAsync(key, dto, _ttl.OrderDetail, ct);
         await _cacheInvalidation.TrackDetailKeyAsync(order.Id.Value, key, _ttl.OrderDetail, ct);
         return Result<OrderDetailsDto>.Success(dto);
+    }
+
+    private static string ResolveActorRole(Guid changedByUserId, Marketplace.Domain.Orders.Entities.Order order)
+    {
+        if (changedByUserId == Guid.Empty)
+            return "system";
+        if (changedByUserId == order.CustomerId)
+            return "buyer";
+        return "company";
     }
 }

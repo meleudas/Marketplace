@@ -17,6 +17,7 @@ public static class OrderCacheKeys
         string scope,
         Guid? actorUserId,
         Guid? companyId,
+        Guid? companyMemberUserId,
         IReadOnlyList<OrderStatus>? statuses,
         DateTime? fromUtc,
         DateTime? toUtc,
@@ -29,7 +30,7 @@ public static class OrderCacheKeys
             ? string.Join(",", statuses.Select(x => x.ToString().ToLowerInvariant()))
             : "all";
 
-        return $"orders:list:v{version}:{scope}:{actorUserId}:{companyId}:{statusPart}:{fromUtc:O}:{toUtc:O}:{(search ?? "").Trim().ToLowerInvariant()}:{(sort ?? "created_desc").Trim().ToLowerInvariant()}:{page}:{pageSize}";
+        return $"orders:list:v{version}:{scope}:{actorUserId}:{companyId}:{companyMemberUserId}:{statusPart}:{fromUtc:O}:{toUtc:O}:{(search ?? "").Trim().ToLowerInvariant()}:{(sort ?? "created_desc").Trim().ToLowerInvariant()}:{page}:{pageSize}";
     }
 
     public static string Detail(long orderId) => $"orders:detail:{orderId}";

@@ -12,11 +12,17 @@ public enum OrderListScope
     Admin
 }
 
+public static class OrderListScopeExtensions
+{
+    public static string ToCacheScope(this OrderListScope scope) => scope.ToString().ToLowerInvariant();
+}
+
 public sealed record ListOrdersQuery(
     OrderListScope Scope,
     Guid ActorUserId,
     bool IsActorAdmin,
     Guid? CompanyId,
+    Guid? CompanyMemberUserId,
     IReadOnlyList<OrderStatus>? Statuses,
     DateTime? CreatedFromUtc,
     DateTime? CreatedToUtc,

@@ -1,7 +1,15 @@
 # Orders Controller
 
-## `GET /me/orders`
+## Кешування списків і деталей
 
+- **Detail:** `orders:detail:{orderId}` + tracked keys у `orders:idx:detail:{orderId}`.
+- **List:** read-through з ключем `orders:list:v{version}:{scope}:...`, де `version` читається з `orders:list:version:{my|company|admin}`.
+- **Інвалідація (version bump + detail remove)** викликається з: checkout (`OrderCreated`), status update, cancel, payment webhook/sync/job (`PaymentStatusChanged` через `OrderMutationCoordinator`), admin refund, outbox processor (backup).
+- **Метрика:** `order_cache_invalidation_failures_total` при fail-soft помилках Redis/cache.
+
+---
+
+## `GET /me/orders`
 - **Summary (1 рядок):** Список моїх замовлень (buyer scope).
 - **Призначення:** пагінований список замовлень поточного покупця з фільтрами.
 - **Хто може викликати:**
@@ -34,7 +42,7 @@
 - **Бізнес-логіка:**
   1. Перевірити доступ buyer/admin
   2. Read-through detail cache `orders:detail:{orderId}`
-  3. Зібрати DTO з `statusHistory[]`
+  3. Зібрати DTO з `statusHistory[]`, `returns[]`, `fulfillment` (хронологічно ASC від checkout `created` до останніх переходів)
 - **Side effects (синхронно):** read-only
 - **Async / «магія»:** —
 - **Де на фронті:**
@@ -42,7 +50,7 @@
   - API-модуль: `frontend/src/features/orders/api/orders.api.ts` (planned)
   - Статус: `planned`
 - **Приймає:** `orderId` (route)
-- **Повертає:** order detail + `statusHistory[]`
+- **Повертає:** order detail + `statusHistory[]`, `returns[]`, `fulfillment` (embedded timeline; джерела statusHistory: `checkout`, `webhook`, `manual`, `cancel`, `refund`, `shipment`, `job`, `integration-retry`, `outbox`)
 - **Помилки:** `404`, `403`, `401`
 
 ## `GET /companies/{companyId}/orders`
@@ -63,7 +71,7 @@
   - Екран: Workspace → Orders (planned)
   - API-модуль: `frontend/src/features/workspace/api/orders.api.ts` (planned)
   - Статус: `planned`
-- **Приймає:** `companyId`, query filters
+- **Приймає:** `companyId` (route), `companyMemberId` (optional — фільтр замовлень, де user змінював статус у `order_status_history`), `statuses[]`, `createdFromUtc`, `createdToUtc`, `search` (order number), `sort` (`created_desc`, `created_asc`, `total_desc`, `total_asc`), `page`, `pageSize`
 - **Повертає:** paginated company orders
 - **Помилки:** `403`, `401`, `404`
 
@@ -86,7 +94,7 @@
   - API-модуль: `frontend/src/features/workspace/api/orders.api.ts` (planned)
   - Статус: `planned`
 - **Приймає:** `companyId`, `orderId`
-- **Повертає:** order detail + `statusHistory[]`
+- **Повертає:** order detail + `statusHistory[]`, `returns[]`, `fulfillment` (embedded timeline; джерела statusHistory: `checkout`, `webhook`, `manual`, `cancel`, `refund`, `shipment`, `job`, `integration-retry`, `outbox`)
 - **Помилки:** `403`, `404`, `401`
 
 ## `GET /admin/orders`
@@ -106,7 +114,7 @@
   - Екран: Admin → Orders (planned)
   - API-модуль: `frontend/src/features/admin/api/orders.api.ts` (planned)
   - Статус: `planned`
-- **Приймає:** query filters
+- **Приймає:** `companyId` (optional platform filter), `companyMemberId` (optional — seller queue по менеджеру через status history), `statuses[]`, `createdFromUtc`, `createdToUtc`, `search`, `sort`, `page`, `pageSize`
 - **Повертає:** paginated admin orders
 - **Помилки:** `403`, `401`
 
@@ -128,7 +136,7 @@
   - API-модуль: `frontend/src/features/admin/api/orders.api.ts` (planned)
   - Статус: `planned`
 - **Приймає:** `orderId`
-- **Повертає:** order detail + `statusHistory[]`
+- **Повертає:** order detail + `statusHistory[]`, `returns[]`, `fulfillment` (embedded timeline; джерела statusHistory: `checkout`, `webhook`, `manual`, `cancel`, `refund`, `shipment`, `job`, `integration-retry`, `outbox`)
 - **Помилки:** `404`, `403`, `401`
 
 ## `POST /orders/{orderId}/status`
@@ -168,9 +176,10 @@
 - **Бізнес-логіка:**
   1. Idempotency guard
   2. Access policy (buyer/seller/admin)
-  3. Set status `Cancelled` + audit trail
-  4. Release inventory reservations (якщо застосовно)
-  5. Cache invalidation
+  3. `OrderCancellationPolicy` (buyer/seller/admin + SLA-вікна) → `Cancelled` + reason fields
+  4. `statusHistory` запис (`source=cancel`, comment=`{reasonCode}: {comment}`)
+  5. Release inventory reservations (якщо застосовно)
+  6. Cache invalidation
 - **Side effects (синхронно):** status update, inventory release, cache bump
 - **Async / «магія»:**
   - Outbox: `OrderCancelled`
@@ -179,7 +188,8 @@
   - Екран: My Orders / Workspace Orders (planned)
   - API-модуль: `frontend/src/features/orders/api/orders.api.ts` (planned)
   - Статус: `planned`
-- **Приймає:** `orderId`, optional cancel reason (body policy-dependent)
+- **Приймає (body):** `{ "reasonCode": "ChangedMind", "comment": "optional" }` — `reasonCode` enum: `ChangedMind`, `WrongAddress`, `DuplicateOrder`, `PaymentIssue`, `OutOfStock`, `CustomerRequest`, `FraudSuspected`, `Other` (для `Other` comment обов'язковий за конфігом)
+- **SLA (default `OrderCancellation`):** buyer `Pending` ≤60 хв, buyer `Paid` ≤24 год; seller `Processing` ≤72 год; admin override для `Shipped`/`Delivered` лише з `FraudSuspected`/`Other`
 - **Повертає:** updated order
 - **Помилки:** `400`, `403`, `404`, `409`
 - **Idempotency:** обов'язковий `Idempotency-Key`

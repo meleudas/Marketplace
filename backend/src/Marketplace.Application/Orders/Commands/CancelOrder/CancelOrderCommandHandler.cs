@@ -1,9 +1,10 @@
+using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Inventory.Services;
 using Marketplace.Application.Notifications;
 using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Orders.Authorization;
-using Marketplace.Application.Orders.Cache;
+using Marketplace.Application.Orders.Policies;
 using Marketplace.Application.Orders.Services;
-using Marketplace.Application.Common.Ports;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Repositories;
 using Marketplace.Domain.Shared.Kernel;
@@ -16,25 +17,28 @@ public sealed class CancelOrderCommandHandler : IRequestHandler<CancelOrderComma
 {
     private readonly IOrderRepository _orderRepository;
     private readonly IOrderAccessService _access;
-    private readonly IOrderCacheInvalidationService _cacheInvalidation;
-    private readonly IOutboxWriter _outbox;
+    private readonly OrderCancellationPolicy _cancellationPolicy;
+    private readonly OrderMutationCoordinator _orderMutationCoordinator;
     private readonly IOrderStatusHistoryWriter _historyWriter;
     private readonly IAppNotificationScheduler _appNotifications;
+    private readonly ICheckoutInventoryService _checkoutInventory;
 
     public CancelOrderCommandHandler(
         IOrderRepository orderRepository,
         IOrderAccessService access,
-        IOrderCacheInvalidationService cacheInvalidation,
-        IOutboxWriter outbox,
+        OrderCancellationPolicy cancellationPolicy,
+        OrderMutationCoordinator orderMutationCoordinator,
         IOrderStatusHistoryWriter historyWriter,
-        IAppNotificationScheduler appNotifications)
+        IAppNotificationScheduler appNotifications,
+        ICheckoutInventoryService checkoutInventory)
     {
         _orderRepository = orderRepository;
         _access = access;
-        _cacheInvalidation = cacheInvalidation;
-        _outbox = outbox;
+        _cancellationPolicy = cancellationPolicy;
+        _orderMutationCoordinator = orderMutationCoordinator;
         _historyWriter = historyWriter;
         _appNotifications = appNotifications;
+        _checkoutInventory = checkoutInventory;
     }
 
     public async Task<Result> Handle(CancelOrderCommand request, CancellationToken ct)
@@ -47,31 +51,47 @@ public sealed class CancelOrderCommandHandler : IRequestHandler<CancelOrderComma
         if (!allowed)
             return Result.Failure("Forbidden");
 
+        var actor = await _access.ResolveCancellationActorAsync(order, request.ActorUserId, request.IsActorAdmin, ct);
+        var policyResult = _cancellationPolicy.Validate(
+            order,
+            actor,
+            request.ReasonCode,
+            request.Comment,
+            DateTime.UtcNow);
+        if (!policyResult.IsSuccess)
+            return policyResult;
+
         try
         {
             var oldStatus = order.Status;
-            order.Cancel();
+            var adminOverride = actor == OrderCancellationActor.Admin
+                && oldStatus is Marketplace.Domain.Orders.Enums.OrderStatus.Shipped
+                    or Marketplace.Domain.Orders.Enums.OrderStatus.Delivered;
+            order.Cancel(request.ReasonCode, request.Comment, adminOverride);
             await _orderRepository.UpdateAsync(order, ct);
+
+            var historyComment = string.IsNullOrWhiteSpace(request.Comment)
+                ? request.ReasonCode.ToString()
+                : $"{request.ReasonCode}: {request.Comment}";
             await _historyWriter.WriteIfChangedAsync(
                 order,
                 oldStatus,
                 request.ActorUserId,
-                "manual",
+                "cancel",
+                comment: historyComment,
                 correlationId: null,
                 ct: ct);
-            await _outbox.AppendAsync(
-                "Order",
-                order.Id.Value.ToString(),
+            await _orderMutationCoordinator.PublishOrderChangedAsync(
+                order,
                 "OrderCancelled",
-                JsonSerializer.Serialize(new
-                {
-                    messageId = Guid.NewGuid(),
-                    orderId = order.Id.Value,
-                    customerId = order.CustomerId,
-                    companyId = order.CompanyId.Value
-                }),
+                $"cancel:{request.ActorUserId}",
                 ct);
-            await _cacheInvalidation.InvalidateOrderAsync(order.Id.Value, order.CustomerId, order.CompanyId.Value, ct);
+            await _checkoutInventory.ReleaseForOrderAsync(
+                order.Id,
+                order.CompanyId,
+                request.ActorUserId,
+                "order-cancelled",
+                ct);
 
             await _appNotifications.ScheduleAsync(
                 new AppNotificationRequest

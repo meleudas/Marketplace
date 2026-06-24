@@ -15,6 +15,7 @@ public sealed class OrderStatusHistoryConfiguration : IEntityTypeConfiguration<O
         builder.Property(x => x.CorrelationId).HasMaxLength(256);
         builder.Property(x => x.IsDeleted).HasDefaultValue(false);
         builder.HasIndex(x => new { x.OrderId, x.ChangedAt });
+        builder.HasIndex(x => new { x.ChangedByUserId, x.OrderId });
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

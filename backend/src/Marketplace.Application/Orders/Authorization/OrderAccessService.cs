@@ -1,3 +1,4 @@
+using Marketplace.Application.Orders.Policies;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Companies.Repositories;
 using Marketplace.Domain.Orders.Entities;
@@ -41,5 +42,18 @@ public sealed class OrderAccessService : IOrderAccessService
 
         var member = await _companyMemberRepository.GetByCompanyAndUserAsync(CompanyId.From(companyId), actorUserId, ct);
         return member is not null && !member.IsDeleted;
+    }
+
+    public Task<OrderCancellationActor> ResolveCancellationActorAsync(
+        Order order,
+        Guid actorUserId,
+        bool isActorAdmin,
+        CancellationToken ct = default)
+    {
+        if (isActorAdmin)
+            return Task.FromResult(OrderCancellationActor.Admin);
+        if (order.CustomerId == actorUserId)
+            return Task.FromResult(OrderCancellationActor.Buyer);
+        return Task.FromResult(OrderCancellationActor.CompanyMember);
     }
 }

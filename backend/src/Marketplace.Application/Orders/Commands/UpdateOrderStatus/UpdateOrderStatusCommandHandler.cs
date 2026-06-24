@@ -1,9 +1,9 @@
 using Marketplace.Application.Notifications;
 using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Orders.Authorization;
-using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Orders.Services;
-using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Shipping.DTOs;
+using Marketplace.Application.Shipping.Services;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Enums;
 using Marketplace.Domain.Orders.Repositories;
@@ -17,23 +17,23 @@ public sealed class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrde
 {
     private readonly IOrderRepository _orderRepository;
     private readonly IOrderAccessService _access;
-    private readonly IOrderCacheInvalidationService _cacheInvalidation;
-    private readonly IOutboxWriter _outbox;
+    private readonly IShipmentFulfillmentService _fulfillment;
+    private readonly OrderMutationCoordinator _orderMutationCoordinator;
     private readonly IOrderStatusHistoryWriter _historyWriter;
     private readonly IAppNotificationScheduler _appNotifications;
 
     public UpdateOrderStatusCommandHandler(
         IOrderRepository orderRepository,
         IOrderAccessService access,
-        IOrderCacheInvalidationService cacheInvalidation,
-        IOutboxWriter outbox,
+        IShipmentFulfillmentService fulfillment,
+        OrderMutationCoordinator orderMutationCoordinator,
         IOrderStatusHistoryWriter historyWriter,
         IAppNotificationScheduler appNotifications)
     {
         _orderRepository = orderRepository;
         _access = access;
-        _cacheInvalidation = cacheInvalidation;
-        _outbox = outbox;
+        _fulfillment = fulfillment;
+        _orderMutationCoordinator = orderMutationCoordinator;
         _historyWriter = historyWriter;
         _appNotifications = appNotifications;
     }
@@ -51,14 +51,49 @@ public sealed class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrde
         try
         {
             var oldStatus = order.Status;
+            var shipmentBackedStatusChange = false;
             switch (request.NewStatus)
             {
                 case OrderStatus.Processing:
                     order.SetProcessing();
                     break;
                 case OrderStatus.Shipped:
-                    order.SetShipped(request.TrackingNumber);
+                {
+                    var readiness = await _fulfillment.BuildReadinessDtoAsync(order.Id, ct);
+                    if (!readiness.IsFullyShipped)
+                    {
+                        var warehouseGroups = readiness.PendingByWarehouse.Count > 0
+                            ? readiness.PendingByWarehouse
+                            : [new WarehouseFulfillmentGroupDto(0, "Default", readiness.PendingItems)];
+
+                        foreach (var group in warehouseGroups)
+                        {
+                            if (group.Items.Count == 0)
+                                continue;
+
+                            var lines = group.Items
+                                .Select(x => new CreateShipmentLineRequest(x.OrderItemId, x.RemainingQuantity))
+                                .ToList();
+                            var warehouseId = group.WarehouseId > 0 ? WarehouseId.From(group.WarehouseId) : null;
+                            var shipmentResult = await _fulfillment.CreateShipmentAsync(
+                                order, warehouseId, lines, request.TrackingNumber, request.ActorUserId, ct);
+                            if (!shipmentResult.IsSuccess)
+                                return Result.Failure(shipmentResult.Error ?? "Failed to create shipment");
+                        }
+
+                        var reloaded = await _orderRepository.GetByIdAsync(order.Id, ct);
+                        if (reloaded is not null)
+                        {
+                            shipmentBackedStatusChange = reloaded.Status != oldStatus;
+                            order = reloaded;
+                        }
+                    }
+                    else
+                    {
+                        order.SetShipped(request.TrackingNumber);
+                    }
                     break;
+                }
                 case OrderStatus.Delivered:
                     order.SetDelivered();
                     break;
@@ -67,39 +102,37 @@ public sealed class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrde
             }
 
             await _orderRepository.UpdateAsync(order, ct);
-            await _historyWriter.WriteIfChangedAsync(
+            if (!shipmentBackedStatusChange)
+            {
+                await _historyWriter.WriteIfChangedAsync(
+                    order,
+                    oldStatus,
+                    request.ActorUserId,
+                    "manual",
+                    correlationId: null,
+                    ct: ct);
+            }
+            await _orderMutationCoordinator.PublishOrderChangedAsync(
                 order,
-                oldStatus,
-                request.ActorUserId,
-                "manual",
-                correlationId: null,
-                ct: ct);
-            await _outbox.AppendAsync(
-                "Order",
-                order.Id.Value.ToString(),
                 "OrderStatusChanged",
-                JsonSerializer.Serialize(new
-                {
-                    messageId = Guid.NewGuid(),
-                    orderId = order.Id.Value,
-                    customerId = order.CustomerId,
-                    companyId = order.CompanyId.Value,
-                    status = order.Status.ToString()
-                }),
+                $"{request.NewStatus}:{request.ActorUserId}",
                 ct);
-            await _cacheInvalidation.InvalidateOrderAsync(order.Id.Value, order.CustomerId, order.CompanyId.Value, ct);
 
             if (order.Status is OrderStatus.Processing or OrderStatus.Shipped or OrderStatus.Delivered)
             {
+                var channels = AppNotificationChannelKind.Push
+                    | AppNotificationChannelKind.InApp
+                    | AppNotificationChannelKind.Email
+                    | AppNotificationChannelKind.Telegram;
+                if (order.Status is OrderStatus.Shipped or OrderStatus.Delivered)
+                    channels |= AppNotificationChannelKind.Sms;
+
                 await _appNotifications.ScheduleAsync(
                     new AppNotificationRequest
                     {
                         TemplateKey = AppNotificationTemplateKeys.UserOrderStatus,
                         CorrelationId = Guid.NewGuid(),
-                        Channels = AppNotificationChannelKind.Push
-                            | AppNotificationChannelKind.InApp
-                            | AppNotificationChannelKind.Email
-                            | AppNotificationChannelKind.Telegram,
+                        Channels = channels,
                         Audience = AppNotificationAudienceKind.User,
                         TargetUserId = order.CustomerId,
                         PayloadJson = JsonSerializer.Serialize(new

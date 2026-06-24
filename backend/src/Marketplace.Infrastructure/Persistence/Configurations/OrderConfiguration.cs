@@ -18,6 +18,7 @@ public sealed class OrderConfiguration : IEntityTypeConfiguration<OrderRecord>
         builder.Property(x => x.TaxAmount).HasColumnType("numeric(14,2)");
         builder.Property(x => x.Notes).HasMaxLength(2000);
         builder.Property(x => x.TrackingNumber).HasMaxLength(256);
+        builder.Property(x => x.CancellationComment).HasMaxLength(2000);
         builder.Property(x => x.IsDeleted).HasDefaultValue(false);
 
         builder.HasIndex(x => x.OrderNumber).IsUnique();

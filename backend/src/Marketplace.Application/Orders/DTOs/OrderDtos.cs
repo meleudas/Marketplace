@@ -1,4 +1,6 @@
 using Marketplace.Domain.Orders.Enums;
+using Marketplace.Application.Shipping.DTOs;
+using Marketplace.Application.Returns.DTOs;
 
 namespace Marketplace.Application.Orders.DTOs;
 
@@ -39,9 +41,12 @@ public sealed record OrderDetailsDto(
     IReadOnlyList<OrderAddressDto> Addresses,
     PaymentSnapshotDto? Payment,
     IReadOnlyList<RefundSnapshotDto> Refunds,
-    IReadOnlyList<OrderStatusHistoryDto> StatusHistory);
+    IReadOnlyList<ReturnSnapshotDto> Returns,
+    IReadOnlyList<OrderStatusHistoryDto> StatusHistory,
+    FulfillmentReadinessDto? Fulfillment);
 
 public sealed record OrderItemDto(
+    long OrderItemId,
     long ProductId,
     string ProductName,
     string? ProductImage,
@@ -83,7 +88,17 @@ public sealed record OrderStatusHistoryDto(
     string OldStatus,
     string NewStatus,
     Guid ChangedByUserId,
+    string? ActorRole,
     string Source,
     string? Comment,
     string? CorrelationId,
     DateTime ChangedAt);
+
+public sealed record ReturnSnapshotDto(
+    long ReturnId,
+    string Status,
+    string ReasonCode,
+    DateTime CreatedAt,
+    DateTime? ReceivedAtUtc,
+    long? RefundId,
+    IReadOnlyList<ReturnLineItemDto> Lines);

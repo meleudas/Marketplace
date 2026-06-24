@@ -13,6 +13,30 @@ public sealed class OrderStatusHistoryWriter : IOrderStatusHistoryWriter
         _historyRepository = historyRepository;
     }
 
+    public async Task RecordCreatedAsync(
+        Order order,
+        Guid actorUserId,
+        string source,
+        string? correlationId,
+        CancellationToken ct = default)
+    {
+        var existing = await _historyRepository.ListByOrderIdAsync(order.Id, ct);
+        if (existing.Any(x => x.Source == source && x.Comment == "created"))
+            return;
+
+        var history = OrderStatusHistory.Create(
+            OrderStatusHistoryId.From(0),
+            order.Id,
+            Marketplace.Domain.Orders.Enums.OrderStatus.Pending,
+            Marketplace.Domain.Orders.Enums.OrderStatus.Pending,
+            actorUserId,
+            source,
+            comment: "created",
+            correlationId);
+
+        await _historyRepository.AddAsync(history, ct);
+    }
+
     public async Task WriteIfChangedAsync(
         Order order,
         Marketplace.Domain.Orders.Enums.OrderStatus oldStatus,

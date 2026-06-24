@@ -49,6 +49,7 @@ public sealed class OrdersController : ControllerBase
             actorId,
             User.IsInRole("Admin"),
             null,
+            null,
             ParseStatuses(statuses),
             createdFromUtc,
             createdToUtc,
@@ -82,6 +83,7 @@ public sealed class OrdersController : ControllerBase
         [FromQuery] DateTime? createdToUtc,
         [FromQuery] string? search,
         [FromQuery] string? sort,
+        [FromQuery] Guid? companyMemberId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
@@ -98,6 +100,7 @@ public sealed class OrdersController : ControllerBase
             actorId,
             User.IsInRole("Admin"),
             companyId,
+            companyMemberId,
             ParseStatuses(statuses),
             createdFromUtc,
             createdToUtc,
@@ -138,6 +141,7 @@ public sealed class OrdersController : ControllerBase
         [FromQuery] DateTime? createdToUtc,
         [FromQuery] string? search,
         [FromQuery] string? sort,
+        [FromQuery] Guid? companyMemberId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
@@ -153,6 +157,7 @@ public sealed class OrdersController : ControllerBase
             actorId,
             true,
             companyId,
+            companyMemberId,
             ParseStatuses(statuses),
             createdFromUtc,
             createdToUtc,
@@ -224,7 +229,7 @@ public sealed class OrdersController : ControllerBase
     }
 
     [HttpPost("orders/{orderId:long}/cancel")]
-    public async Task<IActionResult> Cancel(long orderId, CancellationToken ct)
+    public async Task<IActionResult> Cancel(long orderId, [FromBody] CancelOrderRequest request, CancellationToken ct)
     {
         using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.OrderLatencyMs, new KeyValuePair<string, object?>("operation", "orders_cancel"));
         if (!User.TryGetUserId(out var actorId))
@@ -239,7 +244,11 @@ public sealed class OrdersController : ControllerBase
         }
 
         var scope = $"order-cancel:{orderId}:{actorId:N}";
-        var requestHash = HttpIdempotencyExtensions.BuildRequestHash(orderId.ToString(), actorId.ToString("N"));
+        var requestHash = HttpIdempotencyExtensions.BuildRequestHash(
+            orderId.ToString(),
+            actorId.ToString("N"),
+            request.ReasonCode.ToString(),
+            request.Comment ?? string.Empty);
         var begin = await _idempotency.TryBeginAsync(scope, idempotencyKey, requestHash, TimeSpan.FromHours(12), ct);
         if (begin.State == HttpIdempotencyBeginState.Completed && begin.StoredResponse is not null)
             return this.ReplayResponse(begin.StoredResponse);
@@ -254,7 +263,13 @@ public sealed class OrdersController : ControllerBase
             return Conflict("Idempotency-Key already used with different request payload.");
         }
 
-        var result = await _sender.Send(new CancelOrderCommand(orderId, actorId, User.IsInRole("Admin"), idempotencyKey), ct);
+        var result = await _sender.Send(new CancelOrderCommand(
+            orderId,
+            actorId,
+            User.IsInRole("Admin"),
+            request.ReasonCode,
+            request.Comment,
+            idempotencyKey), ct);
         var actionResult = result.ToActionResult();
         var snapshot = actionResult.SnapshotResult();
         await _idempotency.CompleteAsync(scope, idempotencyKey, requestHash, snapshot.StatusCode, snapshot.BodyJson, ct);
@@ -301,3 +316,5 @@ public sealed class OrdersController : ControllerBase
 }
 
 public sealed record UpdateOrderStatusRequest(string Status, string? TrackingNumber);
+
+public sealed record CancelOrderRequest(OrderCancellationReasonCode ReasonCode, string? Comment);

@@ -1,3 +1,4 @@
+using Marketplace.Domain.Orders.Enums;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
 
@@ -7,4 +8,6 @@ public sealed record CancelOrderCommand(
     long OrderId,
     Guid ActorUserId,
     bool IsActorAdmin,
+    OrderCancellationReasonCode ReasonCode,
+    string? Comment,
     string IdempotencyKey) : IRequest<Result>;

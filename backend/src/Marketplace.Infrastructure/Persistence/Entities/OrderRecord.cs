@@ -20,6 +20,8 @@ public sealed class OrderRecord
     public DateTime? DeliveredAt { get; set; }
     public DateTime? CancelledAt { get; set; }
     public DateTime? RefundedAt { get; set; }
+    public short? CancellationReasonCode { get; set; }
+    public string? CancellationComment { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public bool IsDeleted { get; set; }

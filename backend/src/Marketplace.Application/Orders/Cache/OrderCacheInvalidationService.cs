@@ -1,3 +1,4 @@
+using Marketplace.Application.Common.Observability;
 using Marketplace.Application.Common.Ports;
 
 namespace Marketplace.Application.Orders.Cache;
@@ -90,6 +91,7 @@ public sealed class OrderCacheInvalidationService : IOrderCacheInvalidationServi
         }
         catch
         {
+            MarketplaceMetrics.OrderCacheInvalidationFailures.Add(1);
             return null;
         }
     }
@@ -102,6 +104,7 @@ public sealed class OrderCacheInvalidationService : IOrderCacheInvalidationServi
         }
         catch
         {
+            MarketplaceMetrics.OrderCacheInvalidationFailures.Add(1);
         }
     }
 
@@ -113,6 +116,7 @@ public sealed class OrderCacheInvalidationService : IOrderCacheInvalidationServi
         }
         catch
         {
+            MarketplaceMetrics.OrderCacheInvalidationFailures.Add(1);
         }
     }
 

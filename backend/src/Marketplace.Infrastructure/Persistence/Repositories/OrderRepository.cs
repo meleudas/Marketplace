@@ -50,6 +50,12 @@ public sealed class OrderRepository : IOrderRepository
             var s = filter.Search.Trim();
             q = q.Where(x => x.OrderNumber.Contains(s));
         }
+        if (filter.CompanyMemberUserId.HasValue)
+        {
+            var memberId = filter.CompanyMemberUserId.Value;
+            q = q.Where(o => _context.OrderStatusHistory
+                .Any(h => h.OrderId == o.Id && h.ChangedByUserId == memberId));
+        }
 
         q = (filter.Sort ?? "created_desc").Trim().ToLowerInvariant() switch
         {
@@ -85,6 +91,8 @@ public sealed class OrderRepository : IOrderRepository
         row.DeliveredAt = order.DeliveredAt;
         row.CancelledAt = order.CancelledAt;
         row.RefundedAt = order.RefundedAt;
+        row.CancellationReasonCode = order.CancellationReasonCode.HasValue ? (short)order.CancellationReasonCode.Value : null;
+        row.CancellationComment = order.CancellationComment;
         row.UpdatedAt = order.UpdatedAt;
         row.IsDeleted = order.IsDeleted;
         row.DeletedAt = order.DeletedAt;
@@ -115,7 +123,9 @@ public sealed class OrderRepository : IOrderRepository
             x.CreatedAt,
             x.UpdatedAt,
             x.IsDeleted,
-            x.DeletedAt);
+            x.DeletedAt,
+            x.CancellationReasonCode.HasValue ? (OrderCancellationReasonCode)x.CancellationReasonCode.Value : null,
+            x.CancellationComment);
 
     private static OrderRecord ToRecord(Order x) =>
         new()
@@ -138,6 +148,8 @@ public sealed class OrderRepository : IOrderRepository
             DeliveredAt = x.DeliveredAt,
             CancelledAt = x.CancelledAt,
             RefundedAt = x.RefundedAt,
+            CancellationReasonCode = x.CancellationReasonCode.HasValue ? (short)x.CancellationReasonCode.Value : null,
+            CancellationComment = x.CancellationComment,
             CreatedAt = x.CreatedAt,
             UpdatedAt = x.UpdatedAt,
             IsDeleted = x.IsDeleted,
