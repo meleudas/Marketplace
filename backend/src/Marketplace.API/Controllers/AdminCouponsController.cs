@@ -46,7 +46,9 @@ public sealed class AdminCouponsController : ControllerBase
                 request.StartsAtUtc,
                 request.ExpiresAtUtc,
                 request.IsActive,
-                request.ApplicableCompaniesJson),
+                request.ApplicableCompaniesJson,
+                request.ApplicableCategoriesJson,
+                request.ApplicableProductsJson),
             ct);
         Track("admin_coupon_create", result.IsSuccess, result.Error);
         return result.ToActionResult();
@@ -71,7 +73,9 @@ public sealed class AdminCouponsController : ControllerBase
                 request.StartsAtUtc,
                 request.ExpiresAtUtc,
                 request.IsActive,
-                request.ApplicableCompaniesJson),
+                request.ApplicableCompaniesJson,
+                request.ApplicableCategoriesJson,
+                request.ApplicableProductsJson),
             ct);
         Track("admin_coupon_update", result.IsSuccess, result.Error);
         return result.ToActionResult();
@@ -124,7 +128,9 @@ public sealed record CreateCouponRequest(
     DateTime? StartsAtUtc,
     DateTime? ExpiresAtUtc,
     bool IsActive,
-    string? ApplicableCompaniesJson);
+    string? ApplicableCompaniesJson,
+    string? ApplicableCategoriesJson,
+    string? ApplicableProductsJson);
 
 public sealed record UpdateCouponRequest(
     string? Description,
@@ -136,4 +142,6 @@ public sealed record UpdateCouponRequest(
     DateTime? StartsAtUtc,
     DateTime? ExpiresAtUtc,
     bool IsActive,
-    string? ApplicableCompaniesJson);
+    string? ApplicableCompaniesJson,
+    string? ApplicableCategoriesJson,
+    string? ApplicableProductsJson);

@@ -19,7 +19,9 @@ public sealed record CreateCouponCommand(
     DateTime? StartsAtUtc,
     DateTime? ExpiresAtUtc,
     bool IsActive,
-    string? ApplicableCompaniesJson) : IRequest<Result<CouponDto>>;
+    string? ApplicableCompaniesJson,
+    string? ApplicableCategoriesJson,
+    string? ApplicableProductsJson) : IRequest<Result<CouponDto>>;
 
 public sealed class CreateCouponCommandHandler : IRequestHandler<CreateCouponCommand, Result<CouponDto>>
 {
@@ -40,6 +42,7 @@ public sealed class CreateCouponCommandHandler : IRequestHandler<CreateCouponCom
             return Result<CouponDto>.Failure("conflict: coupon code already exists");
 
         var now = DateTime.UtcNow;
+        var userUsageLimit = request.UserUsageLimit <= 0 ? 1 : request.UserUsageLimit;
         var coupon = Coupon.Reconstitute(
             CouponId.From(0),
             request.Code.Trim(),
@@ -49,11 +52,11 @@ public sealed class CreateCouponCommandHandler : IRequestHandler<CreateCouponCom
             request.MinOrderAmount.HasValue ? new Money(request.MinOrderAmount.Value) : null,
             request.UsageLimit,
             0,
-            request.UserUsageLimit,
+            userUsageLimit,
             request.ExpiresAtUtc,
             request.StartsAtUtc,
-            null,
-            null,
+            string.IsNullOrWhiteSpace(request.ApplicableCategoriesJson) ? null : new JsonBlob(request.ApplicableCategoriesJson),
+            string.IsNullOrWhiteSpace(request.ApplicableProductsJson) ? null : new JsonBlob(request.ApplicableProductsJson),
             string.IsNullOrWhiteSpace(request.ApplicableCompaniesJson) ? null : new JsonBlob(request.ApplicableCompaniesJson),
             request.IsActive,
             now,

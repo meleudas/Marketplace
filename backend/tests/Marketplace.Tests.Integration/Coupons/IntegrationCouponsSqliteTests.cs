@@ -4,11 +4,13 @@ using Marketplace.Application.Coupons.Commands.RemoveCouponFromCart;
 using Marketplace.Application.Coupons.Commands.ValidateCouponForCart;
 using Marketplace.Application.Coupons.Options;
 using Marketplace.Application.Coupons.Services;
+using Marketplace.Application.Coupons.Validation;
 using Marketplace.Domain.Cart.Entities;
 using Marketplace.Domain.Cart.Enums;
 using Marketplace.Domain.Catalog.Entities;
 using Marketplace.Domain.Catalog.Enums;
 using Marketplace.Domain.Common.ValueObjects;
+using Marketplace.Domain.Coupons.Repositories;
 using Marketplace.Infrastructure.Persistence;
 using Marketplace.Infrastructure.Persistence.Repositories;
 using Microsoft.Data.Sqlite;
@@ -29,16 +31,17 @@ public sealed class IntegrationCouponsSqliteTests
         var couponRepo = new CouponRepository(db);
         var usageRepo = new CouponUsageRepository(db);
         var linkRepo = new CartCouponLinkRepository(db);
+        var evaluator = CreateEvaluator(usageRepo);
         var validation = new CouponCartValidationService(
             new CartRepository(db),
             new CartItemRepository(db),
             new ProductRepository(db),
             couponRepo,
-            usageRepo);
+            evaluator);
 
         var create = new CreateCouponCommandHandler(couponRepo);
         var created = await create.Handle(
-            new CreateCouponCommand("SAVE20", null, 20, "Fixed", 50, 100, 2, DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddDays(2), true, $"[\"{fixture.CompanyId}\"]"),
+            new CreateCouponCommand("SAVE20", null, 20, "Fixed", 50, 100, 2, DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddDays(2), true, $"[\"{fixture.CompanyId}\"]", null, null),
             CancellationToken.None);
         Assert.True(created.IsSuccess);
 
@@ -51,7 +54,7 @@ public sealed class IntegrationCouponsSqliteTests
         var applied = await apply.Handle(new ApplyCouponToCartCommand(fixture.UserId, "SAVE20"), CancellationToken.None);
         Assert.True(applied.IsSuccess);
 
-        var checkout = new CouponCheckoutService(linkRepo, couponRepo, usageRepo, Options.Create(new CouponsOptions
+        var checkout = new CouponCheckoutService(linkRepo, couponRepo, usageRepo, validation, evaluator, Options.Create(new CouponsOptions
         {
             ReadEnabled = true,
             CheckoutConsumeEnabled = true
@@ -72,6 +75,120 @@ public sealed class IntegrationCouponsSqliteTests
         var remove = new RemoveCouponFromCartCommandHandler(new CartRepository(db), linkRepo);
         var removed = await remove.Handle(new RemoveCouponFromCartCommand(fixture.UserId, "SAVE20"), CancellationToken.None);
         Assert.True(removed.IsSuccess);
+    }
+
+    [Fact]
+    public async Task ConsumeOnceAsync_Records_Single_Usage_And_Removes_Link()
+    {
+        await using var db = await CreateSqliteContextAsync();
+        var fixture = await SeedFixtureAsync(db);
+
+        var couponRepo = new CouponRepository(db);
+        var usageRepo = new CouponUsageRepository(db);
+        var linkRepo = new CartCouponLinkRepository(db);
+        var evaluator = CreateEvaluator(usageRepo);
+        var validation = new CouponCartValidationService(
+            new CartRepository(db),
+            new CartItemRepository(db),
+            new ProductRepository(db),
+            couponRepo,
+            evaluator);
+        var checkout = new CouponCheckoutService(linkRepo, couponRepo, usageRepo, validation, evaluator, Options.Create(new CouponsOptions
+        {
+            ReadEnabled = true,
+            CheckoutConsumeEnabled = true
+        }));
+
+        var create = new CreateCouponCommandHandler(couponRepo);
+        var created = await create.Handle(
+            new CreateCouponCommand("ONCE10", null, 10, "Fixed", null, 10, 1, DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddDays(2), true, $"[\"{fixture.CompanyId}\"]", null, null),
+            CancellationToken.None);
+        Assert.True(created.IsSuccess);
+
+        var apply = new ApplyCouponToCartCommandHandler(validation, linkRepo);
+        await apply.Handle(new ApplyCouponToCartCommand(fixture.UserId, "ONCE10"), CancellationToken.None);
+
+        await checkout.ConsumeOnceAsync(
+            fixture.UserId,
+            OrderId.From(1001),
+            CartId.From(fixture.CartId),
+            created.Value!.Id,
+            "ONCE10",
+            10m,
+            CancellationToken.None);
+
+        Assert.Equal(1, await db.CouponUsages.AsNoTracking().CountAsync());
+        Assert.Equal(1, await db.Coupons.AsNoTracking().Select(x => x.UsageCount).FirstAsync());
+        Assert.Null(await linkRepo.GetByCartIdAsync(CartId.From(fixture.CartId), CancellationToken.None));
+
+        await checkout.ConsumeOnceAsync(
+            fixture.UserId,
+            OrderId.From(1001),
+            CartId.From(fixture.CartId),
+            created.Value!.Id,
+            "ONCE10",
+            10m,
+            CancellationToken.None);
+
+        Assert.Equal(1, await db.CouponUsages.AsNoTracking().CountAsync());
+    }
+
+    [Fact]
+    public async Task Category_Scoped_Coupon_Discounts_Only_Matching_Lines()
+    {
+        await using var db = await CreateSqliteContextAsync();
+        var fixture = await SeedFixtureAsync(db);
+
+        var couponRepo = new CouponRepository(db);
+        var usageRepo = new CouponUsageRepository(db);
+        var evaluator = CreateEvaluator(usageRepo);
+        var validation = new CouponCartValidationService(
+            new CartRepository(db),
+            new CartItemRepository(db),
+            new ProductRepository(db),
+            couponRepo,
+            evaluator);
+
+        var create = new CreateCouponCommandHandler(couponRepo);
+        await create.Handle(
+            new CreateCouponCommand("CAT5", null, 10, "Percentage", null, 10, 1, DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddDays(2), true, $"[\"{fixture.CompanyId}\"]", "[2]", null),
+            CancellationToken.None);
+
+        var productRepo = new ProductRepository(db);
+        await productRepo.AddAsync(
+            Product.Reconstitute(
+                ProductId.From(3002),
+                CompanyId.From(fixture.CompanyId),
+                "Other category product",
+                "other-cat",
+                "Desc",
+                new Money(100),
+                null,
+                10,
+                0,
+                CategoryId.From(2),
+                ProductStatus.Active,
+                null,
+                0,
+                0,
+                0,
+                false,
+                DateTime.UtcNow,
+                DateTime.UtcNow,
+                false,
+                null),
+            CancellationToken.None);
+
+        var cartItemRepo = new CartItemRepository(db);
+        await cartItemRepo.AddAsync(
+            CartItem.Reconstitute(CartItemId.From(0), CartId.From(fixture.CartId), ProductId.From(3002), 1, new Money(100), Money.Zero, DateTime.UtcNow, DateTime.UtcNow, false, null),
+            CancellationToken.None);
+        await db.SaveChangesAsync();
+
+        var validated = await validation.ValidateAsync(fixture.UserId, "CAT5", CancellationToken.None);
+
+        Assert.True(validated.Result.IsValid);
+        Assert.Equal(10m, validated.Result.DiscountAmount);
     }
 
     private static async Task<(Guid UserId, Guid CompanyId, long CartId)> SeedFixtureAsync(ApplicationDbContext db)
@@ -130,4 +247,13 @@ public sealed class IntegrationCouponsSqliteTests
         await context.Database.EnsureCreatedAsync();
         return context;
     }
+
+    private static CouponEligibilityEvaluator CreateEvaluator(ICouponUsageRepository usageRepo) =>
+        new(usageRepo,
+        [
+            new ActiveWindowCouponRule(),
+            new CompanyScopeCouponRule(),
+            new UsageLimitsCouponRule(),
+            new MinOrderAmountCouponRule()
+        ]);
 }

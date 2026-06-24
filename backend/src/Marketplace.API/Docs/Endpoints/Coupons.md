@@ -20,7 +20,7 @@
   - Екран: AdminShell / coupons (planned)
   - API-модуль: —
   - Статус: `partial`
-- **Body:** `code`, `discountAmount`, `discountType`, `usageLimit`, `userUsageLimit`, `startsAtUtc`, `expiresAtUtc`, `applicableCompaniesJson`.
+- **Body:** `code`, `discountAmount`, `discountType`, `usageLimit`, `userUsageLimit`, `startsAtUtc`, `expiresAtUtc`, `applicableCompaniesJson`, `applicableCategoriesJson`, `applicableProductsJson`.
 - **Повертає:** `CouponDto`.
 - **Помилки:** `409` (дублікат коду), `422` (валідація), `503` (feature disabled).
 
@@ -98,7 +98,7 @@
   - Компанійні ролі: —
 - **Бізнес-логіка:**
   1. Завантажити активний кошик користувача
-  2. Валідувати купон за `code` (термін, ліміти, applicable companies)
+  2. Валідувати купон за `code` (термін, ліміти, applicable companies/categories/products)
   3. Повернути `CouponValidationResultDto` без зміни кошика
 - **Side effects (синхронно):** —
 - **Async / «магія»:** —
@@ -152,4 +152,7 @@
 ## Checkout integration
 
 - `POST /me/cart/checkout` автоматично враховує discount із `cart_coupon_links`.
-- Consume виконується ідемпотентно через `coupon_usages` (`couponId + orderId` unique).
+- Перед створенням замовлень виконується **revalidation** зв'язку купон-кошик; при невалідності — `422` і auto-remove link.
+- **Multi-company кошик:** знижка розподіляється пропорційно eligible subtotal по компаніях; `coupon_usages` **consume один раз** на checkout (anchor `primaryOrderId`), не на кожне замовлення окремо.
+- Scope rules: якщо задано `applicableCategoriesJson` / `applicableProductsJson` — discount лише на відповідні позиції; eligible subtotal для `minOrderAmount` і відсоткової знижки рахується по eligible lines.
+- Consume ідемпотентно через `coupon_usages` (`couponId + orderId` unique).

@@ -1,6 +1,7 @@
 using Marketplace.Domain.Common.Models;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Coupons.Enums;
+using CouponApplicableScope = Marketplace.Domain.Coupons.CouponApplicableScope;
 
 namespace Marketplace.Domain.Coupons.Entities;
 
@@ -68,12 +69,16 @@ public sealed class Coupon : AuditableSoftDeleteAggregateRoot<CouponId>
     }
 
     public bool IsCompanyInScope(Guid companyId)
-    {
-        if (ApplicableCompanies is null || ApplicableCompanies.IsEmpty)
-            return true;
-        var raw = ApplicableCompanies.Raw ?? string.Empty;
-        return raw.Contains(companyId.ToString(), StringComparison.OrdinalIgnoreCase);
-    }
+        => CouponApplicableScope.ContainsGuid(ApplicableCompanies, companyId);
+
+    public bool IsCategoryInScope(long categoryId)
+        => CouponApplicableScope.ContainsLong(ApplicableCategories, categoryId);
+
+    public bool IsProductInScope(long productId)
+        => CouponApplicableScope.ContainsLong(ApplicableProducts, productId);
+
+    public bool IsLineInScope(Guid companyId, long categoryId, long productId)
+        => IsCompanyInScope(companyId) && IsCategoryInScope(categoryId) && IsProductInScope(productId);
 
     public void IncrementUsage(DateTime utcNow)
     {

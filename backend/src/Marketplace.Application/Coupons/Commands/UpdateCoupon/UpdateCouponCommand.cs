@@ -19,7 +19,9 @@ public sealed record UpdateCouponCommand(
     DateTime? StartsAtUtc,
     DateTime? ExpiresAtUtc,
     bool IsActive,
-    string? ApplicableCompaniesJson) : IRequest<Result<CouponDto>>;
+    string? ApplicableCompaniesJson,
+    string? ApplicableCategoriesJson,
+    string? ApplicableProductsJson) : IRequest<Result<CouponDto>>;
 
 public sealed class UpdateCouponCommandHandler : IRequestHandler<UpdateCouponCommand, Result<CouponDto>>
 {
@@ -40,6 +42,7 @@ public sealed class UpdateCouponCommandHandler : IRequestHandler<UpdateCouponCom
             return Result<CouponDto>.Failure("not found");
 
         var now = DateTime.UtcNow;
+        var userUsageLimit = request.UserUsageLimit <= 0 ? 1 : request.UserUsageLimit;
         var updated = Coupon.Reconstitute(
             existing.Id,
             existing.Code,
@@ -49,11 +52,15 @@ public sealed class UpdateCouponCommandHandler : IRequestHandler<UpdateCouponCom
             request.MinOrderAmount.HasValue ? new Money(request.MinOrderAmount.Value) : null,
             request.UsageLimit,
             existing.UsageCount,
-            request.UserUsageLimit,
+            userUsageLimit,
             request.ExpiresAtUtc,
             request.StartsAtUtc,
-            existing.ApplicableCategories,
-            existing.ApplicableProducts,
+            string.IsNullOrWhiteSpace(request.ApplicableCategoriesJson)
+                ? existing.ApplicableCategories
+                : new JsonBlob(request.ApplicableCategoriesJson),
+            string.IsNullOrWhiteSpace(request.ApplicableProductsJson)
+                ? existing.ApplicableProducts
+                : new JsonBlob(request.ApplicableProductsJson),
             string.IsNullOrWhiteSpace(request.ApplicableCompaniesJson) ? null : new JsonBlob(request.ApplicableCompaniesJson),
             request.IsActive,
             existing.CreatedAt,

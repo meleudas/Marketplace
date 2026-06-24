@@ -2,6 +2,7 @@ using Marketplace.Application.Coupons.Commands.ApplyCouponToCart;
 using Marketplace.Application.Coupons.Commands.CreateCoupon;
 using Marketplace.Application.Coupons.Commands.ValidateCouponForCart;
 using Marketplace.Application.Coupons.Services;
+using Marketplace.Application.Coupons.Validation;
 using Marketplace.Domain.Cart.Entities;
 using Marketplace.Domain.Cart.Enums;
 using Marketplace.Domain.Cart.Repositories;
@@ -30,7 +31,7 @@ public sealed class ApplicationCouponsCommandTests
         var couponRepo = new InMemoryCouponRepository(now, companyId);
         var usageRepo = new InMemoryCouponUsageRepository();
 
-        var service = new CouponCartValidationService(cartRepo, cartItemRepo, productRepo, couponRepo, usageRepo);
+        var service = new CouponCartValidationService(cartRepo, cartItemRepo, productRepo, couponRepo, CreateEvaluator(usageRepo));
         var handler = new ValidateCouponForCartCommandHandler(service);
 
         var result = await handler.Handle(new ValidateCouponForCartCommand(userId, "SAVE10"), CancellationToken.None);
@@ -53,7 +54,7 @@ public sealed class ApplicationCouponsCommandTests
         var usageRepo = new InMemoryCouponUsageRepository();
         var linkRepo = new InMemoryCartCouponLinkRepository();
 
-        var service = new CouponCartValidationService(cartRepo, cartItemRepo, productRepo, couponRepo, usageRepo);
+        var service = new CouponCartValidationService(cartRepo, cartItemRepo, productRepo, couponRepo, CreateEvaluator(usageRepo));
         var handler = new ApplyCouponToCartCommandHandler(service, linkRepo);
 
         var result = await handler.Handle(new ApplyCouponToCartCommand(userId, "SAVE10"), CancellationToken.None);
@@ -69,12 +70,21 @@ public sealed class ApplicationCouponsCommandTests
         var handler = new CreateCouponCommandHandler(repo);
 
         var result = await handler.Handle(
-            new CreateCouponCommand("SAVE10", null, 10, "Percentage", null, null, 1, null, null, true, null),
+            new CreateCouponCommand("SAVE10", null, 10, "Percentage", null, null, 1, null, null, true, null, null, null),
             CancellationToken.None);
 
         Assert.True(result.IsFailure);
         Assert.Contains("conflict", result.Error ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
+
+    private static CouponEligibilityEvaluator CreateEvaluator(ICouponUsageRepository usageRepo) =>
+        new(usageRepo,
+        [
+            new ActiveWindowCouponRule(),
+            new CompanyScopeCouponRule(),
+            new UsageLimitsCouponRule(),
+            new MinOrderAmountCouponRule()
+        ]);
 
     private sealed class InMemoryCartRepository : ICartRepository
     {
