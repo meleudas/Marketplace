@@ -2,6 +2,18 @@
 
 Усі маршрути: **`[Authorize(Roles = "Admin")]`**.
 
+### `GET /admin/outbox/dead-letters`
+
+- **Summary:** Сторінковий список dead-letter outbox-повідомлень.
+- **Query:** `page`, `pageSize` (max 100)
+- **Повертає:** `{ items[], total, page, pageSize }` з `OutboxMessageAdminDto`
+
+### `GET /admin/outbox/stuck`
+
+- **Summary:** Outbox-повідомлення з простроченим `next_attempt` (failed, не DLQ, >15 хв).
+- **Query:** `page`, `pageSize`
+- **Повертає:** пагінований список для ops triage
+
 ### `POST /admin/outbox/{messageId}/requeue`
 
 - **Summary (1 рядок):** Повторна постановка dead-letter outbox-повідомлення в чергу.

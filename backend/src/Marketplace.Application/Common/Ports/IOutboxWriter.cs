@@ -8,4 +8,6 @@ public interface IOutboxWriter
     Task MarkFailedAsync(Guid id, string error, DateTime nextAttemptAtUtc, CancellationToken ct = default);
     Task MarkDeadLetterAsync(Guid id, string reason, string category, CancellationToken ct = default);
     Task RequeueDeadLetterAsync(Guid id, CancellationToken ct = default);
+    Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListDeadLettersAsync(int page, int pageSize, CancellationToken ct = default);
+    Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListStuckAsync(DateTime utcNow, int page, int pageSize, CancellationToken ct = default);
 }
