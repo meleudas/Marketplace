@@ -12,15 +12,29 @@ public sealed class CompanyCommissionRateRepository : ICompanyCommissionRateRepo
 
     public CompanyCommissionRateRepository(ApplicationDbContext context) => _context = context;
 
-    public async Task<CompanyCommissionRate?> GetActiveByCompanyIdAsync(CompanyId companyId, CancellationToken ct = default)
+    public async Task<CompanyCommissionRate?> GetActiveByCompanyIdAsync(CompanyId companyId, CancellationToken ct = default) =>
+        await GetActiveAtAsync(companyId, DateTime.UtcNow, ct);
+
+    public async Task<CompanyCommissionRate?> GetActiveAtAsync(CompanyId companyId, DateTime asOfUtc, CancellationToken ct = default)
     {
-        var now = DateTime.UtcNow;
         var row = await _context.CompanyCommissionRates
             .AsNoTracking()
-            .Where(x => x.CompanyId == companyId.Value && x.EffectiveFrom <= now && (x.EffectiveTo == null || x.EffectiveTo > now))
+            .Where(x => x.CompanyId == companyId.Value
+                && x.EffectiveFrom <= asOfUtc
+                && (x.EffectiveTo == null || x.EffectiveTo > asOfUtc))
             .OrderByDescending(x => x.EffectiveFrom)
             .FirstOrDefaultAsync(ct);
         return row is null ? null : ToDomain(row);
+    }
+
+    public async Task<IReadOnlyList<CompanyCommissionRate>> ListByCompanyIdAsync(CompanyId companyId, CancellationToken ct = default)
+    {
+        var rows = await _context.CompanyCommissionRates
+            .AsNoTracking()
+            .Where(x => x.CompanyId == companyId.Value)
+            .OrderByDescending(x => x.EffectiveFrom)
+            .ToListAsync(ct);
+        return rows.Select(ToDomain).ToList();
     }
 
     public async Task<CompanyCommissionRate> AddAsync(CompanyCommissionRate rate, CancellationToken ct = default)

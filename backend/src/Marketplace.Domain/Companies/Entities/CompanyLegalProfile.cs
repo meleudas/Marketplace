@@ -17,6 +17,9 @@ public sealed class CompanyLegalProfile : AggregateRoot<CompanyLegalProfileId>
     public string? CertificateNumber { get; private set; }
     public bool IsVatPayer { get; private set; }
     public decimal? InitialCommissionPercent { get; private set; }
+    public string? PayoutIban { get; private set; }
+    public string? PayoutRecipientName { get; private set; }
+    public string? PayoutProviderAccountId { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
     public bool IsDeleted { get; private set; }
@@ -31,7 +34,10 @@ public sealed class CompanyLegalProfile : AggregateRoot<CompanyLegalProfileId>
         string? ipn,
         string? certificateNumber,
         bool isVatPayer,
-        decimal? initialCommissionPercent)
+        decimal? initialCommissionPercent,
+        string? payoutIban = null,
+        string? payoutRecipientName = null,
+        string? payoutProviderAccountId = null)
     {
         Validate(legalName, legalType, edrpou, ipn, initialCommissionPercent);
         var now = DateTime.UtcNow;
@@ -46,6 +52,9 @@ public sealed class CompanyLegalProfile : AggregateRoot<CompanyLegalProfileId>
             CertificateNumber = Normalize(certificateNumber),
             IsVatPayer = isVatPayer,
             InitialCommissionPercent = initialCommissionPercent,
+            PayoutIban = Normalize(payoutIban),
+            PayoutRecipientName = Normalize(payoutRecipientName),
+            PayoutProviderAccountId = Normalize(payoutProviderAccountId),
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -61,6 +70,9 @@ public sealed class CompanyLegalProfile : AggregateRoot<CompanyLegalProfileId>
         string? certificateNumber,
         bool isVatPayer,
         decimal? initialCommissionPercent,
+        string? payoutIban,
+        string? payoutRecipientName,
+        string? payoutProviderAccountId,
         DateTime createdAt,
         DateTime updatedAt,
         bool isDeleted,
@@ -76,6 +88,9 @@ public sealed class CompanyLegalProfile : AggregateRoot<CompanyLegalProfileId>
             CertificateNumber = certificateNumber,
             IsVatPayer = isVatPayer,
             InitialCommissionPercent = initialCommissionPercent,
+            PayoutIban = payoutIban,
+            PayoutRecipientName = payoutRecipientName,
+            PayoutProviderAccountId = payoutProviderAccountId,
             CreatedAt = createdAt,
             UpdatedAt = updatedAt,
             IsDeleted = isDeleted,
@@ -98,4 +113,12 @@ public sealed class CompanyLegalProfile : AggregateRoot<CompanyLegalProfileId>
     }
 
     private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    public void UpdatePayoutDetails(string? payoutIban, string? payoutRecipientName, string? payoutProviderAccountId)
+    {
+        PayoutIban = Normalize(payoutIban);
+        PayoutRecipientName = Normalize(payoutRecipientName);
+        PayoutProviderAccountId = Normalize(payoutProviderAccountId);
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

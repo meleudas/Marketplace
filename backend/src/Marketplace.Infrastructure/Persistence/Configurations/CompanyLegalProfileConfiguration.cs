@@ -16,6 +16,9 @@ public class CompanyLegalProfileConfiguration : IEntityTypeConfiguration<Company
         builder.Property(x => x.Ipn).HasMaxLength(9);
         builder.Property(x => x.CertificateNumber).HasMaxLength(50);
         builder.Property(x => x.InitialCommissionPercent).HasColumnType("numeric(7,4)");
+        builder.Property(x => x.PayoutIban).HasMaxLength(34);
+        builder.Property(x => x.PayoutRecipientName).HasMaxLength(255);
+        builder.Property(x => x.PayoutProviderAccountId).HasMaxLength(128);
         builder.Property(x => x.IsDeleted).HasDefaultValue(false);
 
         builder.HasIndex(x => x.CompanyId).IsUnique();

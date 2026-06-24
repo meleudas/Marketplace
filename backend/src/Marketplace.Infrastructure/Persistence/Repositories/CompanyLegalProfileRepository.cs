@@ -38,6 +38,9 @@ public sealed class CompanyLegalProfileRepository : ICompanyLegalProfileReposito
         row.CertificateNumber = legalProfile.CertificateNumber;
         row.IsVatPayer = legalProfile.IsVatPayer;
         row.InitialCommissionPercent = legalProfile.InitialCommissionPercent;
+        row.PayoutIban = legalProfile.PayoutIban;
+        row.PayoutRecipientName = legalProfile.PayoutRecipientName;
+        row.PayoutProviderAccountId = legalProfile.PayoutProviderAccountId;
         row.UpdatedAt = legalProfile.UpdatedAt;
         row.IsDeleted = legalProfile.IsDeleted;
         row.DeletedAt = legalProfile.DeletedAt;
@@ -55,6 +58,9 @@ public sealed class CompanyLegalProfileRepository : ICompanyLegalProfileReposito
             row.CertificateNumber,
             row.IsVatPayer,
             row.InitialCommissionPercent,
+            row.PayoutIban,
+            row.PayoutRecipientName,
+            row.PayoutProviderAccountId,
             row.CreatedAt,
             row.UpdatedAt,
             row.IsDeleted,
@@ -72,6 +78,9 @@ public sealed class CompanyLegalProfileRepository : ICompanyLegalProfileReposito
             CertificateNumber = x.CertificateNumber,
             IsVatPayer = x.IsVatPayer,
             InitialCommissionPercent = x.InitialCommissionPercent,
+            PayoutIban = x.PayoutIban,
+            PayoutRecipientName = x.PayoutRecipientName,
+            PayoutProviderAccountId = x.PayoutProviderAccountId,
             CreatedAt = x.CreatedAt,
             UpdatedAt = x.UpdatedAt,
             IsDeleted = x.IsDeleted,

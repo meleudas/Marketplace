@@ -11,6 +11,9 @@ public class CompanyLegalProfileRecord
     public string? CertificateNumber { get; set; }
     public bool IsVatPayer { get; set; }
     public decimal? InitialCommissionPercent { get; set; }
+    public string? PayoutIban { get; set; }
+    public string? PayoutRecipientName { get; set; }
+    public string? PayoutProviderAccountId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public bool IsDeleted { get; set; }
