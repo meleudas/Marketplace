@@ -131,7 +131,7 @@
 | 7.2 | Метрики/алерти на зростання помилок `AppNotificationJobs`, dead-letter для нотифікацій (якщо вводиться окрема таблиця) |
 | 7.3 | GDPR: налаштування користувача, TTL in-app ([ConfigurationAndSecurity.md](ConfigurationAndSecurity.md)) |
 
-**Стан:** **7.1** — без змін коду, зафіксовано backlog у [Architecture.md](Architecture.md) (outbox лише enqueue). **7.2** — лічильники `hangfire_jobs_total` / `hangfire_job_errors_total` для `app-notification-dispatch` доповнено тегом `template_key`; окремої dead-letter таблиці немає. **7.3** — TTL in-app через `AppNotifications:InAppDefaultTtlDays`, щоденна Hangfire-джоба `PruneExpiredInAppNotificationsAsync`, колонки згоди на `AspNetUsers`; API зміни preferences — backlog.
+**Стан:** **7.1** — без змін коду, зафіксовано backlog у [Architecture.md](Architecture.md) (outbox лише enqueue). **7.2** — лічильники `hangfire_jobs_total` / `hangfire_job_errors_total` для `app-notification-dispatch` доповнено тегом `template_key`; retry `notification_dispatch` реалізовано в `IntegrationRetryProcessor` + `IAppNotificationRedispatcher`; DLQ метрика `notification_dispatch_dead_letter_total`; Grafana alert на failed channel deliveries (Email/Telegram/SMS). **7.3** — TTL in-app через `AppNotifications:InAppDefaultTtlDays`, щоденна Hangfire-джоба `PruneExpiredInAppNotificationsAsync`, колонки згоди на `AspNetUsers`; API зміни preferences — backlog. **Template versioning (in-code):** `AppNotificationTemplateVersions` + поле `TemplateVersion` у `AppNotificationEnvelope` / in-app `data.templateVersion`. **SMS:** `SmsNotificationChannel`, `AppNotifications:SmsEnabled`, пілот `UserOrderStatus` (Shipped/Delivered).
 
 ---
 

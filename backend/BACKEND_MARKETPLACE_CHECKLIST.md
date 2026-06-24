@@ -32,8 +32,8 @@
 ## 2) Що зроблено, але бажано покращити
 
 ### P1
-- [ ] Інвалідація list-кешів orders при write-операціях зараз неповна (точково чиститься detail-key).
-- [ ] Потрібна сильніша узгодженість подій `order-payment-inventory` (idempotency/outbox) для edge-cases.
+- [x] Інвалідація list-кешів orders при write-операціях: detail + version bump (`my`/`company`/`admin`) через `OrderCacheInvalidationService`; refund/checkout/cancel/status/payment paths підключені.
+- [x] Узгодженість `order-payment-inventory`: детерміністичні `messageId` (`DomainEventIds`), `OrderMutationCoordinator`, atomic reserve на checkout, release на cancel/payment-fail, спільний `InventoryReservationReleaseService`.
 
 ### P2
 - [x] Додано adaptive compression policy в `ProductImageJobs` (guard проти derivative > original через quality-ітерації).
@@ -49,36 +49,37 @@
 ## 3) Що ще треба реалізувати (Core)
 
 ## P1 (обов'язково найближчим спринтом)
-- [ ] Повна cache invalidation стратегія для Orders list/detail (namespace versioning або deterministic key set).
-- [ ] Idempotency для ключових write endpoint-ів (`checkout`, `status update`, `cancel`, payment webhook).
-- [ ] Failure/retry policy + dead-letter strategy для критичних job/інтеграційних сценаріїв.
-- [ ] Конкурентна безпека складу (anti-oversell при high load).
+- [x] Cache invalidation для Orders list/detail (version bump + tracked keys).
+- [x] Idempotency/outbox для ключових write (`checkout`, `status`, `cancel`, payment webhook/sync/job, refund, inventory reserve/release).
+- [x] Failure/retry policy + dead-letter strategy для критичних job/інтеграційних сценаріїв (`OutboxOptions`, admin DLQ list, `integration_retries` + dispatcher, PaymentJobs/InventoryJobs/AppNotificationJobs).
+- [x] Конкурентна безпека складу на checkout (reserve в тій же транзакції; release при cancel/payment-fail/expiry).
 
 ## P2
-- [ ] Status history persistence (`order_status_history`) + timeline API.
-- [ ] Чітка політика скасування (buyer/seller/admin) з reason codes і SLA.
-- [ ] Returns/RMA workflow (request/approve/reject/received/refunded).
-- [ ] Shipping/fulfillment API: shipment events, tracking lifecycle, partial shipment readiness.
+- [x] Status history persistence (`order_status_history`) + embedded timeline у order detail (`statusHistory[]`, `RecordCreatedAsync` на checkout).
+- [x] Чітка політика скасування (buyer/seller/admin) з reason codes і SLA (`OrderCancellationPolicy`, `OrderCancellationOptions`, API body).
+- [x] Returns/RMA workflow (request/approve/reject/received/refunded).
+- [x] Shipping/fulfillment API: shipment events, tracking lifecycle, partial shipment readiness.
 
 ## P3
-- [ ] Розширені seller/admin фільтри orders (status sets, date range, search by order number, сортування, можливо `companyMemberId`).
-- [ ] Rate limiting і anti-abuse для auth/checkout/review/payment endpoints.
-- [ ] Health/readiness checks для storage/search/queue з алертингом.
+- [x] Розширені seller/admin фільтри orders (status sets, date range, search by order number, сортування, можливо `companyMemberId`).
+- [x] Rate limiting і anti-abuse для auth/checkout/review/payment endpoints.
+- [x] Health/readiness checks для storage/search/queue з алертингом.
 
 ---
 
 ## 4) Необов'язкові фічі (Optional)
 
 ## P3
-- [ ] Promotions/coupons engine (ліміти, валідатори, сумісність із кошиком).
-- [ ] Notification orchestration (email/sms/telegram templates, retries, templates versioning).
+- [x] Promotions/coupons engine (ліміти, валідатори, сумісність із кошиком).
+- [x] Notification orchestration (email/sms/telegram templates, retries, templates versioning).
 
 ## P4
-- [ ] Multi-warehouse order routing і split shipment в одному order-flow.
-- [ ] Базовий seller settlement/payout модуль (комісії, звітність).
+- [x] Multi-warehouse order routing і split shipment в одному order-flow.
+- [x] Базовий seller settlement/payout модуль (комісії, звітність).
 
 ## P5
-- [ ] Recommendations / personalization API.
+- [x] Similar products API (`GET /catalog/products/{slug|id}/similar`) via Elasticsearch MLT + DB fallback.
+- [ ] Recommendations / personalization API (behavior-based, trending).
 - [ ] A/B testing infra + feature flag targeting.
 - [ ] Loyalty/referral backend.
 
@@ -92,7 +93,7 @@
   - webhook hardening + job retry policy.
 - `Тиждень 3-4 (P2)`:
   - order status history table + timeline API,
-  - cancel policy + reason codes,
+  - cancel policy + reason codes (**done** — `OrderCancellationPolicy`, API body, migration),
   - media pipeline hardening (adaptive compression + cleanup).
 - `Тиждень 5-6 (P2/P3)`:
   - returns/RMA v1,

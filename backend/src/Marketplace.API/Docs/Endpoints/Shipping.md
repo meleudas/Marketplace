@@ -164,6 +164,41 @@
   - Статус: `planned`
 - **Повертає:** список `ShipmentDto`.
 
+## `GET /me/shipments/{shipmentId}`
+
+- **Summary:** Деталі shipment для buyer з `items[]` та `events[]` timeline.
+- **Повертає:** `ShipmentDetailDto`.
+
+## `GET /me/orders/{orderId}/shipments`
+
+- **Summary:** Список shipments замовлення для buyer.
+- **Повертає:** `ShipmentSummaryDto[]`.
+
+## `POST /companies/{companyId}/orders/{orderId}/shipments`
+
+- **Summary:** Seller створює partial/full shipment з line items, optional `warehouseId` та tracking.
+- **Body:** `warehouseId` (обов'язковий для замовлень з multi-warehouse allocations), `lines[]`, `trackingNumber`.
+- **Idempotency-Key:** обов'язковий.
+- **Повертає:** `ShipmentDetailDto`.
+
+## Multi-warehouse fulfillment
+
+- Checkout резервує stock greedy за `Warehouse.Priority` (DESC); зберігає `order_fulfillment_allocations`.
+- `FulfillmentReadinessDto.pendingByWarehouse[]` групує залишок для відправки по складах.
+- Кожен shipment прив'язаний до `warehouseId`; ship зменшує stock лише на цьому складі.
+
+## `GET /companies/{companyId}/orders/{orderId}/shipments`
+
+- **Summary:** Список shipments замовлення для seller.
+
+## `GET /companies/{companyId}/shipments/{shipmentId}`
+
+- **Summary:** Деталі shipment для seller з events timeline.
+
+## Fulfillment у order detail
+
+`fulfillment` (`FulfillmentReadinessDto`) у `OrderDetailsDto`: прогрес partial ship без нових `OrderStatus`. Поле `pendingByWarehouse` — групи рядків по складах для seller UI.
+
 ## `POST /integrations/shipping/novaposhta/webhook`
 
 - **Summary (1 рядок):** Webhook статусів доставки від Nova Poshta.

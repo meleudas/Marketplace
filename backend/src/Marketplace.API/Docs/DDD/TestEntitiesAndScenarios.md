@@ -14,9 +14,16 @@
 | **Категорії** | `1` Electronics, `2` Smartphones (батько 1), `3` Home |
 | **Товари (slug)** | `seed-phone-alpha`, `seed-laptop-beta`, `seed-earbuds-gamma`, `seed-kettle-home`, `seed-watch-pending` (PendingReview), `seed-tablet-rejected` (Draft) |
 | **Склади** | Tech: warehouse `1` MAIN-KYIV, `2` SEC-LVIV; Home: `3` HOME-LVIV |
-| **Резерв (демо)** | `SEED-RES-DEMO` на товар 1 (склад 1), 5 од. |
+| **Сток split** | product 1 на WH1 (`warehouse_stocks` id=1) і WH2 (id=5, Lviv, 30 шт.) |
+| **Резерв (демо)** | `SEED-RES-DEMO` на товар 1 (склад 1), 5 од.; order 4: `order-4-product-1-wh-1/2` |
 | **Кошик buyer@** | Товари 1–3; **watch** на laptop (product 2, склад 0 — restock demo) |
-| **Замовлення** | `ORD-SEED-0001` … `0003` + `order_status_history` |
+| **Замовлення** | `ORD-SEED-0001` … `0004` + `order_status_history` |
+| **P4 fulfillment** | order 4 — split allocations WH1+WH2; order 2 — shipments per warehouse |
+| **Finance** | `order_financials` (orders 2–3), `seller_ledger_entries`, batches 1–3, payout `MANUAL-SEED-001` |
+| **Payout IBAN** | Tech Store: `UA213223130000026007233566001` |
+| **Coupon** | `SEED10` (10%, Tech Store) |
+| **Return** | id=1 на order 3 (`WrongItem`, Requested) |
+| **Chat** | `c1000001-0000-4000-8000-000000000001` (buyer ↔ seller, order 2) |
 | **In-app (`notifications`)** | 7 рядків (order, restock, admin, moderation, company) — `GET /me/in-app-notifications` |
 | **Web Push (`push_subscriptions`)** | buyer / admin / moderator — demo endpoints |
 
@@ -79,6 +86,27 @@
 
 1. У БД уже є активний резерв `SEED-RES-DEMO`; для нового коду — `POST .../reservations` з унікальним `reservationCode`.
 2. `DELETE .../reservations/{code}` — зняття резерву.
+
+### H. Multi-warehouse ship (P4)
+
+1. `buyer@`: `GET /companies/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/orders/4` — `fulfillment.pendingByWarehouse` з WH1 і WH2 (по 1 phone).
+2. `logistics@` або `seller@`: `POST .../orders/4/shipments?warehouseId=1` — відправка з Kyiv Main.
+3. `buyer@` / `seller@`: `GET .../orders/2/shipments` — два shipment (`NP-SEED-0002-A/B`) з різних складів.
+
+### I. Earnings / settlements (P4)
+
+1. `seller@`: `GET /companies/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/earnings/summary` — available ≈ 13372.22 (sale − refund), platformFees ≈ 1124.78.
+2. `seller@`: `GET .../settlements` — batch id=1 (Ready, без payout).
+3. `seller@`: `PATCH .../payout-profile` — IBAN уже заповнений, можна оновити інший.
+4. `admin@`: `GET /admin/settlements?status=Ready` — batch id=1.
+5. `admin@`: `POST /admin/settlements/1/approve-payout` — batch без payout (Tech Store IBAN є).
+
+### J. Coupon / return / chat
+
+1. `buyer@`: `POST /me/cart/coupons` з кодом `SEED10` (кошик 1–3, Tech Store).
+2. `buyer@`: `GET /me/returns` — 1 return на order 3 (kettle).
+3. `seller@` (Home Comfort owner — `buyer@` для HC): `POST .../returns/1/approve`.
+4. `buyer@` / `seller@`: `GET /chats` — чат `c1000001-...` по order 2; `POST /chats/{id}/messages`.
 
 ## Негативні кейси (чекліст)
 
