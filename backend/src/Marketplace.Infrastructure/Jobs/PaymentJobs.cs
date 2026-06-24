@@ -1,13 +1,17 @@
-using Marketplace.Application.Payments.Ports;
-using Hangfire;
-using Marketplace.Application.Orders.Cache;
-using Marketplace.Application.Payments.Services;
-using Marketplace.Application.Common.Ports;
-using Marketplace.Application.Orders.Services;
+using Marketplace.Application.Common;
 using Marketplace.Application.Common.Observability;
+using Marketplace.Application.Common.Options;
+using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Inventory.Services;
+using Marketplace.Application.Orders.Services;
+using Marketplace.Application.Payments.Ports;
+using Marketplace.Application.Payments.Services;
 using Marketplace.Domain.Orders.Repositories;
 using Marketplace.Domain.Payments.Enums;
 using Marketplace.Domain.Payments.Repositories;
+using Hangfire;
+using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace Marketplace.Infrastructure.Jobs;
 
@@ -16,27 +20,33 @@ public sealed class PaymentJobs
     private readonly IPaymentRepository _paymentRepository;
     private readonly IOrderRepository _orderRepository;
     private readonly ILiqPayPort _liqPayPort;
-    private readonly IOrderCacheInvalidationService _orderCacheInvalidation;
+    private readonly OrderMutationCoordinator _orderMutationCoordinator;
     private readonly IOrderPaymentStateApplier _paymentStateApplier;
-    private readonly IOutboxWriter _outbox;
     private readonly IOrderStatusHistoryWriter _historyWriter;
+    private readonly ICheckoutInventoryService _checkoutInventory;
+    private readonly IIntegrationRetryStore _integrationRetryStore;
+    private readonly IntegrationRetryOptions _retryOptions;
 
     public PaymentJobs(
         IPaymentRepository paymentRepository,
         IOrderRepository orderRepository,
         ILiqPayPort liqPayPort,
-        IOrderCacheInvalidationService orderCacheInvalidation,
+        OrderMutationCoordinator orderMutationCoordinator,
         IOrderPaymentStateApplier paymentStateApplier,
-        IOutboxWriter outbox,
-        IOrderStatusHistoryWriter historyWriter)
+        IOrderStatusHistoryWriter historyWriter,
+        ICheckoutInventoryService checkoutInventory,
+        IIntegrationRetryStore integrationRetryStore,
+        IOptions<IntegrationRetryOptions> retryOptions)
     {
         _paymentRepository = paymentRepository;
         _orderRepository = orderRepository;
         _liqPayPort = liqPayPort;
-        _orderCacheInvalidation = orderCacheInvalidation;
+        _orderMutationCoordinator = orderMutationCoordinator;
         _paymentStateApplier = paymentStateApplier;
-        _outbox = outbox;
         _historyWriter = historyWriter;
+        _checkoutInventory = checkoutInventory;
+        _integrationRetryStore = integrationRetryStore;
+        _retryOptions = retryOptions.Value;
     }
 
     [DisableConcurrentExecution(timeoutInSeconds: 300)]
@@ -54,6 +64,20 @@ public sealed class PaymentJobs
             if (!statusResult.IsSuccess)
             {
                 MarketplaceMetrics.HangfireJobErrors.Add(1, [new KeyValuePair<string, object?>("job", "payments-sync-pending")]);
+                var nextAttempt = RetryBackoffCalculator.ComputeNextAttemptUtc(
+                    1,
+                    _retryOptions.BaseBackoffMinutes,
+                    _retryOptions.MaxBackoffMinutes,
+                    DateTime.UtcNow);
+                await _integrationRetryStore.UpsertAsync(
+                    new IntegrationRetryUpsert(
+                        IntegrationRetryKinds.PaymentSync,
+                        "Payment",
+                        payment.Id.Value.ToString(),
+                        JsonSerializer.Serialize(new { paymentId = payment.Id.Value }),
+                        statusResult.Error ?? "Failed to sync payment status"),
+                    nextAttempt,
+                    ct);
                 continue;
             }
 
@@ -72,20 +96,6 @@ public sealed class PaymentJobs
 
             payment.UpdateProviderState(mapped, statusResult.TransactionId, new Marketplace.Domain.Common.ValueObjects.JsonBlob(statusResult.RawResponse));
             await _paymentRepository.UpdateAsync(payment, ct);
-            await _outbox.AppendAsync(
-                "Payment",
-                payment.Id.Value.ToString(),
-                "PaymentStatusChanged",
-                System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    messageId = Guid.NewGuid(),
-                    paymentId = payment.Id.Value,
-                    orderId = payment.OrderId.Value,
-                    transactionId = statusResult.TransactionId,
-                    status = mapped.ToString(),
-                    source = "job"
-                }),
-                ct);
 
             var order = await _orderRepository.GetByIdAsync(payment.OrderId, ct);
             if (order is null)
@@ -102,7 +112,26 @@ public sealed class PaymentJobs
                 "job",
                 correlationId: statusResult.TransactionId,
                 ct: ct);
-            await _orderCacheInvalidation.InvalidateOrderAsync(order.Id.Value, order.CustomerId, order.CompanyId.Value, ct);
+
+            await _orderMutationCoordinator.PublishPaymentStatusChangedAsync(
+                payment.Id.Value,
+                order.Id.Value,
+                order.CustomerId,
+                order.CompanyId.Value,
+                mapped.ToString(),
+                "job",
+                statusResult.TransactionId,
+                ct);
+
+            if (mapped == PaymentTransactionStatus.Failed)
+            {
+                await _checkoutInventory.ReleaseForOrderAsync(
+                    order.Id,
+                    order.CompanyId,
+                    null,
+                    "payment-failed",
+                    ct);
+            }
         }
         MarketplaceMetrics.HangfireJobs.Add(1, [new KeyValuePair<string, object?>("job", "payments-sync-pending"), new KeyValuePair<string, object?>("status", "success")]);
     }

@@ -162,6 +162,7 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
             await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductDetailPrefix + oldSlug, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductDetailPrefix + product.Slug, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.SimilarProductsPrefix + product.Id.Value, ct);
             if (product.Status == ProductStatus.Active)
                 await _searchIndexDispatcher.EnqueueUpsertProductAsync(product.Id.Value, ct);
 

@@ -19,7 +19,7 @@ namespace Marketplace.API.Controllers;
 [ApiController]
 [Tags("Chats")]
 [Route("me/chats")]
-[Authorize(Roles = "User,Buyer")]
+[Authorize(Roles = "User,Buyer,Seller")]
 public sealed class ChatsController : ControllerBase
 {
     private readonly ISender _sender;

@@ -101,6 +101,30 @@ public sealed record ShipmentId : ValueObject
     protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
 }
 
+public sealed record ShipmentItemId : ValueObject
+{
+    public long Value { get; }
+    private ShipmentItemId(long value) => Value = value;
+    public static ShipmentItemId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
+public sealed record ReturnRequestId : ValueObject
+{
+    public long Value { get; }
+    private ReturnRequestId(long value) => Value = value;
+    public static ReturnRequestId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
+public sealed record ReturnLineItemId : ValueObject
+{
+    public long Value { get; }
+    private ReturnLineItemId(long value) => Value = value;
+    public static ReturnLineItemId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
 public sealed record ShippingQuoteId : ValueObject
 {
     public long Value { get; }
@@ -277,6 +301,14 @@ public sealed record InventoryReservationId : ValueObject
     protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
 }
 
+public sealed record OrderFulfillmentAllocationId : ValueObject
+{
+    public long Value { get; }
+    private OrderFulfillmentAllocationId(long value) => Value = value;
+    public static OrderFulfillmentAllocationId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
 public sealed record CompanyFollowerId : ValueObject
 {
     public long Value { get; }
@@ -378,5 +410,37 @@ public sealed record UserRefreshTokenId : ValueObject
     public long Value { get; }
     private UserRefreshTokenId(long value) => Value = value;
     public static UserRefreshTokenId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
+public sealed record OrderFinancialsId : ValueObject
+{
+    public long Value { get; }
+    private OrderFinancialsId(long value) => Value = value;
+    public static OrderFinancialsId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
+public sealed record SellerLedgerEntryId : ValueObject
+{
+    public long Value { get; }
+    private SellerLedgerEntryId(long value) => Value = value;
+    public static SellerLedgerEntryId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
+public sealed record SettlementBatchId : ValueObject
+{
+    public long Value { get; }
+    private SettlementBatchId(long value) => Value = value;
+    public static SettlementBatchId From(long value) => new(value);
+    protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
+}
+
+public sealed record SellerPayoutId : ValueObject
+{
+    public long Value { get; }
+    private SellerPayoutId(long value) => Value = value;
+    public static SellerPayoutId From(long value) => new(value);
     protected override IEnumerable<object> GetEqualityComponents() { yield return Value; }
 }

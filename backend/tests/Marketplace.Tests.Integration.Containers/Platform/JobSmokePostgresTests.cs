@@ -22,19 +22,10 @@ public sealed class JobSmokePostgresTests
         await using var scope = _fixture.CreateServiceProvider().CreateAsyncScope();
         var sp = scope.ServiceProvider;
 
-        var inventoryJobs = new InventoryJobs(
-            sp.GetRequiredService<Marketplace.Domain.Inventory.Repositories.IInventoryReservationRepository>(),
-            sp.GetRequiredService<Marketplace.Domain.Inventory.Repositories.IWarehouseStockRepository>());
+        var inventoryJobs = sp.GetRequiredService<InventoryJobs>();
         await inventoryJobs.ExpireReservationsAsync(CancellationToken.None);
 
-        var paymentJobs = new PaymentJobs(
-            sp.GetRequiredService<Marketplace.Domain.Payments.Repositories.IPaymentRepository>(),
-            sp.GetRequiredService<Marketplace.Domain.Orders.Repositories.IOrderRepository>(),
-            new FakeLiqPayPort(),
-            new Marketplace.Application.Orders.Cache.OrderCacheInvalidationService(new NoopCachePort()),
-            new Marketplace.Application.Payments.Services.OrderPaymentStateApplier(),
-            new OutboxRepository(sp.GetRequiredService<Marketplace.Infrastructure.Persistence.ApplicationDbContext>()),
-            new NoopOrderStatusHistoryWriter());
+        var paymentJobs = sp.GetRequiredService<PaymentJobs>();
         await paymentJobs.SyncPendingPaymentsAsync(CancellationToken.None);
     }
 }

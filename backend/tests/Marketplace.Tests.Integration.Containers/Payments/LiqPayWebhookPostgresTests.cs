@@ -2,6 +2,7 @@ using System.Text;
 using Marketplace.Application.Payments.Commands.HandleLiqPayWebhook;
 using Marketplace.Application.Payments.Ports;
 using Marketplace.Application.Payments.Services;
+using Marketplace.Application.Orders.Services;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Entities;
 using Marketplace.Domain.Orders.Enums;
@@ -44,12 +45,15 @@ public sealed class LiqPayWebhookPostgresTests
             new FakeLiqPayPort(),
             paymentRepo,
             orderRepo,
-            new Marketplace.Application.Orders.Cache.OrderCacheInvalidationService(new NoopCachePort()),
+            OrderTestDoubles.CreateCoordinator(
+                new Marketplace.Application.Orders.Cache.OrderCacheInvalidationService(new NoopCachePort()),
+                new OutboxRepository(db)),
             new OrderPaymentStateApplier(),
-            new OutboxRepository(db),
             new Marketplace.Application.Orders.Services.OrderStatusHistoryWriter(new OrderStatusHistoryRepository(db)),
             new InboxDeduplicator(db),
-            new NoopAppNotificationScheduler());
+            new NoopAppNotificationScheduler(),
+            new NoopCheckoutInventoryService(),
+            new NoopOrderFinancialsWriter());
 
         var first = await handler.Handle(new HandleLiqPayWebhookCommand(payload, "sig-1", "idem-pg-a"), CancellationToken.None);
         var second = await handler.Handle(new HandleLiqPayWebhookCommand(payload, "sig-1", "idem-pg-b"), CancellationToken.None);

@@ -1,6 +1,9 @@
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Common.Observability;
+using Marketplace.Application.Common.Options;
+using Marketplace.Application.Common;
 using Hangfire;
+using Microsoft.Extensions.Options;
 
 namespace Marketplace.Infrastructure.Jobs;
 
@@ -8,12 +11,16 @@ public sealed class OutboxDispatcherJobs
 {
     private readonly IOutboxWriter _outbox;
     private readonly IOutboxEventProcessor _processor;
-    private const int MaxAttempts = 10;
+    private readonly OutboxOptions _options;
 
-    public OutboxDispatcherJobs(IOutboxWriter outbox, IOutboxEventProcessor processor)
+    public OutboxDispatcherJobs(
+        IOutboxWriter outbox,
+        IOutboxEventProcessor processor,
+        IOptions<OutboxOptions> options)
     {
         _outbox = outbox;
         _processor = processor;
+        _options = options.Value;
     }
 
     [DisableConcurrentExecution(timeoutInSeconds: 300)]
@@ -27,8 +34,10 @@ public sealed class OutboxDispatcherJobs
             MarketplaceMetrics.HangfireJobLatencyMs,
             new KeyValuePair<string, object?>("job", "outbox-dispatch"));
 
+        var maxAttempts = Math.Clamp(_options.MaxAttempts, 1, 50);
+        var batchSize = Math.Clamp(_options.BatchSize, 1, 500);
         var now = DateTime.UtcNow;
-        var batch = await _outbox.ListPendingAsync(100, now, ct);
+        var batch = await _outbox.ListPendingAsync(batchSize, now, ct);
         foreach (var message in batch)
         {
             try
@@ -59,7 +68,7 @@ public sealed class OutboxDispatcherJobs
             catch (Exception ex)
             {
                 MarketplaceMetrics.HangfireJobErrors.Add(1, [new KeyValuePair<string, object?>("job", "outbox-dispatch")]);
-                if (message.Attempts + 1 >= MaxAttempts)
+                if (message.Attempts + 1 >= maxAttempts)
                 {
                     await _outbox.MarkDeadLetterAsync(message.Id, ex.Message, "exhausted", ct);
                     MarketplaceMetrics.OutboxDispatchErrors.Add(1,
@@ -75,9 +84,11 @@ public sealed class OutboxDispatcherJobs
                     continue;
                 }
 
-                var nextDelayMinutes = Math.Min(60, Math.Pow(2, Math.Min(message.Attempts + 1, 6)));
-                var jitterSeconds = Random.Shared.Next(1, 15);
-                var nextAttempt = now.AddMinutes(nextDelayMinutes).AddSeconds(jitterSeconds);
+                var nextAttempt = RetryBackoffCalculator.ComputeNextAttemptUtc(
+                    message.Attempts + 1,
+                    _options.BaseBackoffMinutes,
+                    _options.MaxBackoffMinutes,
+                    now);
                 await _outbox.MarkFailedAsync(message.Id, ex.Message, nextAttempt, ct);
                 MarketplaceMetrics.OutboxDispatchErrors.Add(1,
                 [

@@ -41,6 +41,7 @@ public sealed class DeleteProductCommandHandler : IRequestHandler<DeleteProductC
 
             await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductDetailPrefix + oldSlug, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.SimilarProductsPrefix + product.Id.Value, ct);
             await _searchIndexDispatcher.EnqueueDeleteProductAsync(product.Id.Value, ct);
             return Result.Success();
         }

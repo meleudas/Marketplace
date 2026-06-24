@@ -37,6 +37,8 @@ public static class MarketplaceMetrics
     public static readonly Counter<long> CatalogErrors = Meter.CreateCounter<long>("catalog_errors_total");
     public static readonly Histogram<double> CatalogLatencyMs = Meter.CreateHistogram<double>("catalog_latency_ms");
     public static readonly Counter<long> CatalogSearchFallbacks = Meter.CreateCounter<long>("catalog_search_fallback_total");
+    public static readonly Counter<long> CatalogSimilarProductsFallbacks = Meter.CreateCounter<long>("catalog_similar_products_fallback_total");
+    public static readonly Counter<long> OrderCacheInvalidationFailures = Meter.CreateCounter<long>("order_cache_invalidation_failures_total");
 
     public static readonly Counter<long> CompanyOps = Meter.CreateCounter<long>("company_operations_total");
     public static readonly Counter<long> CompanyErrors = Meter.CreateCounter<long>("company_errors_total");
@@ -65,6 +67,10 @@ public static class MarketplaceMetrics
     public static readonly Counter<long> ShippingOps = Meter.CreateCounter<long>("shipping_operations_total");
     public static readonly Counter<long> ShippingErrors = Meter.CreateCounter<long>("shipping_errors_total");
     public static readonly Histogram<double> ShippingLatencyMs = Meter.CreateHistogram<double>("shipping_latency_ms");
+    public static readonly Counter<long> ShipmentCreated = Meter.CreateCounter<long>("shipment_created_total");
+    public static readonly Counter<long> ShipmentDeliveryStatus = Meter.CreateCounter<long>("shipment_delivery_status_total");
+    public static readonly Counter<long> ShippingWebhookEvents = Meter.CreateCounter<long>("shipping_webhook_events_total");
+    public static readonly Counter<long> RateLimitRejected = Meter.CreateCounter<long>("rate_limit_rejected_total");
     public static readonly Counter<long> CouponOps = Meter.CreateCounter<long>("coupon_operations_total");
     public static readonly Counter<long> CouponErrors = Meter.CreateCounter<long>("coupon_errors_total");
     public static readonly Counter<long> CouponValidationFailures = Meter.CreateCounter<long>("coupon_validation_failures_total");
@@ -91,10 +97,13 @@ public static class MarketplaceMetrics
     public static readonly Histogram<double> NotificationDispatchLatencyMs = Meter.CreateHistogram<double>("notification_dispatch_latency_ms");
     public static readonly Counter<long> NotificationChannelDeliveries = Meter.CreateCounter<long>("notification_channel_deliveries_total");
     public static readonly Counter<long> NotificationChannelErrors = Meter.CreateCounter<long>("notification_channel_errors_total");
+    public static readonly Counter<long> NotificationDispatchDeadLetter = Meter.CreateCounter<long>("notification_dispatch_dead_letter_total");
 
     public static readonly Counter<long> OutboxDispatches = Meter.CreateCounter<long>("outbox_dispatch_total");
     public static readonly Counter<long> OutboxDispatchErrors = Meter.CreateCounter<long>("outbox_dispatch_errors_total");
     public static readonly Counter<long> OutboxDeadLetters = Meter.CreateCounter<long>("outbox_dead_letter_total");
+    public static readonly Counter<long> IntegrationRetryAttempts = Meter.CreateCounter<long>("integration_retry_attempts_total");
+    public static readonly Counter<long> IntegrationRetryDeadLetters = Meter.CreateCounter<long>("integration_retry_dead_letter_total");
     public static readonly Counter<long> IdempotencyBegins = Meter.CreateCounter<long>("idempotency_begin_total");
     public static readonly Counter<long> IdempotencyConflicts = Meter.CreateCounter<long>("idempotency_conflicts_total");
     public static readonly Counter<long> IdempotencyReplays = Meter.CreateCounter<long>("idempotency_replays_total");
@@ -102,6 +111,15 @@ public static class MarketplaceMetrics
     public static readonly Counter<long> AnalyticsEventsDropped = Meter.CreateCounter<long>("analytics_events_dropped_total");
     public static readonly Histogram<double> AnalyticsPipelineLatencyMs = Meter.CreateHistogram<double>("analytics_pipeline_latency_ms");
     public static readonly Counter<long> AnalyticsAggregationFailures = Meter.CreateCounter<long>("analytics_aggregation_failures_total");
+    public static readonly Counter<long> RecommendationModelTrainings = Meter.CreateCounter<long>("recommendation_model_trainings_total");
+    public static readonly Counter<long> RecommendationModelPromotions = Meter.CreateCounter<long>("recommendation_model_promotions_total");
+    public static readonly Counter<long> RecommendationFallbacks = Meter.CreateCounter<long>("recommendation_fallbacks_total");
+    public static readonly Histogram<double> RecommendationInferenceLatencyMs = Meter.CreateHistogram<double>("recommendation_inference_latency_ms");
+
+    public static readonly Counter<long> CommissionPosted = Meter.CreateCounter<long>("commission_posted_total");
+    public static readonly Counter<long> SellerLedgerEntries = Meter.CreateCounter<long>("seller_ledger_entries_total");
+    public static readonly Counter<long> SellerPayoutTotal = Meter.CreateCounter<long>("seller_payout_total");
+    public static readonly Counter<long> SettlementBatchTotal = Meter.CreateCounter<long>("settlement_batch_total");
 
     public static IDisposable StartTimer(Histogram<double> histogram, params KeyValuePair<string, object?>[] tags)
         => new TimerScope(histogram, tags);

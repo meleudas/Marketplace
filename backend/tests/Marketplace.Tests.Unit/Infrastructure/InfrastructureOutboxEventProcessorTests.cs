@@ -1,7 +1,11 @@
+using Marketplace.Application.Catalog.Cache;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Payments.Services;
 using Marketplace.Application.Support.Ports;
+using Marketplace.Domain.Catalog.Entities;
+using Marketplace.Domain.Catalog.Enums;
+using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Orders.Entities;
 using Marketplace.Domain.Orders.Enums;
@@ -22,14 +26,7 @@ public sealed class InfrastructureOutboxEventProcessorTests
         var inbox = new StubInboxDeduplicator(true);
         var orderRepo = new StubOrderRepository();
         var paymentRepo = new StubPaymentRepository();
-        var processor = new OutboxEventProcessor(
-            inbox,
-            orderRepo,
-            paymentRepo,
-            new OrderPaymentStateApplier(),
-            new StubOrderCacheInvalidation(),
-            new StubOrderStatusHistoryWriter(),
-            new NoOpSupportHelpdeskSyncHandler());
+        var processor = CreateProcessor(inbox, orderRepo, paymentRepo);
 
         var message = new OutboxMessage(
             Guid.NewGuid(),
@@ -60,14 +57,7 @@ public sealed class InfrastructureOutboxEventProcessorTests
         var paymentRepo = new StubPaymentRepository();
         var cache = new StubOrderCacheInvalidation();
         var history = new StubOrderStatusHistoryWriter();
-        var processor = new OutboxEventProcessor(
-            inbox,
-            orderRepo,
-            paymentRepo,
-            new OrderPaymentStateApplier(),
-            cache,
-            history,
-            new NoOpSupportHelpdeskSyncHandler());
+        var processor = CreateProcessor(inbox, orderRepo, paymentRepo, cache, history);
 
         var message = new OutboxMessage(
             Guid.NewGuid(),
@@ -99,14 +89,7 @@ public sealed class InfrastructureOutboxEventProcessorTests
         var inbox = new StubInboxDeduplicator(false);
         var orderRepo = new StubOrderRepository(OrderStatus.Paid);
         var paymentRepo = new StubPaymentRepository(PaymentTransactionStatus.Completed);
-        var processor = new OutboxEventProcessor(
-            inbox,
-            orderRepo,
-            paymentRepo,
-            new OrderPaymentStateApplier(),
-            new StubOrderCacheInvalidation(),
-            new StubOrderStatusHistoryWriter(),
-            new NoOpSupportHelpdeskSyncHandler());
+        var processor = CreateProcessor(inbox, orderRepo, paymentRepo);
 
         var message = new OutboxMessage(
             Guid.NewGuid(),
@@ -131,14 +114,10 @@ public sealed class InfrastructureOutboxEventProcessorTests
     [Fact]
     public async Task Unsupported_EventType_Throws_PermanentOutboxException()
     {
-        var processor = new OutboxEventProcessor(
+        var processor = CreateProcessor(
             new StubInboxDeduplicator(false),
             new StubOrderRepository(),
-            new StubPaymentRepository(),
-            new OrderPaymentStateApplier(),
-            new StubOrderCacheInvalidation(),
-            new StubOrderStatusHistoryWriter(),
-            new NoOpSupportHelpdeskSyncHandler());
+            new StubPaymentRepository());
 
         var message = new OutboxMessage(
             Guid.NewGuid(),
@@ -157,6 +136,55 @@ public sealed class InfrastructureOutboxEventProcessorTests
 
         await Assert.ThrowsAsync<PermanentOutboxException>(() => processor.ProcessAsync(message, CancellationToken.None));
     }
+
+    [Fact]
+    public async Task InventoryReleased_Invalidates_Catalog_Cache_For_Product()
+    {
+        var inbox = new StubInboxDeduplicator(false);
+        var cache = new StubAppCachePort();
+        var productRepo = new StubProductRepository();
+        var processor = CreateProcessor(inbox, new StubOrderRepository(), new StubPaymentRepository(), productRepo: productRepo, appCache: cache);
+
+        var message = new OutboxMessage(
+            Guid.NewGuid(),
+            "InventoryReservation",
+            "1",
+            "InventoryReleased",
+            "{\"messageId\":\"22222222-2222-2222-2222-222222222222\",\"productId\":42}",
+            DateTime.UtcNow,
+            null,
+            0,
+            null,
+            null,
+            null,
+            null,
+            null);
+
+        await processor.ProcessAsync(message, CancellationToken.None);
+
+        Assert.Contains(cache.RemovedKeys, x => x == CatalogCacheKeys.ProductList);
+        Assert.Contains(cache.RemovedKeys, x => x == CatalogCacheKeys.ProductDetailPrefix + "product-42");
+        Assert.True(inbox.MarkedProcessed);
+    }
+
+    private static OutboxEventProcessor CreateProcessor(
+        StubInboxDeduplicator inbox,
+        StubOrderRepository orderRepo,
+        StubPaymentRepository paymentRepo,
+        StubOrderCacheInvalidation? cache = null,
+        StubOrderStatusHistoryWriter? history = null,
+        StubProductRepository? productRepo = null,
+        StubAppCachePort? appCache = null)
+        => new(
+            inbox,
+            orderRepo,
+            paymentRepo,
+            new OrderPaymentStateApplier(),
+            cache ?? new StubOrderCacheInvalidation(),
+            history ?? new StubOrderStatusHistoryWriter(),
+            new NoOpSupportHelpdeskSyncHandler(),
+            productRepo ?? new StubProductRepository(),
+            appCache ?? new StubAppCachePort());
 
     private sealed class StubInboxDeduplicator : IInboxDeduplicator
     {
@@ -222,6 +250,9 @@ public sealed class InfrastructureOutboxEventProcessorTests
     private sealed class StubOrderStatusHistoryWriter : Marketplace.Application.Orders.Services.IOrderStatusHistoryWriter
     {
         public bool Wrote { get; private set; }
+        public Task RecordCreatedAsync(Order order, Guid actorUserId, string source, string? correlationId = null, CancellationToken ct = default)
+            => Task.CompletedTask;
+
         public Task WriteIfChangedAsync(Order order, OrderStatus oldStatus, Guid actorUserId, string source, string? comment = null, string? correlationId = null, CancellationToken ct = default)
         {
             Wrote = true;
@@ -232,5 +263,53 @@ public sealed class InfrastructureOutboxEventProcessorTests
     private sealed class NoOpSupportHelpdeskSyncHandler : ISupportHelpdeskSyncHandler
     {
         public Task ProcessAsync(OutboxMessage message, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class StubProductRepository : IProductRepository
+    {
+        public Task<Product?> GetByIdAsync(ProductId id, CancellationToken ct = default)
+            => Task.FromResult<Product?>(Product.Reconstitute(
+                id,
+                CompanyId.From(Guid.NewGuid()),
+                "Product",
+                $"product-{id.Value}",
+                "desc",
+                new Money(10),
+                null,
+                1,
+                0,
+                CategoryId.From(1),
+                ProductStatus.Active,
+                null,
+                0,
+                0,
+                0,
+                false,
+                DateTime.UtcNow,
+                DateTime.UtcNow,
+                false,
+                null));
+
+        public Task<Product?> GetBySlugAsync(CompanyId companyId, string slug, CancellationToken ct = default) => Task.FromResult<Product?>(null);
+        public Task<Product?> GetBySlugAsync(string slug, CancellationToken ct = default) => Task.FromResult<Product?>(null);
+        public Task<IReadOnlyList<Product>> ListByIdsAsync(IReadOnlyCollection<ProductId> ids, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Product>>([]);
+        public Task<IReadOnlyList<Product>> ListByCompanyAsync(CompanyId companyId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Product>>([]);
+        public Task<IReadOnlyList<Product>> ListActiveAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Product>>([]);
+        public Task<IReadOnlyList<Product>> ListPendingReviewAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Product>>([]);
+        public Task AddAsync(Product product, CancellationToken ct = default) => Task.CompletedTask;
+        public Task UpdateAsync(Product product, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private sealed class StubAppCachePort : IAppCachePort
+    {
+        public List<string> RemovedKeys { get; } = [];
+
+        public Task<T?> GetAsync<T>(string key, CancellationToken ct = default) where T : class => Task.FromResult<T?>(null);
+        public Task SetAsync<T>(string key, T value, TimeSpan ttl, CancellationToken ct = default) where T : class => Task.CompletedTask;
+        public Task RemoveAsync(string key, CancellationToken ct = default)
+        {
+            RemovedKeys.Add(key);
+            return Task.CompletedTask;
+        }
     }
 }

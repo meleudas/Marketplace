@@ -1,6 +1,7 @@
 using Marketplace.Application.Notifications;
 using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Orders.Authorization;
+using Marketplace.Application.Orders.Policies;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Orders.Commands.UpdateOrderStatus;
 using Marketplace.Application.Orders.Services;
@@ -39,8 +40,8 @@ public sealed class OrderStatusOutboxPostgresTests
         var handler = new UpdateOrderStatusCommandHandler(
             orderRepo,
             new AllowAccessService(),
-            new OrderCacheInvalidationService(new NoopCachePort()),
-            new OutboxRepository(db),
+            new NoopShipmentFulfillmentService(),
+            OrderTestDoubles.CreateCoordinator(new OrderCacheInvalidationService(new NoopCachePort()), new OutboxRepository(db)),
             new OrderStatusHistoryWriter(new OrderStatusHistoryRepository(db)),
             notificationSpy);
 
@@ -96,6 +97,9 @@ public sealed class OrderStatusOutboxPostgresTests
 
         public Task<bool> CanReadCompanyScopeAsync(Guid companyId, Guid actorUserId, bool isActorAdmin, CancellationToken ct = default)
             => Task.FromResult(true);
+
+        public Task<OrderCancellationActor> ResolveCancellationActorAsync(Order order, Guid actorUserId, bool isActorAdmin, CancellationToken ct = default)
+            => Task.FromResult(isActorAdmin ? OrderCancellationActor.Admin : OrderCancellationActor.CompanyMember);
     }
 
     private sealed class SpyAppNotificationScheduler : IAppNotificationScheduler

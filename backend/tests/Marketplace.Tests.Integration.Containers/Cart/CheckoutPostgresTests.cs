@@ -1,6 +1,9 @@
 using Marketplace.Application.Carts.Commands.CheckoutCart;
+using Marketplace.Application.Inventory.Services;
 using Marketplace.Application.Carts.DTOs;
 using Marketplace.Application.Orders.Cache;
+using Marketplace.Application.Orders.Services;
+using Marketplace.Tests.Common.Fakes;
 using Marketplace.Domain.Cart.Entities;
 using Marketplace.Domain.Cart.Enums;
 using Marketplace.Domain.Catalog.Entities;
@@ -46,10 +49,11 @@ public sealed class CheckoutPostgresTests
             new PaymentRepository(db),
             new FakeLiqPayPort(),
             new NoopCachePort(),
-            new OrderCacheInvalidationService(new NoopCachePort()),
-            new OutboxRepository(db),
+            OrderTestDoubles.CreateCoordinator(new OrderCacheInvalidationService(new NoopCachePort()), new OutboxRepository(db)),
+            new NoopCheckoutInventoryService(),
             new NoopOrderStatusHistoryWriter(),
             new WarehouseStockRepository(db),
+            new WarehouseAllocationPlanner(new WarehouseRepository(db), new WarehouseStockRepository(db)),
             new NoopAppNotificationScheduler(),
             new NoopCartStockWatchRepository(),
             new ShippingMethodRepository(db),
@@ -70,7 +74,7 @@ public sealed class CheckoutPostgresTests
         Assert.True(result.IsSuccess);
         Assert.Single(await db.Orders.AsNoTracking().ToListAsync());
         Assert.Single(await db.Payments.AsNoTracking().ToListAsync());
-        Assert.Single(await db.OutboxMessages.AsNoTracking().ToListAsync());
+        Assert.Single(await db.OutboxMessages.AsNoTracking().Where(x => x.AggregateType == "Order").ToListAsync());
         Assert.Empty(await db.CartItems.AsNoTracking().Where(x => x.CartId == fixture.CartId && !x.IsDeleted).ToListAsync());
     }
 
@@ -117,6 +121,17 @@ public sealed class CheckoutPostgresTests
             CancellationToken.None);
 
         var stockRepository = new WarehouseStockRepository(db);
+        var warehouseRepository = new WarehouseRepository(db);
+        await warehouseRepository.AddAsync(
+            Marketplace.Domain.Inventory.Entities.Warehouse.Create(
+                WarehouseId.From(1),
+                CompanyId.From(companyId),
+                "Main",
+                "MAIN",
+                Address.Empty,
+                "UTC",
+                1),
+            CancellationToken.None);
         await stockRepository.AddAsync(
             WarehouseStock.Reconstitute(
                 WarehouseStockId.From(0),

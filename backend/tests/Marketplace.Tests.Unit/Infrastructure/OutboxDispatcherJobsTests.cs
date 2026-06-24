@@ -1,5 +1,7 @@
+using Marketplace.Application.Common.Options;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Infrastructure.Jobs;
+using Microsoft.Extensions.Options;
 
 namespace Marketplace.Tests;
 
@@ -11,7 +13,7 @@ public sealed class OutboxDispatcherJobsTests
     {
         var message = BuildMessage(attempts: 0);
         var outbox = new SpyOutboxWriter([message]);
-        var jobs = new OutboxDispatcherJobs(outbox, new ConfigurableProcessor());
+        var jobs = new OutboxDispatcherJobs(outbox, new ConfigurableProcessor(), Options.Create(new OutboxOptions()));
 
         await jobs.DispatchPendingAsync(CancellationToken.None);
 
@@ -25,7 +27,7 @@ public sealed class OutboxDispatcherJobsTests
     {
         var message = BuildMessage(attempts: 0);
         var outbox = new SpyOutboxWriter([message]);
-        var jobs = new OutboxDispatcherJobs(outbox, new ConfigurableProcessor { ThrowPermanent = true });
+        var jobs = new OutboxDispatcherJobs(outbox, new ConfigurableProcessor { ThrowPermanent = true }, Options.Create(new OutboxOptions()));
 
         await jobs.DispatchPendingAsync(CancellationToken.None);
 
@@ -38,7 +40,7 @@ public sealed class OutboxDispatcherJobsTests
     {
         var message = BuildMessage(attempts: 2);
         var outbox = new SpyOutboxWriter([message]);
-        var jobs = new OutboxDispatcherJobs(outbox, new ConfigurableProcessor { ThrowTransient = true });
+        var jobs = new OutboxDispatcherJobs(outbox, new ConfigurableProcessor { ThrowTransient = true }, Options.Create(new OutboxOptions()));
 
         await jobs.DispatchPendingAsync(CancellationToken.None);
 
@@ -51,7 +53,7 @@ public sealed class OutboxDispatcherJobsTests
     {
         var message = BuildMessage(attempts: 9);
         var outbox = new SpyOutboxWriter([message]);
-        var jobs = new OutboxDispatcherJobs(outbox, new ConfigurableProcessor { ThrowTransient = true });
+        var jobs = new OutboxDispatcherJobs(outbox, new ConfigurableProcessor { ThrowTransient = true }, Options.Create(new OutboxOptions()));
 
         await jobs.DispatchPendingAsync(CancellationToken.None);
 
@@ -130,5 +132,11 @@ public sealed class OutboxDispatcherJobsTests
 
         public Task RequeueDeadLetterAsync(Guid id, CancellationToken ct = default)
             => Task.CompletedTask;
+
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListDeadLettersAsync(int page, int pageSize, CancellationToken ct = default)
+            => Task.FromResult(((IReadOnlyList<OutboxMessage>)Array.Empty<OutboxMessage>(), 0L));
+
+        public Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListStuckAsync(DateTime utcNow, int page, int pageSize, CancellationToken ct = default)
+            => Task.FromResult(((IReadOnlyList<OutboxMessage>)Array.Empty<OutboxMessage>(), 0L));
     }
 }

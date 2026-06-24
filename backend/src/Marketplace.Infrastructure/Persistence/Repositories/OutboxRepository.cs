@@ -115,4 +115,53 @@ public sealed class OutboxRepository : IOutboxWriter
         row.ProcessedAtUtc = null;
         await _context.SaveChangesAsync(ct);
     }
+
+    public async Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListDeadLettersAsync(int page, int pageSize, CancellationToken ct = default)
+    {
+        var pageIndex = Math.Max(1, page);
+        var size = Math.Clamp(pageSize, 1, 100);
+        var q = _context.OutboxMessages.AsNoTracking().Where(x => x.DeadLetteredAtUtc != null);
+        var total = await q.LongCountAsync(ct);
+        var rows = await q
+            .OrderByDescending(x => x.DeadLetteredAtUtc)
+            .Skip((pageIndex - 1) * size)
+            .Take(size)
+            .ToListAsync(ct);
+        return (rows.Select(ToMessage).ToList(), total);
+    }
+
+    public async Task<(IReadOnlyList<OutboxMessage> Items, long Total)> ListStuckAsync(DateTime utcNow, int page, int pageSize, CancellationToken ct = default)
+    {
+        var pageIndex = Math.Max(1, page);
+        var size = Math.Clamp(pageSize, 1, 100);
+        var q = _context.OutboxMessages.AsNoTracking()
+            .Where(x => x.ProcessedAtUtc == null
+                        && x.DeadLetteredAtUtc == null
+                        && x.NextAttemptAtUtc != null
+                        && x.NextAttemptAtUtc < utcNow.AddMinutes(-15)
+                        && x.Attempts > 0);
+        var total = await q.LongCountAsync(ct);
+        var rows = await q
+            .OrderBy(x => x.NextAttemptAtUtc)
+            .Skip((pageIndex - 1) * size)
+            .Take(size)
+            .ToListAsync(ct);
+        return (rows.Select(ToMessage).ToList(), total);
+    }
+
+    private static OutboxMessage ToMessage(OutboxMessageRecord x) =>
+        new(
+            x.Id,
+            x.AggregateType,
+            x.AggregateId,
+            x.EventType,
+            x.Payload,
+            x.OccurredAtUtc,
+            x.ProcessedAtUtc,
+            x.Attempts,
+            x.LastError,
+            x.NextAttemptAtUtc,
+            x.DeadLetteredAtUtc,
+            x.DeadLetterReason,
+            x.DeadLetterCategory);
 }
