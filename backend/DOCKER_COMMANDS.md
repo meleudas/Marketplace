@@ -228,7 +228,10 @@ docker compose --profile tools run --rm db-seed
 - `marketplace_users`, `refresh_tokens`
 - `categories`, `companies`, `company_members`, `company_legal_profiles`, `company_contracts`, `company_commission_rates`
 - `products` (active + `PendingReview` + draft/rejected), `product_details`, `product_images`
-- `warehouses`, `warehouse_stocks`, `stock_movements`, `inventory_reservations`
+- `warehouses`, `warehouse_stocks`, `stock_movements`, `inventory_reservations`, `order_fulfillment_allocations`
+- `shipments`, `shipment_items`, `shipping_events`
+- `order_financials`, `seller_ledger_entries`, `settlement_batches`, `seller_payouts` (+ `PayoutIban` у `company_legal_profiles`)
+- `coupons`, `return_requests`, `return_line_items`, `chats`, `chat_participants`, `chat_messages`
 - `carts`, `cart_items`, `cart_stock_watches`, `favorites`
 - `orders`, `order_items`, `order_addresses`, `order_status_history`, `payments`, `refunds`
 - `product_reviews`, `company_reviews`, `review_replies`
@@ -252,7 +255,9 @@ docker compose --profile tools run --rm db-seed
 
 Товари: `seed-phone-alpha`, `seed-laptop-beta`, `seed-earbuds-gamma`, `seed-kettle-home`, `seed-watch-pending` (модерація), `seed-tablet-rejected` (чернетка).
 
-Замовлення: `ORD-SEED-0001` (admin, Processing), `ORD-SEED-0002` (buyer, Shipped), `ORD-SEED-0003` (buyer, Delivered).
+Замовлення: `ORD-SEED-0001` (admin, Processing), `ORD-SEED-0002` (buyer, Shipped), `ORD-SEED-0003` (buyer, Delivered), `ORD-SEED-0004` (buyer, Paid — split WH1+WH2).
+
+P4 / finance: earnings/settlements для Tech Store (`seller@`), batch Ready id=1 для `admin@`, coupon `SEED10`, return id=1, chat `c1000001-0000-4000-8000-000000000001`.
 
 In-app: `GET /me/in-app-notifications` під `buyer@` / `admin@` / `moderator@` — є приклади прочитаних і непрочитаних.
 

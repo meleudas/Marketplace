@@ -19,8 +19,10 @@ services:
       Database__AutoMigrate: "true"
       ConnectionStrings__Database: "Host=postgres;Port=5432;Database=marketplace;Username=postgres;Password=${POSTGRES_PASSWORD:-postgres}"
       ConnectionStrings__Redis: "redis:6379"
+      ConnectionStrings__ClickHouse: "http://clickhouse:8123"
       Elasticsearch__Enabled: "true"
       Elasticsearch__Url: "http://elasticsearch:9200"
+      Elasticsearch__ProductsIndex: "products-v2"
       Storage__Enabled: "true"
       Storage__Endpoint: "minio:9000"
       Storage__AccessKey: "${MINIO_ROOT_USER:-minioadmin}"
@@ -36,6 +38,9 @@ services:
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       OpenTelemetry__Enabled: "${OTEL_ENABLED:-false}"
       OpenTelemetry__EnableLegacyPrometheusEndpoint: "false"
+      ClickHouse__Enabled: "true"
+      ClickHouse__Url: "http://clickhouse:8123"
+      ClickHouse__Database: "marketplace"
     depends_on:
       postgres:
         condition: service_healthy
@@ -44,6 +49,8 @@ services:
       elasticsearch:
         condition: service_started
       minio:
+        condition: service_healthy
+      clickhouse:
         condition: service_healthy
     networks:
       - marketplace
@@ -142,6 +149,22 @@ services:
     networks:
       - marketplace
 
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: marketplace
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - marketplace
+
   otel-collector:
     profiles: ["observability"]
     image: otel/opentelemetry-collector-contrib:0.96.0
@@ -200,6 +223,7 @@ volumes:
   postgres_data:
   redis_data:
   minio_data:
+  clickhouse_data:
   prometheus_data:
 
 networks:
