@@ -13,7 +13,6 @@ import { WORKSPACE_COMPANY_ID } from "@/features/workspace/config/workspace.cons
 import { getWorkspaceErrorMessage } from "@/features/workspace/lib/workspace.error";
 import { canManageMembers } from "@/features/workspace/model/workspace.permissions";
 import type { CompanyMemberDto, CompanyMembershipDto } from "@/features/workspace/model/workspace.types";
-import { WorkspaceMembershipError } from "@/features/workspace/model/workspace.types";
 import { MemberRoleForm } from "@/features/workspace/ui/MemberRoleForm";
 import { useAuth } from "@/features/auth/model/auth.store";
 import styles from "./WorkspaceScreen.module.css";
@@ -38,15 +37,10 @@ export function WorkspaceMembersScreen() {
 
     let me: CompanyMembershipDto | null = null;
 
-    try {
-      me = await getCompanyMembershipMe(WORKSPACE_COMPANY_ID);
-    } catch (membershipError) {
-      const isIgnorableMembershipError =
-        isGlobalAdmin &&
-        membershipError instanceof WorkspaceMembershipError &&
-        (membershipError.kind === "forbidden" || membershipError.kind === "notFound");
-
-      if (!isIgnorableMembershipError) {
+    if (!isGlobalAdmin) {
+      try {
+        me = await getCompanyMembershipMe(WORKSPACE_COMPANY_ID);
+      } catch (membershipError) {
         setError(getWorkspaceErrorMessage(membershipError, "Failed to load company members"));
         setLoading(false);
         return;
