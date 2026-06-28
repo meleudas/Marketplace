@@ -15,6 +15,7 @@ namespace Marketplace.Application.Auth.DTOs
         DateTime CreatedAt,
         DateTime UpdatedAt,
         bool IsDeleted,
-        DateTime? DeletedAt
+        DateTime? DeletedAt,
+        IReadOnlyList<UserCompanyMembershipDto> CompanyMemberships
     );
 }

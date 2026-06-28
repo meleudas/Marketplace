@@ -1,0 +1,127 @@
+using Marketplace.Application.Inventory.Services;
+using Marketplace.Application.Orders.Services;
+using Marketplace.Application.Payments.Ports;
+using Marketplace.Application.Payments.Services;
+using Marketplace.Domain.Common.ValueObjects;
+using Marketplace.Domain.Orders.Repositories;
+using Marketplace.Domain.Payments.Enums;
+using Marketplace.Domain.Payments.Repositories;
+using Marketplace.Domain.Shared.Kernel;
+using MediatR;
+
+namespace Marketplace.Application.Payments.Commands.SyncPaymentStatus;
+
+public sealed class SyncPaymentStatusCommandHandler : IRequestHandler<SyncPaymentStatusCommand, Result>
+{
+    private readonly IPaymentRepository _paymentRepository;
+    private readonly IOrderRepository _orderRepository;
+    private readonly ILiqPayPort _liqPayPort;
+    private readonly OrderMutationCoordinator _orderMutationCoordinator;
+    private readonly IOrderPaymentStateApplier _paymentStateApplier;
+    private readonly IOrderStatusHistoryWriter _historyWriter;
+    private readonly ICheckoutInventoryService _checkoutInventory;
+
+    public SyncPaymentStatusCommandHandler(
+        IPaymentRepository paymentRepository,
+        IOrderRepository orderRepository,
+        ILiqPayPort liqPayPort,
+        OrderMutationCoordinator orderMutationCoordinator,
+        IOrderPaymentStateApplier paymentStateApplier,
+        IOrderStatusHistoryWriter historyWriter,
+        ICheckoutInventoryService checkoutInventory)
+    {
+        _paymentRepository = paymentRepository;
+        _orderRepository = orderRepository;
+        _liqPayPort = liqPayPort;
+        _orderMutationCoordinator = orderMutationCoordinator;
+        _paymentStateApplier = paymentStateApplier;
+        _historyWriter = historyWriter;
+        _checkoutInventory = checkoutInventory;
+    }
+
+    public async Task<Result> Handle(SyncPaymentStatusCommand request, CancellationToken ct)
+    {
+        try
+        {
+            var payment = await _paymentRepository.GetByIdAsync(PaymentId.From(request.PaymentId), ct);
+            if (payment is null)
+                return Result.Failure("Payment not found");
+            if (string.IsNullOrWhiteSpace(payment.TransactionId))
+                return Result.Failure("Transaction id is missing");
+
+            var statusResult = await _liqPayPort.GetPaymentStatusAsync(payment.TransactionId, ct);
+            if (!statusResult.IsSuccess)
+                return Result.Failure(statusResult.Error ?? "Failed to sync payment status");
+
+            var mapped = statusResult.Status?.ToLowerInvariant() switch
+            {
+                "success" => PaymentTransactionStatus.Completed,
+                "reversed" => PaymentTransactionStatus.Refunded,
+                "refunded" => PaymentTransactionStatus.Refunded,
+                "failure" => PaymentTransactionStatus.Failed,
+                "error" => PaymentTransactionStatus.Failed,
+                _ => PaymentTransactionStatus.Pending
+            };
+
+            if (mapped == payment.Status || IsStatusDowngrade(payment.Status, mapped))
+                return Result.Success();
+
+            payment.UpdateProviderState(mapped, statusResult.TransactionId, new JsonBlob(statusResult.RawResponse));
+            await _paymentRepository.UpdateAsync(payment, ct);
+
+            var order = await _orderRepository.GetByIdAsync(payment.OrderId, ct);
+            if (order is not null)
+            {
+                var oldStatus = order.Status;
+                _paymentStateApplier.TryApply(order, mapped, out _);
+                await _orderRepository.UpdateAsync(order, ct);
+                await _historyWriter.WriteIfChangedAsync(
+                    order,
+                    oldStatus,
+                    Guid.Empty,
+                    "sync",
+                    correlationId: statusResult.TransactionId,
+                    ct: ct);
+
+                await _orderMutationCoordinator.PublishPaymentStatusChangedAsync(
+                    payment.Id.Value,
+                    order.Id.Value,
+                    order.CustomerId,
+                    order.CompanyId.Value,
+                    mapped.ToString(),
+                    "sync",
+                    statusResult.TransactionId,
+                    ct);
+
+                if (mapped == PaymentTransactionStatus.Failed)
+                {
+                    await _checkoutInventory.ReleaseForOrderAsync(
+                        order.Id,
+                        order.CompanyId,
+                        null,
+                        "payment-failed",
+                        ct);
+                }
+            }
+
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure($"Failed to sync payment: {ex.Message}");
+        }
+    }
+
+    private static bool IsStatusDowngrade(PaymentTransactionStatus current, PaymentTransactionStatus next)
+        => Rank(next) < Rank(current);
+
+    private static int Rank(PaymentTransactionStatus status)
+        => status switch
+        {
+            PaymentTransactionStatus.Pending => 0,
+            PaymentTransactionStatus.Failed => 1,
+            PaymentTransactionStatus.Completed => 2,
+            PaymentTransactionStatus.Refunded => 3,
+            _ => 0
+        };
+}

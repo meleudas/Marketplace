@@ -28,6 +28,7 @@ public sealed class UpdateCompanyCommandHandler : IRequestHandler<UpdateCompanyC
             var company = await _companyRepository.GetByIdAsync(id, ct);
             if (company == null)
                 return Result<CompanyDto>.Failure("Company not found");
+            var oldSlug = company.Slug;
 
             company.UpdateProfile(
                 request.Name,
@@ -41,6 +42,10 @@ public sealed class UpdateCompanyCommandHandler : IRequestHandler<UpdateCompanyC
 
             await _companyRepository.UpdateAsync(company, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ApprovedCompanies, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.AdminCompanyByIdPrefix + company.Id.Value, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.CatalogCompanyByIdPrefix + company.Id.Value, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.CatalogCompanyBySlugPrefix + oldSlug.ToLowerInvariant(), ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.CatalogCompanyBySlugPrefix + company.Slug.ToLowerInvariant(), ct);
             return Result<CompanyDto>.Success(CompanyMapper.ToDto(company));
         }
         catch (Exception ex)

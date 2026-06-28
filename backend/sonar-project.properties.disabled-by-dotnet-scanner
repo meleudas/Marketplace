@@ -1,0 +1,11 @@
+sonar.projectKey=marketplace-backend
+sonar.projectName=Marketplace Backend
+sonar.sourceEncoding=UTF-8
+
+sonar.sources=src
+sonar.tests=tests
+
+sonar.cs.analyzer.projectOutPaths=**/bin/**,**/obj/**
+sonar.coverageReportPaths=test-results/sonar-coverage/coverage.cobertura.xml
+
+sonar.exclusions=**/Migrations/**,**/bin/**,**/obj/**,**/Contracts/**,**/test-results/**

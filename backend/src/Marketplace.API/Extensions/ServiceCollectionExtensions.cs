@@ -1,26 +1,36 @@
 using Marketplace.API.Filters;
+using Marketplace.API.OpenApi;
 using Marketplace.API.Options;
+using Marketplace.API.Chats;
+using Marketplace.Application.Chats.Ports;
 using Marketplace.Application;
+using Marketplace.Infrastructure.Health;
 using Marketplace.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.OpenApi;
-
 namespace Marketplace.API.Extensions;
 
 public static class ServiceCollectionExtensions
 {
     private const string CorsPolicyName = "MarketplaceCors";
 
-    public static IServiceCollection AddMarketplaceApi(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddMarketplaceApi(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment hostEnvironment)
     {
         services.Configure<CookieAuthOptions>(configuration.GetSection(CookieAuthOptions.SectionName));
 
         services.AddApplication();
         services.AddInfrastructure(configuration, ConfigureGoogleIfPresent(configuration));
+        services.AddMarketplaceHealthChecks(configuration);
+        services.AddSignalR();
+        services.AddScoped<IChatRealtimeNotifier, SignalRChatRealtimeNotifier>();
 
         services.AddHttpContextAccessor();
+        services.AddSingleton<EndpointDocRegistry>();
         services.AddControllers(options => options.Filters.Add<ValidateModelAttribute>());
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
@@ -28,8 +38,11 @@ public static class ServiceCollectionExtensions
             options.SwaggerDoc("v1", new OpenApiInfo
             {
                 Title = "Marketplace API",
-                Version = "v1"
+                Version = "v1",
+                Description = OpenApiTagDefinitions.BuildDocumentDescription()
             });
+            options.OperationFilter<EndpointDocumentationOperationFilter>();
+            options.DocumentFilter<TagDescriptionsDocumentFilter>();
 
             // HTTP Bearer: Swagger UI сам додає префікс "Bearer " — в поле вводу лише JWT (access token).
             var bearerScheme = new OpenApiSecurityScheme
@@ -51,12 +64,8 @@ public static class ServiceCollectionExtensions
 
         services.AddOpenApi("v1", options =>
         {
-            options.AddDocumentTransformer((document, _, _) =>
-            {
-                document.Info.Title = "Marketplace API";
-                document.Info.Version = "v1";
-                return Task.CompletedTask;
-            });
+            options.AddDocumentTransformer<TagDescriptionsDocumentTransformer>();
+            options.AddOperationTransformer<EndpointDocumentationTransformer>();
         });
 
         services.AddCors(options =>
@@ -76,6 +85,9 @@ public static class ServiceCollectionExtensions
                     .AllowCredentials();
             });
         });
+
+        services.Configure<OpenTelemetryOptions>(configuration.GetSection(OpenTelemetryOptions.SectionName));
+        services.AddMarketplaceOpenTelemetry(configuration, hostEnvironment);
 
         return services;
     }

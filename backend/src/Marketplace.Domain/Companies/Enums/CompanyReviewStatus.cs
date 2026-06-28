@@ -4,5 +4,6 @@ public enum CompanyReviewStatus : short
 {
     Pending = 0,
     Approved = 1,
-    Rejected = 2
+    Rejected = 2,
+    Hidden = 3
 }

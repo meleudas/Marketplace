@@ -13,6 +13,8 @@ public class ProductRecord
     public int MinStock { get; set; }
     public long CategoryId { get; set; }
     public short Status { get; set; }
+    public Guid? SubmittedByUserId { get; set; }
+    public string? ModerationRejectionReason { get; set; }
     public decimal? Rating { get; set; }
     public int ReviewCount { get; set; }
     public long ViewCount { get; set; }

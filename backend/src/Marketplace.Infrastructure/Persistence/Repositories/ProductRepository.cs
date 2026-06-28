@@ -32,6 +32,18 @@ public sealed class ProductRepository : IProductRepository
         return row is null ? null : ToDomain(row);
     }
 
+    public async Task<IReadOnlyList<Product>> ListByIdsAsync(IReadOnlyCollection<ProductId> ids, CancellationToken ct = default)
+    {
+        if (ids.Count == 0)
+            return [];
+
+        var values = ids.Select(x => x.Value).ToHashSet();
+        var rows = await _context.Products.AsNoTracking()
+            .Where(x => values.Contains(x.Id))
+            .ToListAsync(ct);
+        return rows.Select(ToDomain).ToList();
+    }
+
     public async Task<IReadOnlyList<Product>> ListByCompanyAsync(CompanyId companyId, CancellationToken ct = default)
     {
         var rows = await _context.Products.AsNoTracking()
@@ -45,6 +57,15 @@ public sealed class ProductRepository : IProductRepository
     {
         var rows = await _context.Products.AsNoTracking()
             .Where(x => x.Status == (short)ProductStatus.Active)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(ct);
+        return rows.Select(ToDomain).ToList();
+    }
+
+    public async Task<IReadOnlyList<Product>> ListPendingReviewAsync(CancellationToken ct = default)
+    {
+        var rows = await _context.Products.AsNoTracking()
+            .Where(x => x.Status == (short)ProductStatus.PendingReview)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(ct);
         return rows.Select(ToDomain).ToList();
@@ -70,6 +91,8 @@ public sealed class ProductRepository : IProductRepository
         row.MinStock = product.MinStock;
         row.CategoryId = product.CategoryId.Value;
         row.Status = (short)product.Status;
+        row.SubmittedByUserId = product.SubmittedByUserId;
+        row.ModerationRejectionReason = product.ModerationRejectionReason;
         row.Rating = product.Rating;
         row.ReviewCount = product.ReviewCount;
         row.ViewCount = product.ViewCount;
@@ -103,7 +126,9 @@ public sealed class ProductRepository : IProductRepository
             r.CreatedAt,
             r.UpdatedAt,
             r.IsDeleted,
-            r.DeletedAt);
+            r.DeletedAt,
+            r.SubmittedByUserId,
+            r.ModerationRejectionReason);
 
     private static ProductRecord ToRecord(Product p) =>
         new()
@@ -119,6 +144,8 @@ public sealed class ProductRepository : IProductRepository
             MinStock = p.MinStock,
             CategoryId = p.CategoryId.Value,
             Status = (short)p.Status,
+            SubmittedByUserId = p.SubmittedByUserId,
+            ModerationRejectionReason = p.ModerationRejectionReason,
             Rating = p.Rating,
             ReviewCount = p.ReviewCount,
             ViewCount = p.ViewCount,

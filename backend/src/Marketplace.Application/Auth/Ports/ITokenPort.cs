@@ -1,4 +1,4 @@
-﻿using Marketplace.Domain.Auth.ValueObjects;
+using Marketplace.Domain.Auth.ValueObjects;
 using Marketplace.Domain.Users.ValueObjects;
 using Microsoft.IdentityModel.Tokens;
 using System;

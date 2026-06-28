@@ -1,4 +1,4 @@
-﻿using Marketplace.Domain.Shared.Kernel;
+using Marketplace.Domain.Shared.Kernel;
 using MediatR;
 
 namespace Marketplace.Application.Users.Commands.VerifyEmail

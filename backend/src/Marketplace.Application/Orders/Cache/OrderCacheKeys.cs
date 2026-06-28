@@ -1,0 +1,37 @@
+using Marketplace.Domain.Orders.Enums;
+
+namespace Marketplace.Application.Orders.Cache;
+
+public static class OrderCacheKeys
+{
+    public static string DetailIndex(long orderId) => $"orders:idx:detail:{orderId}";
+    public static string ListIndex(string scope, Guid? actorUserId, Guid? companyId)
+        => $"orders:idx:list:{scope.Trim().ToLowerInvariant()}:{actorUserId}:{companyId}";
+
+    public static string AdminListVersion() => "orders:list:version:admin";
+    public static string CompanyListVersion(Guid companyId) => $"orders:list:version:company:{companyId}";
+    public static string MyListVersion(Guid userId) => $"orders:list:version:my:{userId}";
+
+    public static string List(
+        long version,
+        string scope,
+        Guid? actorUserId,
+        Guid? companyId,
+        Guid? companyMemberUserId,
+        IReadOnlyList<OrderStatus>? statuses,
+        DateTime? fromUtc,
+        DateTime? toUtc,
+        string? search,
+        string? sort,
+        int page,
+        int pageSize)
+    {
+        var statusPart = statuses is { Count: > 0 }
+            ? string.Join(",", statuses.Select(x => x.ToString().ToLowerInvariant()))
+            : "all";
+
+        return $"orders:list:v{version}:{scope}:{actorUserId}:{companyId}:{companyMemberUserId}:{statusPart}:{fromUtc:O}:{toUtc:O}:{(search ?? "").Trim().ToLowerInvariant()}:{(sort ?? "created_desc").Trim().ToLowerInvariant()}:{page}:{pageSize}";
+    }
+
+    public static string Detail(long orderId) => $"orders:detail:{orderId}";
+}

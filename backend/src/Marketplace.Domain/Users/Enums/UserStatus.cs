@@ -1,4 +1,4 @@
-﻿
+
 namespace Marketplace.Domain.Users.Enums
 {
     public enum UserStatus

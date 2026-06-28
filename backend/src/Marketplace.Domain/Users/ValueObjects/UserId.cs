@@ -1,4 +1,4 @@
-﻿using Marketplace.Domain.Common.Models;
+using Marketplace.Domain.Common.Models;
 using System;
 using System.Collections.Generic;
 using System.Text;

@@ -620,17 +620,20 @@ Redis залишається для кешу/епемерних станів, S3
 - `type` smallint/enum (`order|payment|review|system|promo`)
 - `title` text
 - `message` text
-- `data` jsonb
+- `data` jsonb (у т.ч. `templateKey`, `jobCorrelationId` для клієнтського дедупу разом із Web Push)
 - `action_url` text nullable
 - `is_read` bool
 - `read_at` timestamptz nullable
 - `expires_at` timestamptz nullable
-- `raw_payload` json nullable
+- `raw_payload` jsonb nullable
+- `correlation_id` uuid nullable — унікальний разом із `user_id` (ідемпотентність Hangfire; для fan-out адмінам — похідний ключ на пару job+user)
 - `created_at` timestamptz
+- `updated_at` timestamptz
 
 Індекси:
 - (`user_id`, `is_read`, `created_at` desc)
 - (`expires_at`)
+- унікальний (`user_id`, `correlation_id`)
 - `gin (data jsonb_path_ops)`
 
 ### 🟥 Redis

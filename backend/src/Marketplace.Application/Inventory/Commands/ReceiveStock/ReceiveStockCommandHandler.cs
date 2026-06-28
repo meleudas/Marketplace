@@ -3,12 +3,15 @@ using Marketplace.Application.Catalog.Cache;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Inventory.DTOs;
 using Marketplace.Application.Inventory.Mappings;
+using Marketplace.Application.Inventory.Services;
+using Marketplace.Domain.Catalog.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Inventory.Entities;
 using Marketplace.Domain.Inventory.Enums;
 using Marketplace.Domain.Inventory.Repositories;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
+using System.Linq;
 
 namespace Marketplace.Application.Inventory.Commands.ReceiveStock;
 
@@ -17,18 +20,24 @@ public sealed class ReceiveStockCommandHandler : IRequestHandler<ReceiveStockCom
     private readonly IInventoryAccessService _access;
     private readonly IWarehouseStockRepository _stockRepository;
     private readonly IStockMovementRepository _movementRepository;
+    private readonly IProductRepository _productRepository;
     private readonly IAppCachePort _cache;
+    private readonly IRestockAvailabilityNotifier _restockNotifier;
 
     public ReceiveStockCommandHandler(
         IInventoryAccessService access,
         IWarehouseStockRepository stockRepository,
         IStockMovementRepository movementRepository,
-        IAppCachePort cache)
+        IProductRepository productRepository,
+        IAppCachePort cache,
+        IRestockAvailabilityNotifier restockNotifier)
     {
         _access = access;
         _stockRepository = stockRepository;
         _movementRepository = movementRepository;
+        _productRepository = productRepository;
         _cache = cache;
+        _restockNotifier = restockNotifier;
     }
 
     public async Task<Result<WarehouseStockDto>> Handle(ReceiveStockCommand request, CancellationToken ct)
@@ -43,8 +52,12 @@ public sealed class ReceiveStockCommandHandler : IRequestHandler<ReceiveStockCom
 
             var warehouseId = WarehouseId.From(request.WarehouseId);
             var productId = ProductId.From(request.ProductId);
+            var companyId = CompanyId.From(request.CompanyId);
+            var beforeRows = await _stockRepository.ListByProductAsync(companyId, productId, ct);
+            var beforeAvailableSum = beforeRows.Sum(x => x.Available);
+
             var stock = await _stockRepository.GetByWarehouseAndProductAsync(warehouseId, productId, ct)
-                ?? WarehouseStock.Create(WarehouseStockId.From(0), CompanyId.From(request.CompanyId), warehouseId, productId, 0, 0, 0);
+                ?? WarehouseStock.Create(WarehouseStockId.From(0), companyId, warehouseId, productId, 0, 0, 0);
 
             if (stock.Id.Value == 0)
                 await _stockRepository.AddAsync(stock, ct);
@@ -64,6 +77,18 @@ public sealed class ReceiveStockCommandHandler : IRequestHandler<ReceiveStockCom
                 request.Reference);
             await _movementRepository.AddAsync(movement, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
+            var product = await _productRepository.GetByIdAsync(productId, ct);
+            if (product is not null)
+                await _cache.RemoveAsync(CatalogCacheKeys.ProductDetailPrefix + product.Slug, ct);
+
+            var afterRows = await _stockRepository.ListByProductAsync(companyId, productId, ct);
+            var afterAvailableSum = afterRows.Sum(x => x.Available);
+            await _restockNotifier.NotifyIfCrossedFromZeroAsync(
+                request.CompanyId,
+                request.ProductId,
+                beforeAvailableSum,
+                afterAvailableSum,
+                ct);
 
             return Result<WarehouseStockDto>.Success(InventoryMapper.ToDto(stock));
         }

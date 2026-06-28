@@ -1,4 +1,5 @@
 using Marketplace.Application.Catalog.Cache;
+using Marketplace.Application.Common.Options;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Products.DTOs;
 using Marketplace.Application.Products.Mappings;
@@ -7,6 +8,7 @@ using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Inventory.Repositories;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
+using Microsoft.Extensions.Options;
 
 namespace Marketplace.Application.Products.Queries.GetCatalogProducts;
 
@@ -15,12 +17,14 @@ public sealed class GetCatalogProductsQueryHandler : IRequestHandler<GetCatalogP
     private readonly IProductRepository _productRepository;
     private readonly IWarehouseStockRepository _stockRepository;
     private readonly IAppCachePort _cache;
+    private readonly CacheTtlOptions _ttl;
 
-    public GetCatalogProductsQueryHandler(IProductRepository productRepository, IWarehouseStockRepository stockRepository, IAppCachePort cache)
+    public GetCatalogProductsQueryHandler(IProductRepository productRepository, IWarehouseStockRepository stockRepository, IAppCachePort cache, IOptions<CacheTtlOptions> ttl)
     {
         _productRepository = productRepository;
         _stockRepository = stockRepository;
         _cache = cache;
+        _ttl = ttl.Value;
     }
 
     public async Task<Result<IReadOnlyList<ProductListItemDto>>> Handle(GetCatalogProductsQuery request, CancellationToken ct)
@@ -41,7 +45,7 @@ public sealed class GetCatalogProductsQueryHandler : IRequestHandler<GetCatalogP
                 dtos.Add(ProductMapper.ToListItemDto(p, available, status));
             }
 
-            await _cache.SetAsync(CatalogCacheKeys.ProductList, dtos, TimeSpan.FromMinutes(5), ct);
+            await _cache.SetAsync(CatalogCacheKeys.ProductList, dtos, _ttl.CatalogProductList, ct);
             return Result<IReadOnlyList<ProductListItemDto>>.Success(dtos);
         }
         catch (Exception ex)

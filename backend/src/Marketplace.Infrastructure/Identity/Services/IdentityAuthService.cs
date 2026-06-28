@@ -5,13 +5,16 @@ using Marketplace.Domain.Shared.Kernel;
 using Marketplace.Domain.Users.Enums;
 using Marketplace.Domain.Users.Repositories;
 using Marketplace.Domain.Users.ValueObjects;
+using Marketplace.Infrastructure.External.Telegram;
 using Marketplace.Infrastructure.Identity.Entities;
 using Marketplace.Infrastructure.Identity.Security;
-using Marketplace.Infrastructure.External.Telegram;
+using Marketplace.Application.Auth.Options;
+using Marketplace.Application.Common.Observability;
 using Marketplace.Infrastructure.Persistence;
 using Marketplace.Infrastructure.Persistence.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
 
@@ -30,6 +33,7 @@ public class IdentityAuthService : IAuthenticationPort
     private readonly INotificationDispatcher _notificationDispatcher;
     private readonly ITelegramLinkCodeStore _telegramLinkCodeStore;
     private readonly TelegramOptions _telegramOptions;
+    private readonly ILogger<IdentityAuthService> _logger;
 
     public IdentityAuthService(
         UserManager<ApplicationUser> userManager,
@@ -39,7 +43,8 @@ public class IdentityAuthService : IAuthenticationPort
         IUserRepository userRepository,
         INotificationDispatcher notificationDispatcher,
         ITelegramLinkCodeStore telegramLinkCodeStore,
-        IOptions<TelegramOptions> telegramOptions)
+        IOptions<TelegramOptions> telegramOptions,
+        ILogger<IdentityAuthService> logger)
     {
         _userManager = userManager;
         _db = db;
@@ -49,6 +54,7 @@ public class IdentityAuthService : IAuthenticationPort
         _notificationDispatcher = notificationDispatcher;
         _telegramLinkCodeStore = telegramLinkCodeStore;
         _telegramOptions = telegramOptions.Value;
+        _logger = logger;
     }
 
     public async Task<Result<AuthTokens>> RegisterAsync(
@@ -59,33 +65,53 @@ public class IdentityAuthService : IAuthenticationPort
         string? phoneNumber = null,
         CancellationToken ct = default)
     {
+        using var timer = MarketplaceMetrics.StartTimer(
+            MarketplaceMetrics.AuthLatencyMs,
+            new KeyValuePair<string, object?>("operation", "register"));
         var appUser = _identityUserService.CreateForRegistration(identityId, email, userName, phoneNumber);
 
         var create = await _userManager.CreateAsync(appUser, password);
         if (!create.Succeeded)
             return Result<AuthTokens>.Failure(string.Join(" ", create.Errors.Select(e => e.Description)));
 
-        var inRole = await _userManager.AddToRoleAsync(appUser, "User");
+        var inRole = await _userManager.AddToRoleAsync(appUser, nameof(UserRole.Buyer));
         if (!inRole.Succeeded)
             return Result<AuthTokens>.Failure(string.Join(" ", inRole.Errors.Select(e => e.Description)));
 
         if (RequireConfirmedEmail && !appUser.EmailConfirmed)
             return Result<AuthTokens>.Success(null!);
 
+        MarketplaceMetrics.AuthOps.Add(1, new("operation", "register"), new("status", "ok"));
         return await IssueTokensAsync(appUser, ct);
     }
 
     public async Task<Result<AuthTokens>> LoginAsync(Email email, string password, string? twoFactorCode = null, CancellationToken ct = default)
     {
+        using var timer = MarketplaceMetrics.StartTimer(
+            MarketplaceMetrics.AuthLatencyMs,
+            new KeyValuePair<string, object?>("operation", "login"));
         var appUser = await _userManager.FindByEmailAsync(email.Value);
         if (appUser is null || appUser.IsDeleted)
+        {
+            RecordAuthFailure("login", "invalid_credentials");
             return Result<AuthTokens>.Failure("Invalid email or password.");
+        }
 
         if (RequireConfirmedEmail && !appUser.EmailConfirmed)
+        {
+            RecordAuthFailure("login", "unconfirmed_email");
             return Result<AuthTokens>.Failure("Please confirm your email before login.");
+        }
 
-        if (!await _userManager.CheckPasswordAsync(appUser, password))
+        var passwordCheck = await _userManager.CheckPasswordAsync(appUser, password);
+        if (!passwordCheck)
+        {
+            await _userManager.AccessFailedAsync(appUser);
+            RecordAuthFailure("login", "invalid_credentials");
             return Result<AuthTokens>.Failure("Invalid email or password.");
+        }
+
+        await _userManager.ResetAccessFailedCountAsync(appUser);
 
         if (appUser.TwoFactorEnabled)
         {
@@ -95,7 +121,10 @@ public class IdentityAuthService : IAuthenticationPort
                     ? await SendTelegramTwoFactorCodeInternalAsync(appUser, ct)
                     : await SendEmailTwoFactorCodeInternalAsync(appUser, ct);
                 if (sendCode.IsFailure)
+                {
+                    RecordAuthFailure("login", "2fa_send_failed");
                     return Result<AuthTokens>.Failure(sendCode.Error ?? "Failed to send 2FA code.");
+                }
 
                 var channelMessage = appUser.TelegramTwoFactorEnabled
                     ? "A verification code was sent to your Telegram."
@@ -108,7 +137,10 @@ public class IdentityAuthService : IAuthenticationPort
                 : await _userManager.VerifyTwoFactorTokenAsync(appUser, TokenOptions.DefaultEmailProvider, twoFactorCode);
 
             if (!isValid)
+            {
+                RecordAuthFailure("login", "invalid_2fa_code");
                 return Result<AuthTokens>.Failure("Invalid 2FA code.");
+            }
         }
 
         var domainUser = await _userRepository.GetByIdentityIdAsync(IdentityUserId.From(appUser.Id), ct);
@@ -118,22 +150,46 @@ public class IdentityAuthService : IAuthenticationPort
             await _userRepository.UpdateAsync(domainUser, ct);
         }
 
+        MarketplaceMetrics.AuthOps.Add(1, new("operation", "login"), new("status", "ok"));
         return await IssueTokensAsync(appUser, ct);
     }
 
     public async Task<Result<AuthTokens>> RefreshTokenAsync(string refreshToken, CancellationToken ct = default)
     {
+        using var timer = MarketplaceMetrics.StartTimer(
+            MarketplaceMetrics.AuthLatencyMs,
+            new KeyValuePair<string, object?>("operation", "refresh"));
         var hash = TokenHasher.Sha256Hex(refreshToken);
         var stored = await _db.RefreshTokens.FirstOrDefaultAsync(x => x.TokenHash == hash, ct);
-        if (stored is null || stored.RevokedAt is not null || stored.ExpiresAt < DateTime.UtcNow)
+        if (stored is null)
+        {
+            RecordAuthFailure("refresh", "invalid_token");
             return Result<AuthTokens>.Failure("Invalid or expired refresh token.");
+        }
+        if (stored.RevokedAt is not null)
+        {
+            await LogoutAsync(IdentityUserId.From(stored.UserId), ct);
+            RecordAuthFailure("refresh", "replay_detected");
+            return Result<AuthTokens>.Failure("Refresh token replay detected.");
+        }
+        if (stored.ExpiresAt < DateTime.UtcNow)
+        {
+            RecordAuthFailure("refresh", "expired_token");
+            return Result<AuthTokens>.Failure("Invalid or expired refresh token.");
+        }
 
         var appUser = await _userManager.FindByIdAsync(stored.UserId.ToString());
         if (appUser is null || appUser.IsDeleted)
+        {
+            RecordAuthFailure("refresh", "user_not_found");
             return Result<AuthTokens>.Failure("User no longer exists.");
+        }
 
         if (RequireConfirmedEmail && !appUser.EmailConfirmed)
+        {
+            RecordAuthFailure("refresh", "unconfirmed_email");
             return Result<AuthTokens>.Failure("Please confirm your email before login.");
+        }
 
         stored.RevokedAt = DateTime.UtcNow;
 
@@ -155,6 +211,7 @@ public class IdentityAuthService : IAuthenticationPort
         var access = _tokenPort.GenerateAccessToken(identityId, appUser.Email ?? string.Empty, roles);
 
         await _db.SaveChangesAsync(ct);
+        MarketplaceMetrics.AuthOps.Add(1, new("operation", "refresh"), new("status", "ok"));
         return Result<AuthTokens>.Success(AuthTokens.Create(access, newRefresh));
     }
 
@@ -216,6 +273,8 @@ public class IdentityAuthService : IAuthenticationPort
         if (!r.Succeeded)
             return Result.Failure(string.Join(" ", r.Errors.Select(e => e.Description)));
 
+        await LogoutAsync(IdentityUserId.From(appUser.Id), ct);
+        MarketplaceMetrics.AuthOps.Add(1, new("operation", "reset-password"), new("status", "ok"));
         return Result.Success();
     }
 
@@ -461,6 +520,13 @@ public class IdentityAuthService : IAuthenticationPort
         Span<byte> bytes = stackalloc byte[6];
         RandomNumberGenerator.Fill(bytes);
         return Convert.ToHexString(bytes);
+    }
+
+    private void RecordAuthFailure(string operation, string reason)
+    {
+        MarketplaceMetrics.AuthOps.Add(1, new("operation", operation), new("status", "error"));
+        MarketplaceMetrics.AuthErrors.Add(1, new("operation", operation), new("reason", reason));
+        _logger.LogWarning("Auth service operation {Operation} failed: {Reason}", operation, reason);
     }
 
 }

@@ -6,8 +6,9 @@
 
 | Розділ | Зміст |
 |--------|--------|
-| [Endpoints — довідник по маршрутах](Endpoints/README.md) | Усі endpoint-и: що приймають, що повертають, авторизація, side effects, помилки |
+| [Endpoints — довідник по маршрутах](Endpoints/README.md) | Усі endpoint-и (у т.ч. [Push / Web Push](Endpoints/PushNotifications.md)): що приймають, що повертають, авторизація, side effects, помилки |
 | [ControllerModels — приклади JSON body](ControllerModels/README.md) | Швидкі зразки тіл запитів для Postman/curl |
+| [Notifications — нотифікації](Notifications/README.md) | In-app, Web Push / SW, email, Telegram: архітектура, канали, події, ролі, безпека (реалізовано vs план) |
 | [DDD — контексти та логіка](DDD/README.md) | Bounded contexts, зв’язки сутностей, потоки, кеш, ролі (огляд) |
 | [Матриця доступів за ролями](DDD/RoleAccessMatrix.md) | Хто що може в API |
 | [Тестові сутності та сценарії](DDD/TestEntitiesAndScenarios.md) | Які дані/ролі потрібні для перевірки |
@@ -24,7 +25,9 @@
 
 Детальні таблиці полів JSON залишено в кореневому [README.md](../README.md) проєкту API (розділ «Довідник полів»). Нові endpoint-и описані в [Endpoints/](Endpoints/README.md) з посиланням на типи відповідей.
 
-## OpenAPI / Swagger
+## OpenAPI / Swagger / Scalar
 
-- UI: `/swagger`
-- OpenAPI JSON: `/openapi/v1.json`
+- **Swagger UI:** `/swagger` — схеми + markdown-опис з `Docs/Endpoints/*.md`
+- **Scalar:** `/scalar` — те саме через `/openapi/v1.json`
+- **OpenAPI JSON:** `/openapi/v1.json`, `/swagger/v1/swagger.json`
+- **Джерело описів:** [`Docs/Endpoints/`](Endpoints/README.md) (парситься `OpenApi/EndpointDocRegistry`)

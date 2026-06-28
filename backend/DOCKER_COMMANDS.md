@@ -11,6 +11,29 @@
 - `postgres`
 - `redis`
 - `frontend` (лише з профілем `frontend`, див. корінь репозиторію `docker-compose.yml`)
+- **Observability** (profile `observability`): `otel-collector`, `prometheus`, `jaeger`, `grafana` — див. [docs/platform-engineering/09-local-docker-compose-runbook.md](../docs/platform-engineering/09-local-docker-compose-runbook.md)
+- **SonarQube CE** (profile `sonar`): `sonarqube`, `sonarqube-db`
+
+### Observability stack (корінь репозиторію)
+
+```powershell
+# У .env або backend/.env: OTEL_ENABLED=true
+docker compose -f docker-compose.yml -f docker-compose.observability.yml --profile observability up -d --build
+```
+
+SonarQube (з кореня або backend):
+
+```powershell
+docker compose --profile sonar up -d
+# Після bootstrap: backend/scripts/sonar-scan.ps1
+```
+
+| UI | URL |
+|----|-----|
+| Grafana | http://localhost:3001 |
+| Prometheus | http://localhost:9090 |
+| Jaeger | http://localhost:16686 |
+| SonarQube | http://localhost:9002 (`docker compose --profile sonar up -d`) |
 
 ---
 
@@ -201,13 +224,18 @@ docker compose --profile tools run --rm db-seed
 ```
 
 Скрипт очищає і наповнює узгоджені дані для:
-- `AspNetUsers` / `AspNetRoles` / `AspNetUserRoles`
-- `marketplace_users`
-- `categories`
-- `companies`
-- `company_members` (ролі в **Tech Store** та власник **Home Comfort**)
-- `products`, `product_details`, `product_images`
-- `warehouses`, `warehouse_stocks`, `stock_movements`, `inventory_reservations` (демо стоку та резерву)
+- `AspNetUsers` / `AspNetRoles` / `AspNetUserRoles` (у т.ч. `NotifyAppByEmail`, `NotifyAppByTelegram`, Telegram для admin/seller/moderator)
+- `marketplace_users`, `refresh_tokens`
+- `categories`, `companies`, `company_members`, `company_legal_profiles`, `company_contracts`, `company_commission_rates`
+- `products` (active + `PendingReview` + draft/rejected), `product_details`, `product_images`
+- `warehouses`, `warehouse_stocks`, `stock_movements`, `inventory_reservations`, `order_fulfillment_allocations`
+- `shipments`, `shipment_items`, `shipping_events`
+- `order_financials`, `seller_ledger_entries`, `settlement_batches`, `seller_payouts` (+ `PayoutIban` у `company_legal_profiles`)
+- `coupons`, `return_requests`, `return_line_items`, `chats`, `chat_participants`, `chat_messages`
+- `carts`, `cart_items`, `cart_stock_watches`, `favorites`
+- `orders`, `order_items`, `order_addresses`, `order_status_history`, `payments`, `refunds`
+- `product_reviews`, `company_reviews`, `review_replies`
+- `notifications` (in-app), `push_subscriptions`, `outbox_messages`, `inbox_messages`, `http_idempotency_requests`
 
 Пароль для **всіх** тестових акаунтів: **`Admin123!`**
 
@@ -223,5 +251,13 @@ docker compose --profile tools run --rm db-seed
 | `support@marketplace.test` | Buyer | Tech Store — **Support** |
 | `logistics@marketplace.test` | Buyer | Tech Store — **Logistics** (інвентар write) |
 
-Після seed для **Docker** (uuid-компанії): **Tech Store** `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa`, **Home Comfort** `bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb`. Публічні товари: `seed-phone-alpha`, `seed-laptop-beta`, `seed-earbuds-gamma`, `seed-kettle-home`.
+Після seed для **Docker** (uuid-компанії): **Tech Store** `aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa`, **Home Comfort** `bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb`.
+
+Товари: `seed-phone-alpha`, `seed-laptop-beta`, `seed-earbuds-gamma`, `seed-kettle-home`, `seed-watch-pending` (модерація), `seed-tablet-rejected` (чернетка).
+
+Замовлення: `ORD-SEED-0001` (admin, Processing), `ORD-SEED-0002` (buyer, Shipped), `ORD-SEED-0003` (buyer, Delivered), `ORD-SEED-0004` (buyer, Paid — split WH1+WH2).
+
+P4 / finance: earnings/settlements для Tech Store (`seller@`), batch Ready id=1 для `admin@`, coupon `SEED10`, return id=1, chat `c1000001-0000-4000-8000-000000000001`.
+
+In-app: `GET /me/in-app-notifications` під `buyer@` / `admin@` / `moderator@` — є приклади прочитаних і непрочитаних.
 

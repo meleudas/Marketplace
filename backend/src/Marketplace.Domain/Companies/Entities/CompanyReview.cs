@@ -1,3 +1,4 @@
+using Marketplace.Domain.Common.Exceptions;
 using Marketplace.Domain.Common.Models;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Companies.Enums;
@@ -16,7 +17,6 @@ public sealed class CompanyReview : AuditableSoftDeleteAggregateRoot<CompanyRevi
     public JsonBlob Ratings { get; private set; } = JsonBlob.Empty;
     public decimal OverallRating { get; private set; }
     public string Comment { get; private set; } = string.Empty;
-    public JsonBlob? Response { get; private set; }
     public CompanyReviewStatus Status { get; private set; }
     public Guid? ModeratedByUserId { get; private set; }
     public DateTime? ModeratedAt { get; private set; }
@@ -31,7 +31,6 @@ public sealed class CompanyReview : AuditableSoftDeleteAggregateRoot<CompanyRevi
         JsonBlob ratings,
         decimal overallRating,
         string comment,
-        JsonBlob? response,
         CompanyReviewStatus status,
         Guid? moderatedByUserId,
         DateTime? moderatedAt,
@@ -50,7 +49,6 @@ public sealed class CompanyReview : AuditableSoftDeleteAggregateRoot<CompanyRevi
             Ratings = ratings,
             OverallRating = overallRating,
             Comment = comment,
-            Response = response,
             Status = status,
             ModeratedByUserId = moderatedByUserId,
             ModeratedAt = moderatedAt,
@@ -59,4 +57,61 @@ public sealed class CompanyReview : AuditableSoftDeleteAggregateRoot<CompanyRevi
             IsDeleted = isDeleted,
             DeletedAt = deletedAt
         };
+
+    public static CompanyReview Create(
+        CompanyReviewId id,
+        CompanyId companyId,
+        Guid userId,
+        string userName,
+        long orderId,
+        decimal overallRating,
+        string comment,
+        JsonBlob? ratings = null)
+    {
+        if (overallRating is < 1 or > 5)
+            throw new DomainException("Overall rating must be in range [1..5]");
+        if (string.IsNullOrWhiteSpace(comment))
+            throw new DomainException("Comment is required");
+        if (string.IsNullOrWhiteSpace(userName))
+            throw new DomainException("User name is required");
+
+        var now = DateTime.UtcNow;
+        return new CompanyReview
+        {
+            Id = id,
+            CompanyId = companyId,
+            UserId = userId,
+            UserName = userName.Trim(),
+            OrderId = orderId,
+            IsVerifiedPurchase = true,
+            Ratings = ratings ?? JsonBlob.Empty,
+            OverallRating = overallRating,
+            Comment = comment.Trim(),
+            Status = CompanyReviewStatus.Approved,
+            CreatedAt = now,
+            UpdatedAt = now,
+            IsDeleted = false
+        };
+    }
+
+    public void Update(decimal overallRating, string comment, JsonBlob? ratings = null)
+    {
+        if (overallRating is < 1 or > 5)
+            throw new DomainException("Overall rating must be in range [1..5]");
+        if (string.IsNullOrWhiteSpace(comment))
+            throw new DomainException("Comment is required");
+
+        OverallRating = overallRating;
+        Comment = comment.Trim();
+        Ratings = ratings ?? JsonBlob.Empty;
+        Touch();
+    }
+
+    public void Moderate(CompanyReviewStatus status, Guid moderatedByUserId)
+    {
+        Status = status;
+        ModeratedByUserId = moderatedByUserId;
+        ModeratedAt = DateTime.UtcNow;
+        Touch();
+    }
 }

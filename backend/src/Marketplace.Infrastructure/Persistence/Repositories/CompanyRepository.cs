@@ -19,6 +19,14 @@ public class CompanyRepository : ICompanyRepository
         return row == null ? null : ToDomain(row);
     }
 
+    public async Task<Company?> GetApprovedNotDeletedBySlugAsync(string slug, CancellationToken ct = default)
+    {
+        var normalized = slug.Trim();
+        var row = await _context.Companies.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Slug == normalized && x.IsApproved && !x.IsDeleted, ct);
+        return row == null ? null : ToDomain(row);
+    }
+
     public async Task<IReadOnlyList<Company>> GetAllAsync(CancellationToken ct = default)
     {
         var rows = await _context.Companies
@@ -33,7 +41,7 @@ public class CompanyRepository : ICompanyRepository
     {
         var rows = await _context.Companies
             .AsNoTracking()
-            .Where(x => x.IsApproved)
+            .Where(x => x.IsApproved && !x.IsDeleted)
             .OrderBy(x => x.CreatedAt)
             .ToListAsync(ct);
 
@@ -88,8 +96,8 @@ public class CompanyRepository : ICompanyRepository
             r.ApprovedAt,
             r.ApprovedByUserId,
             r.Rating,
-            0,
-            0,
+            r.ReviewCount,
+            r.FollowerCount,
             new JsonBlob(r.MetaRaw),
             r.CreatedAt,
             r.UpdatedAt,
@@ -116,6 +124,8 @@ public class CompanyRepository : ICompanyRepository
             ApprovedAt = company.ApprovedAt,
             ApprovedByUserId = company.ApprovedByUserId,
             Rating = company.Rating,
+            ReviewCount = company.ReviewCount,
+            FollowerCount = company.FollowerCount,
             MetaRaw = company.Meta.Raw,
             CreatedAt = company.CreatedAt,
             UpdatedAt = company.UpdatedAt,
@@ -140,6 +150,8 @@ public class CompanyRepository : ICompanyRepository
         row.ApprovedAt = company.ApprovedAt;
         row.ApprovedByUserId = company.ApprovedByUserId;
         row.Rating = company.Rating;
+        row.ReviewCount = company.ReviewCount;
+        row.FollowerCount = company.FollowerCount;
         row.MetaRaw = company.Meta.Raw;
         row.UpdatedAt = company.UpdatedAt;
         row.IsDeleted = company.IsDeleted;

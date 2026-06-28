@@ -16,9 +16,14 @@
 | [UsersController.md](UsersController.md) | [Endpoints/Users.md](../Endpoints/Users.md) |
 | [AdminCatalogController.md](AdminCatalogController.md) | [Endpoints/AdminCatalog.md](../Endpoints/AdminCatalog.md) |
 | [CatalogController.md](CatalogController.md) | [Endpoints/Catalog.md](../Endpoints/Catalog.md) |
+| [CartController.md](CartController.md) | [Endpoints/Cart.md](../Endpoints/Cart.md) |
+| [AdminPaymentsController.md](AdminPaymentsController.md) | [Endpoints/AdminPayments.md](../Endpoints/AdminPayments.md) |
+| [OrdersController.md](OrdersController.md) | [Endpoints/Orders.md](../Endpoints/Orders.md) |
 | [ProductsController.md](ProductsController.md) | [Endpoints/Products.md](../Endpoints/Products.md) |
 | [InventoryController.md](InventoryController.md) | [Endpoints/Inventory.md](../Endpoints/Inventory.md) |
 | [CompanyMembersController.md](CompanyMembersController.md) | [Endpoints/CompanyMembers.md](../Endpoints/CompanyMembers.md) |
+| [PaymentsIntegrationsController.md](PaymentsIntegrationsController.md) | [Endpoints/PaymentsIntegrations.md](../Endpoints/PaymentsIntegrations.md) |
 | [TelegramIntegrationsController.md](TelegramIntegrationsController.md) | [Endpoints/TelegramIntegrations.md](../Endpoints/TelegramIntegrations.md) |
+| [PushNotificationsController.md](PushNotificationsController.md) | [Endpoints/PushNotifications.md](../Endpoints/PushNotifications.md) |
 
 Шлях до папки: `backend/src/Marketplace.API/Docs/ControllerModels`

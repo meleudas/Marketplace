@@ -16,6 +16,32 @@ public sealed class Refund : AuditableSoftDeleteAggregateRoot<RefundId>
     public Guid? ProcessedByUserId { get; private set; }
     public DateTime? ProcessedAt { get; private set; }
 
+    public static Refund Create(
+        RefundId id,
+        PaymentId paymentId,
+        OrderId orderId,
+        Money amount,
+        string reason,
+        Guid processedByUserId)
+    {
+        var now = DateTime.UtcNow;
+        return new Refund
+        {
+            Id = id,
+            PaymentId = paymentId,
+            OrderId = orderId,
+            Amount = amount,
+            Reason = reason.Trim(),
+            Status = RefundStatus.Pending,
+            ProcessedByUserId = processedByUserId,
+            ProcessedAt = null,
+            CreatedAt = now,
+            UpdatedAt = now,
+            IsDeleted = false,
+            DeletedAt = null
+        };
+    }
+
     public static Refund Reconstitute(
         RefundId id,
         PaymentId paymentId,
@@ -44,4 +70,12 @@ public sealed class Refund : AuditableSoftDeleteAggregateRoot<RefundId>
             IsDeleted = isDeleted,
             DeletedAt = deletedAt
         };
+
+    public void SetStatus(RefundStatus status)
+    {
+        Status = status;
+        if (status is RefundStatus.Completed or RefundStatus.Rejected)
+            ProcessedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

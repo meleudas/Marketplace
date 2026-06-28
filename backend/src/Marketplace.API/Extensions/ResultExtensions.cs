@@ -56,6 +56,14 @@ public static class ResultExtensions
             return StatusCodes.Status403Forbidden;
         if (e.Contains("not found"))
             return StatusCodes.Status404NotFound;
+        if (e.Contains("conflict"))
+            return StatusCodes.Status409Conflict;
+        if (e.Contains("unprocessable"))
+            return StatusCodes.Status422UnprocessableEntity;
+        if (e.Contains("payload too large"))
+            return StatusCodes.Status413PayloadTooLarge;
+        if (e.Contains("rate exceeded"))
+            return StatusCodes.Status429TooManyRequests;
         return StatusCodes.Status400BadRequest;
     }
 }

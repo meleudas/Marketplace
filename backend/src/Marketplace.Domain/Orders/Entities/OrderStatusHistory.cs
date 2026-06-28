@@ -13,7 +13,37 @@ public sealed class OrderStatusHistory : AuditableSoftDeleteAggregateRoot<OrderS
     public OrderStatus NewStatus { get; private set; }
     public string? Comment { get; private set; }
     public Guid ChangedByUserId { get; private set; }
+    public string Source { get; private set; } = string.Empty;
+    public string? CorrelationId { get; private set; }
     public DateTime ChangedAt { get; private set; }
+
+    public static OrderStatusHistory Create(
+        OrderStatusHistoryId id,
+        OrderId orderId,
+        OrderStatus oldStatus,
+        OrderStatus newStatus,
+        Guid changedByUserId,
+        string source,
+        string? comment = null,
+        string? correlationId = null)
+    {
+        var now = DateTime.UtcNow;
+        return new OrderStatusHistory
+        {
+            Id = id,
+            OrderId = orderId,
+            OldStatus = oldStatus,
+            NewStatus = newStatus,
+            Comment = comment,
+            ChangedByUserId = changedByUserId,
+            Source = source,
+            CorrelationId = correlationId,
+            ChangedAt = now,
+            CreatedAt = now,
+            UpdatedAt = now,
+            IsDeleted = false
+        };
+    }
 
     public static OrderStatusHistory Reconstitute(
         OrderStatusHistoryId id,
@@ -22,6 +52,8 @@ public sealed class OrderStatusHistory : AuditableSoftDeleteAggregateRoot<OrderS
         OrderStatus newStatus,
         string? comment,
         Guid changedByUserId,
+        string source,
+        string? correlationId,
         DateTime changedAt,
         DateTime createdAt,
         DateTime updatedAt,
@@ -35,6 +67,8 @@ public sealed class OrderStatusHistory : AuditableSoftDeleteAggregateRoot<OrderS
             NewStatus = newStatus,
             Comment = comment,
             ChangedByUserId = changedByUserId,
+            Source = source,
+            CorrelationId = correlationId,
             ChangedAt = changedAt,
             CreatedAt = createdAt,
             UpdatedAt = updatedAt,

@@ -17,15 +17,27 @@ public sealed class CompanyMemberRepository : ICompanyMemberRepository
     {
         var row = await _context.CompanyMembers
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.CompanyId == companyId.Value && x.UserId == userId, ct);
+            .FirstOrDefaultAsync(x => x.CompanyId == companyId.Value && x.UserId == userId && !x.IsDeleted, ct);
         return row is null ? null : ToDomain(row);
+    }
+
+    public async Task<IReadOnlyList<CompanyMember>> ListByUserAsync(Guid userId, CancellationToken ct = default)
+    {
+        var rows = await _context.CompanyMembers
+            .AsNoTracking()
+            .Where(x => x.UserId == userId && !x.IsDeleted)
+            .OrderByDescending(x => x.IsOwner)
+            .ThenBy(x => x.CreatedAt)
+            .ToListAsync(ct);
+
+        return rows.Select(ToDomain).ToList();
     }
 
     public async Task<IReadOnlyList<CompanyMember>> ListByCompanyAsync(CompanyId companyId, CancellationToken ct = default)
     {
         var rows = await _context.CompanyMembers
             .AsNoTracking()
-            .Where(x => x.CompanyId == companyId.Value)
+            .Where(x => x.CompanyId == companyId.Value && !x.IsDeleted)
             .OrderByDescending(x => x.IsOwner)
             .ThenBy(x => x.CreatedAt)
             .ToListAsync(ct);
@@ -34,7 +46,7 @@ public sealed class CompanyMemberRepository : ICompanyMemberRepository
     }
 
     public Task<bool> ExistsOwnerAsync(CompanyId companyId, CancellationToken ct = default)
-        => _context.CompanyMembers.AnyAsync(x => x.CompanyId == companyId.Value && x.IsOwner, ct);
+        => _context.CompanyMembers.AnyAsync(x => x.CompanyId == companyId.Value && x.IsOwner && !x.IsDeleted, ct);
 
     public async Task AddAsync(CompanyMember member, CancellationToken ct = default)
     {

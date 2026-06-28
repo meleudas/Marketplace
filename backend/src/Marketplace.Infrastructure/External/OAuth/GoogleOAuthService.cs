@@ -1,5 +1,6 @@
 using Marketplace.Application.Auth.DTOs;
 using Marketplace.Application.Auth.Ports;
+using GoogleOAuthExchangePayload = Marketplace.Application.Auth.Ports.GoogleOAuthExchangePayload;
 using Marketplace.Domain.Shared.Kernel;
 using Marketplace.Domain.Users.Entities;
 using Marketplace.Domain.Users.Repositories;
@@ -13,7 +14,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Marketplace.Infrastructure.External.OAuth;
 
-public sealed class GoogleOAuthService
+public sealed class GoogleOAuthService : IGoogleOAuthPort
 {
     private const string GoogleProvider = "Google";
     private const string StateKeyPrefix = "oauth:google:state:";
@@ -110,7 +111,7 @@ public sealed class GoogleOAuthService
                 if (!loginResult.Succeeded)
                     return Result<AuthTokensDto>.Failure(string.Join(" ", loginResult.Errors.Select(e => e.Description)));
 
-                var roleResult = await _userManager.AddToRoleAsync(appUser, "User");
+                var roleResult = await _userManager.AddToRoleAsync(appUser, "Buyer");
                 if (!roleResult.Succeeded)
                     return Result<AuthTokensDto>.Failure(string.Join(" ", roleResult.Errors.Select(e => e.Description)));
             }
@@ -151,7 +152,7 @@ public sealed class GoogleOAuthService
     public async Task<string> CreateExchangeCodeAsync(AuthTokensDto tokens, CancellationToken ct = default)
     {
         var code = Guid.NewGuid().ToString("N");
-        await _cacheService.SetAsync(CodeKeyPrefix + code, new GoogleExchangePayload(
+        await _cacheService.SetAsync(CodeKeyPrefix + code, new GoogleOAuthExchangePayload(
             tokens.AccessToken,
             tokens.RefreshToken,
             tokens.AccessTokenExpiresAt,
@@ -159,10 +160,10 @@ public sealed class GoogleOAuthService
         return code;
     }
 
-    public async Task<GoogleExchangePayload?> ConsumeExchangeCodeAsync(string code, CancellationToken ct = default)
+    public async Task<GoogleOAuthExchangePayload?> ConsumeExchangeCodeAsync(string code, CancellationToken ct = default)
     {
         var key = CodeKeyPrefix + code;
-        var payload = await _cacheService.GetAsync<GoogleExchangePayload>(key, ct);
+        var payload = await _cacheService.GetAsync<GoogleOAuthExchangePayload>(key, ct);
         if (payload is null)
             return null;
 
@@ -214,9 +215,4 @@ public sealed class GoogleOAuthService
         return "user" + Guid.NewGuid().ToString("N")[..8];
     }
 
-    public sealed record GoogleExchangePayload(
-        string AccessToken,
-        string RefreshToken,
-        DateTime AccessTokenExpiresAt,
-        DateTime RefreshTokenExpiresAt);
 }

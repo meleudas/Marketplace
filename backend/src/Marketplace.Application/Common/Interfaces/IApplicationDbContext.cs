@@ -1,4 +1,4 @@
-﻿namespace Marketplace.Application.Common.Interfaces
+namespace Marketplace.Application.Common.Interfaces
 {
     public interface IApplicationDbContext
     {

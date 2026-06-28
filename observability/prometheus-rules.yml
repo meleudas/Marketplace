@@ -1,0 +1,84 @@
+groups:
+  - name: marketplace_recording
+    interval: 1m
+    rules:
+      - record: marketplace:checkout_error_rate:10m
+        expr: |
+          sum(rate(checkout_errors_total[10m]))
+          /
+          clamp_min(sum(rate(checkout_operations_total[10m])), 1)
+      - record: marketplace:payment_webhook_error_rate:10m
+        expr: |
+          sum(rate(webhook_errors_total{provider="liqpay"}[10m]))
+          /
+          clamp_min(sum(rate(webhook_operations_total{provider="liqpay"}[10m])), 1)
+      - record: marketplace:reports_error_rate:10m
+        expr: |
+          sum(rate(report_errors_total[10m]))
+          /
+          clamp_min(sum(rate(report_operations_total[10m])), 1)
+      - record: marketplace:analytics_drop_rate:10m
+        expr: |
+          sum(rate(analytics_events_dropped_total[10m]))
+          /
+          clamp_min(sum(rate(analytics_events_ingested_total[10m])) + sum(rate(analytics_events_dropped_total[10m])), 1)
+
+  - name: marketplace_alerts
+    interval: 1m
+    rules:
+      - alert: CheckoutHighErrorRate
+        expr: marketplace:checkout_error_rate:10m > 0.02
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Checkout error rate above 2% (10m)
+      - alert: OutboxDeadLetterGrowth
+        expr: increase(outbox_dead_letter_total[1h]) > 10
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: Outbox dead-letter growth in the last hour
+      - alert: HangfireJobErrors
+        expr: increase(hangfire_job_errors_total[10m]) > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Hangfire job errors detected in the last 10m
+      - alert: ReportsQueueBacklogHigh
+        expr: max_over_time(report_queue_backlog[10m]) > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Reports queue backlog above threshold
+      - alert: ReportsSlaBreachSpike
+        expr: increase(report_sla_breach_total[10m]) > 5
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: Reports SLA breach spike
+      - alert: ReportsHighErrorRate
+        expr: marketplace:reports_error_rate:10m > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Reports error rate above 5% (10m)
+      - alert: AnalyticsDropRateHigh
+        expr: marketplace:analytics_drop_rate:10m > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Analytics drop rate above 5% (10m)
+      - alert: AnalyticsAggregationLag
+        expr: max_over_time(analytics_pipeline_latency_ms_sum[10m]) > 10000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Analytics aggregation latency lag above threshold

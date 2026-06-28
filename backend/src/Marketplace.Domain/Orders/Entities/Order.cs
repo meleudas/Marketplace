@@ -1,5 +1,6 @@
 using Marketplace.Domain.Common.Models;
 using Marketplace.Domain.Common.ValueObjects;
+using Marketplace.Domain.Common.Exceptions;
 using Marketplace.Domain.Orders.Enums;
 
 namespace Marketplace.Domain.Orders.Entities;
@@ -25,6 +26,8 @@ public sealed class Order : AuditableSoftDeleteAggregateRoot<OrderId>
     public DateTime? DeliveredAt { get; private set; }
     public DateTime? CancelledAt { get; private set; }
     public DateTime? RefundedAt { get; private set; }
+    public OrderCancellationReasonCode? CancellationReasonCode { get; private set; }
+    public string? CancellationComment { get; private set; }
 
     public static Order Reconstitute(
         OrderId id,
@@ -48,7 +51,9 @@ public sealed class Order : AuditableSoftDeleteAggregateRoot<OrderId>
         DateTime createdAt,
         DateTime updatedAt,
         bool isDeleted,
-        DateTime? deletedAt) =>
+        DateTime? deletedAt,
+        OrderCancellationReasonCode? cancellationReasonCode = null,
+        string? cancellationComment = null) =>
         new()
         {
             Id = id,
@@ -69,9 +74,84 @@ public sealed class Order : AuditableSoftDeleteAggregateRoot<OrderId>
             DeliveredAt = deliveredAt,
             CancelledAt = cancelledAt,
             RefundedAt = refundedAt,
+            CancellationReasonCode = cancellationReasonCode,
+            CancellationComment = cancellationComment,
             CreatedAt = createdAt,
             UpdatedAt = updatedAt,
             IsDeleted = isDeleted,
             DeletedAt = deletedAt
         };
+
+    public void MarkPaid()
+    {
+        EnsureNotDeleted();
+        Status = OrderStatus.Paid;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void MarkFailed()
+    {
+        EnsureNotDeleted();
+        Status = OrderStatus.Cancelled;
+        CancelledAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void MarkRefunded()
+    {
+        EnsureNotDeleted();
+        Status = OrderStatus.Refunded;
+        RefundedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetProcessing()
+    {
+        EnsureNotDeleted();
+        if (Status is not (OrderStatus.Pending or OrderStatus.Paid))
+            throw new DomainException("Invalid status transition");
+        Status = OrderStatus.Processing;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetShipped(string? trackingNumber)
+    {
+        EnsureNotDeleted();
+        if (Status != OrderStatus.Processing)
+            throw new DomainException("Invalid status transition");
+        Status = OrderStatus.Shipped;
+        TrackingNumber = string.IsNullOrWhiteSpace(trackingNumber) ? TrackingNumber : trackingNumber.Trim();
+        ShippedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetDelivered()
+    {
+        EnsureNotDeleted();
+        if (Status != OrderStatus.Shipped)
+            throw new DomainException("Invalid status transition");
+        Status = OrderStatus.Delivered;
+        DeliveredAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Cancel(OrderCancellationReasonCode reasonCode, string? comment = null, bool adminOverride = false)
+    {
+        EnsureNotDeleted();
+        if (!adminOverride && Status is OrderStatus.Delivered or OrderStatus.Refunded or OrderStatus.Cancelled or OrderStatus.Shipped)
+            throw new DomainException("Invalid status transition");
+        if (adminOverride && Status is OrderStatus.Refunded or OrderStatus.Cancelled)
+            throw new DomainException("Invalid status transition");
+        Status = OrderStatus.Cancelled;
+        CancelledAt = DateTime.UtcNow;
+        CancellationReasonCode = reasonCode;
+        CancellationComment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    private void EnsureNotDeleted()
+    {
+        if (IsDeleted)
+            throw new DomainException("Cannot modify deleted order");
+    }
 }

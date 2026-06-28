@@ -44,5 +44,6 @@ public static class ProductMapper
             x.IsMain,
             x.Width,
             x.Height,
-            x.FileSize);
+            x.FileSize,
+            string.IsNullOrWhiteSpace(x.ThumbnailUrl) ? "processing" : "ready");
 }

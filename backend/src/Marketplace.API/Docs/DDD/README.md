@@ -15,6 +15,10 @@
 | [RoleAccessMatrix.md](RoleAccessMatrix.md) | Матриця «роль → що доступно» |
 | [TestEntitiesAndScenarios.md](TestEntitiesAndScenarios.md) | Тестові дані та покрокові сценарії |
 
+### Застосункові нотифікації (окремо від DDD-файлів контекстів)
+
+Крос-контекстна документація (Web Push, майбутній in-app, email/Telegram для маркетплейсу, матриця подій і ролей): [Notifications/README.md](../Notifications/README.md).
+
 ## Залежності між контекстами (спрощена схема)
 
 ```mermaid

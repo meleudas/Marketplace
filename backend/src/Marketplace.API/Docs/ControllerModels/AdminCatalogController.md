@@ -23,6 +23,15 @@
     "postalCode": "01001",
     "country": "UA"
   },
+  "legalProfile": {
+    "legalName": "My Company LLC",
+    "legalType": "llc",
+    "edrpou": "12345678",
+    "ipn": null,
+    "certificateNumber": "VAT-2026-001",
+    "isVatPayer": true,
+    "initialCommissionPercent": 12.5
+  },
   "metaRaw": "{\"source\":\"admin\"}"
 }
 ```
@@ -78,11 +87,14 @@
 - Body не потрібен:
   - `GET /admin/companies`
   - `GET /admin/companies/pending`
+  - `GET /admin/companies/{id}`
   - `POST /admin/companies/{id}/approve`
   - `POST /admin/companies/{id}/revoke-approval`
+  - `POST /admin/companies/{id}/commission-rates` (body: `commissionPercent`, `effectiveFrom`, `reason`)
   - `DELETE /admin/companies/{id}`
   - `GET /admin/categories`
   - `GET /admin/categories/active`
+  - `GET /admin/categories/{id}`
   - `POST /admin/categories/{id}/activate`
   - `POST /admin/categories/{id}/deactivate`
   - `DELETE /admin/categories/{id}`

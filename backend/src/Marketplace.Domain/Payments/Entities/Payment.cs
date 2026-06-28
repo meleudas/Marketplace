@@ -17,6 +17,35 @@ public sealed class Payment : AuditableSoftDeleteAggregateRoot<PaymentId>
     public JsonBlob ProviderResponse { get; private set; } = JsonBlob.Empty;
     public DateTime? ProcessedAt { get; private set; }
 
+    public static Payment Create(
+        PaymentId id,
+        OrderId orderId,
+        PaymentMethodKind paymentMethod,
+        Money amount,
+        string currency,
+        string? transactionId,
+        PaymentTransactionStatus status,
+        JsonBlob providerResponse)
+    {
+        var now = DateTime.UtcNow;
+        return new Payment
+        {
+            Id = id,
+            OrderId = orderId,
+            PaymentMethod = paymentMethod,
+            Amount = amount,
+            Currency = currency,
+            TransactionId = string.IsNullOrWhiteSpace(transactionId) ? null : transactionId.Trim(),
+            Status = status,
+            ProviderResponse = providerResponse,
+            ProcessedAt = status is PaymentTransactionStatus.Completed or PaymentTransactionStatus.Refunded ? now : null,
+            CreatedAt = now,
+            UpdatedAt = now,
+            IsDeleted = false,
+            DeletedAt = null
+        };
+    }
+
     public static Payment Reconstitute(
         PaymentId id,
         OrderId orderId,
@@ -47,4 +76,20 @@ public sealed class Payment : AuditableSoftDeleteAggregateRoot<PaymentId>
             IsDeleted = isDeleted,
             DeletedAt = deletedAt
         };
+
+    public void UpdateProviderState(
+        PaymentTransactionStatus status,
+        string? transactionId,
+        JsonBlob providerResponse,
+        DateTime? processedAt = null)
+    {
+        Status = status;
+        TransactionId = string.IsNullOrWhiteSpace(transactionId) ? TransactionId : transactionId.Trim();
+        ProviderResponse = providerResponse;
+        if (processedAt.HasValue)
+            ProcessedAt = processedAt.Value;
+        else if (status is PaymentTransactionStatus.Completed or PaymentTransactionStatus.Refunded)
+            ProcessedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

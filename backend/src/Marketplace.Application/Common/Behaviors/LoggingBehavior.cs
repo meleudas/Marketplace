@@ -1,4 +1,4 @@
-﻿using Marketplace.Domain.Shared.Kernel;
+using Marketplace.Domain.Shared.Kernel;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Serilog.Context;

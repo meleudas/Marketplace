@@ -18,6 +18,8 @@ public class CompanyRecord
     public DateTime? ApprovedAt { get; set; }
     public string? ApprovedByUserId { get; set; }
     public decimal? Rating { get; set; }
+    public int ReviewCount { get; set; }
+    public int FollowerCount { get; set; }
     public string? MetaRaw { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

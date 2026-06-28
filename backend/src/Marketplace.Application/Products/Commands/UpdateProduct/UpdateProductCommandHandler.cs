@@ -1,10 +1,16 @@
+using System.Text.Json;
 using Marketplace.Application.Catalog.Cache;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Notifications;
+using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Products.Authorization;
 using Marketplace.Application.Products.DTOs;
 using Marketplace.Application.Products.Mappings;
+using Marketplace.Application.Products.Ports;
 using Marketplace.Domain.Catalog.Entities;
+using Marketplace.Domain.Catalog.Enums;
 using Marketplace.Domain.Catalog.Repositories;
+using Marketplace.Domain.Common.Exceptions;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
@@ -17,20 +23,29 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
     private readonly IProductRepository _productRepository;
     private readonly IProductDetailRepository _detailRepository;
     private readonly IProductImageRepository _imageRepository;
+    private readonly IObjectStorage _storage;
     private readonly IAppCachePort _cache;
+    private readonly IProductSearchIndexDispatcher _searchIndexDispatcher;
+    private readonly IAppNotificationScheduler _appNotifications;
 
     public UpdateProductCommandHandler(
         IProductAccessService access,
         IProductRepository productRepository,
         IProductDetailRepository detailRepository,
         IProductImageRepository imageRepository,
-        IAppCachePort cache)
+        IObjectStorage storage,
+        IAppCachePort cache,
+        IProductSearchIndexDispatcher searchIndexDispatcher,
+        IAppNotificationScheduler appNotifications)
     {
         _access = access;
         _productRepository = productRepository;
         _detailRepository = detailRepository;
         _imageRepository = imageRepository;
+        _storage = storage;
         _cache = cache;
+        _searchIndexDispatcher = searchIndexDispatcher;
+        _appNotifications = appNotifications;
     }
 
     public async Task<Result<ProductDto>> Handle(UpdateProductCommand request, CancellationToken ct)
@@ -45,6 +60,7 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
                 return Result<ProductDto>.Failure("Product not found");
 
             var oldSlug = product.Slug;
+            var wasDraft = product.Status == ProductStatus.Draft;
             product.UpdateProfile(
                 request.Name,
                 request.Slug,
@@ -54,6 +70,18 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
                 request.MinStock,
                 CategoryId.From(request.CategoryId),
                 request.HasVariants);
+
+            if (wasDraft)
+            {
+                try
+                {
+                    product.SubmitForModeration(request.ActorUserId);
+                }
+                catch (DomainException ex)
+                {
+                    return Result<ProductDto>.Failure(ex.Message);
+                }
+            }
 
             await _productRepository.UpdateAsync(product, ct);
 
@@ -90,12 +118,21 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
                 }
             }
 
+            var existingImages = await _imageRepository.ListByProductIdAsync(product.Id, ct);
+            var oldKeys = existingImages
+                .SelectMany(x => new[] { x.OriginalObjectKey, x.ImageObjectKey, x.ThumbnailObjectKey })
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
             var images = (request.Images ?? [])
                 .Select(x => ProductImage.Create(
                     ProductImageId.From(0),
                     product.Id,
                     x.ImageUrl,
                     x.ThumbnailUrl,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
                     x.AltText,
                     x.SortOrder,
                     x.IsMain,
@@ -105,9 +142,49 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
                 .ToList();
             await _imageRepository.ReplaceForProductAsync(product.Id, images, ct);
 
+            var keepKeys = images
+                .SelectMany(x => new[] { x.OriginalObjectKey, x.ImageObjectKey, x.ThumbnailObjectKey })
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var key in oldKeys.Where(x => !keepKeys.Contains(x)))
+            {
+                try
+                {
+                    await _storage.DeleteAsync(key, ct);
+                }
+                catch
+                {
+                    // Best-effort cleanup; recurring cleanup job removes leftovers.
+                }
+            }
+
             await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductDetailPrefix + oldSlug, ct);
             await _cache.RemoveAsync(CatalogCacheKeys.ProductDetailPrefix + product.Slug, ct);
+            await _cache.RemoveAsync(CatalogCacheKeys.SimilarProductsPrefix + product.Id.Value, ct);
+            if (product.Status == ProductStatus.Active)
+                await _searchIndexDispatcher.EnqueueUpsertProductAsync(product.Id.Value, ct);
+
+            if (wasDraft)
+            {
+                await _appNotifications.ScheduleAsync(
+                    new AppNotificationRequest
+                    {
+                        TemplateKey = AppNotificationTemplateKeys.AdminProductPendingReview,
+                        CorrelationId = AppNotificationCorrelationIds.ProductPendingReviewQueue(product.Id.Value),
+                        Channels = AppNotificationChannelKind.Push | AppNotificationChannelKind.InApp,
+                        Audience = AppNotificationAudienceKind.Admins,
+                        PayloadJson = JsonSerializer.Serialize(new
+                        {
+                            productId = product.Id.Value,
+                            companyId = product.CompanyId.Value,
+                            name = product.Name,
+                            slug = product.Slug
+                        })
+                    },
+                    ct);
+            }
 
             var dto = new ProductDto(
                 ProductMapper.ToListItemDto(product, 0, "out_of_stock"),

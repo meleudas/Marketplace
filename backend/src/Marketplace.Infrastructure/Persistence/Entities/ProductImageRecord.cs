@@ -6,6 +6,9 @@ public class ProductImageRecord
     public long ProductId { get; set; }
     public string ImageUrl { get; set; } = string.Empty;
     public string ThumbnailUrl { get; set; } = string.Empty;
+    public string OriginalObjectKey { get; set; } = string.Empty;
+    public string ImageObjectKey { get; set; } = string.Empty;
+    public string ThumbnailObjectKey { get; set; } = string.Empty;
     public string AltText { get; set; } = string.Empty;
     public int SortOrder { get; set; }
     public bool IsMain { get; set; }

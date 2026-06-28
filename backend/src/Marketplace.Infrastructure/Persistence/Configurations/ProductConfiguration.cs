@@ -16,6 +16,8 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<ProductRecor
         builder.Property(x => x.Price).HasColumnType("numeric(14,2)");
         builder.Property(x => x.OldPrice).HasColumnType("numeric(14,2)");
         builder.Property(x => x.IsDeleted).HasDefaultValue(false);
+        builder.Property(x => x.SubmittedByUserId).HasColumnType("uuid");
+        builder.Property(x => x.ModerationRejectionReason).HasMaxLength(2000);
 
         builder.HasIndex(x => x.Slug).IsUnique();
         builder.HasIndex(x => x.CompanyId);

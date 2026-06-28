@@ -12,4 +12,5 @@ public sealed record CreateCompanyCommand(
     string ContactEmail,
     string ContactPhone,
     CompanyAddressDto Address,
+    CompanyLegalProfileDto LegalProfile,
     string? MetaRaw) : IRequest<Result<CompanyDto>>;

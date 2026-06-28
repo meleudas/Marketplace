@@ -1,4 +1,5 @@
 using Marketplace.Application.Catalog.Cache;
+using Marketplace.Application.Common.Options;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Products.DTOs;
 using Marketplace.Application.Products.Mappings;
@@ -7,6 +8,7 @@ using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Inventory.Repositories;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
+using Microsoft.Extensions.Options;
 
 namespace Marketplace.Application.Products.Queries.GetCatalogProductBySlug;
 
@@ -17,19 +19,22 @@ public sealed class GetCatalogProductBySlugQueryHandler : IRequestHandler<GetCat
     private readonly IProductImageRepository _imageRepository;
     private readonly IWarehouseStockRepository _stockRepository;
     private readonly IAppCachePort _cache;
+    private readonly CacheTtlOptions _ttl;
 
     public GetCatalogProductBySlugQueryHandler(
         IProductRepository productRepository,
         IProductDetailRepository detailRepository,
         IProductImageRepository imageRepository,
         IWarehouseStockRepository stockRepository,
-        IAppCachePort cache)
+        IAppCachePort cache,
+        IOptions<CacheTtlOptions> ttl)
     {
         _productRepository = productRepository;
         _detailRepository = detailRepository;
         _imageRepository = imageRepository;
         _stockRepository = stockRepository;
         _cache = cache;
+        _ttl = ttl.Value;
     }
 
     public async Task<Result<ProductDto>> Handle(GetCatalogProductBySlugQuery request, CancellationToken ct)
@@ -56,7 +61,7 @@ public sealed class GetCatalogProductBySlugQueryHandler : IRequestHandler<GetCat
                 detail is null ? null : ProductMapper.ToDetailDto(detail),
                 images.Select(ProductMapper.ToImageDto).ToList());
 
-            await _cache.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(5), ct);
+            await _cache.SetAsync(cacheKey, dto, _ttl.CatalogProductDetail, ct);
             return Result<ProductDto>.Success(dto);
         }
         catch (Exception ex)

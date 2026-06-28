@@ -34,6 +34,8 @@ public sealed class AssignCompanyMemberRoleCommandHandler : IRequestHandler<Assi
             var company = await _companyRepository.GetByIdAsync(companyId, ct);
             if (company is null)
                 return Result<CompanyMemberDto>.Failure("Company not found");
+            if (company.IsDeleted)
+                return Result<CompanyMemberDto>.Failure("Company not found");
 
             var user = await _userRepository.GetByIdentityIdAsync(Domain.Users.ValueObjects.IdentityUserId.From(request.TargetUserId), ct);
             if (user is null)
@@ -43,6 +45,8 @@ public sealed class AssignCompanyMemberRoleCommandHandler : IRequestHandler<Assi
             {
                 var actorMembership = await _companyMemberRepository.GetByCompanyAndUserAsync(companyId, request.ActorUserId, ct);
                 if (actorMembership is null || !CompanyPermissions.CanManageMembers(actorMembership.Role))
+                    return Result<CompanyMemberDto>.Failure("Forbidden");
+                if (request.Role == Domain.Companies.Enums.CompanyMembershipRole.Owner)
                     return Result<CompanyMemberDto>.Failure("Forbidden");
             }
 

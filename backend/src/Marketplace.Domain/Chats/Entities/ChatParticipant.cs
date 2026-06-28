@@ -20,6 +20,28 @@ public sealed class ChatParticipant : Entity
     public bool IsDeleted { get; private set; }
     public DateTime? DeletedAt { get; private set; }
 
+    public bool IsActive => !IsDeleted && LeftAt is null;
+
+    public static ChatParticipant Join(
+        ChatId chatId,
+        Guid userId,
+        ChatParticipantRole role,
+        CompanyId? companyId,
+        DateTime nowUtc) =>
+        new()
+        {
+            ChatId = chatId,
+            UserId = userId,
+            Role = role,
+            CompanyId = companyId,
+            JoinedAt = nowUtc,
+            LeftAt = null,
+            CreatedAt = nowUtc,
+            UpdatedAt = nowUtc,
+            IsDeleted = false,
+            DeletedAt = null
+        };
+
     public static ChatParticipant Reconstitute(
         ChatId chatId,
         Guid userId,

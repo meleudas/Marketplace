@@ -1,8 +1,6 @@
 using Marketplace.Application.Inventory.Authorization;
-using Marketplace.Application.Catalog.Cache;
-using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Inventory.Services;
 using Marketplace.Domain.Common.ValueObjects;
-using Marketplace.Domain.Inventory.Enums;
 using Marketplace.Domain.Inventory.Repositories;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
@@ -13,19 +11,16 @@ public sealed class ReleaseReservationCommandHandler : IRequestHandler<ReleaseRe
 {
     private readonly IInventoryAccessService _access;
     private readonly IInventoryReservationRepository _reservationRepository;
-    private readonly IWarehouseStockRepository _stockRepository;
-    private readonly IAppCachePort _cache;
+    private readonly IInventoryReservationReleaseService _releaseService;
 
     public ReleaseReservationCommandHandler(
         IInventoryAccessService access,
         IInventoryReservationRepository reservationRepository,
-        IWarehouseStockRepository stockRepository,
-        IAppCachePort cache)
+        IInventoryReservationReleaseService releaseService)
     {
         _access = access;
         _reservationRepository = reservationRepository;
-        _stockRepository = stockRepository;
-        _cache = cache;
+        _releaseService = releaseService;
     }
 
     public async Task<Result> Handle(ReleaseReservationCommand request, CancellationToken ct)
@@ -39,19 +34,10 @@ public sealed class ReleaseReservationCommandHandler : IRequestHandler<ReleaseRe
             var reservation = await _reservationRepository.GetByCodeAsync(companyId, request.ReservationCode, ct);
             if (reservation is null)
                 return Result.Failure("Reservation not found");
-            if (reservation.Status != InventoryReservationStatus.Active)
+            if (reservation.Status != Domain.Inventory.Enums.InventoryReservationStatus.Active)
                 return Result.Success();
 
-            var stock = await _stockRepository.GetByWarehouseAndProductAsync(reservation.WarehouseId, reservation.ProductId, ct);
-            if (stock is null)
-                return Result.Failure("Stock not found");
-
-            stock.Release(reservation.Quantity);
-            reservation.Release();
-            await _stockRepository.UpdateAsync(stock, ct);
-            await _reservationRepository.UpdateAsync(reservation, ct);
-            await _cache.RemoveAsync(CatalogCacheKeys.ProductList, ct);
-
+            await _releaseService.ReleaseAsync(reservation, request.ActorUserId, "manual-release", expired: false, ct);
             return Result.Success();
         }
         catch (Exception ex)

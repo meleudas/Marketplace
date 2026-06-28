@@ -1,6 +1,7 @@
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Inventory.Entities;
 using Marketplace.Domain.Inventory.Repositories;
+using Marketplace.Application.Common.Exceptions;
 using Marketplace.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,9 +42,11 @@ public sealed class WarehouseStockRepository : IWarehouseStockRepository
 
     public async Task UpdateAsync(WarehouseStock stock, CancellationToken ct = default)
     {
-        var row = await _context.WarehouseStocks
-            .FirstOrDefaultAsync(x => x.Id == stock.Id.Value, ct)
-            ?? throw new InvalidOperationException("Warehouse stock not found");
+        var row = await _context.WarehouseStocks.FirstOrDefaultAsync(x => x.Id == stock.Id.Value, ct)
+                  ?? throw new InvalidOperationException("Warehouse stock not found");
+
+        _context.Entry(row).Property(x => x.Version).OriginalValue = stock.Version - 1;
+
         row.OnHand = stock.OnHand;
         row.Reserved = stock.Reserved;
         row.ReorderPoint = stock.ReorderPoint;
@@ -51,7 +54,15 @@ public sealed class WarehouseStockRepository : IWarehouseStockRepository
         row.UpdatedAt = stock.UpdatedAt;
         row.IsDeleted = stock.IsDeleted;
         row.DeletedAt = stock.DeletedAt;
-        await _context.SaveChangesAsync(ct);
+
+        try
+        {
+            await _context.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw new ConcurrencyConflictException("Warehouse stock update conflict", ex);
+        }
     }
 
     private static WarehouseStock ToDomain(WarehouseStockRecord row) =>
