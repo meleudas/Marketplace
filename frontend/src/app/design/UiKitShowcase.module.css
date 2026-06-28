@@ -1,0 +1,49 @@
+.page {
+  min-height: 100vh;
+  background: var(--ui-color-bg);
+  font-family: var(--ui-font-sans);
+  color: var(--ui-color-text);
+}
+
+.section {
+  padding-block: var(--ui-space-6);
+}
+
+.sectionHead {
+  display: grid;
+  gap: var(--ui-space-2);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--ui-font-size-2xl);
+  font-weight: var(--ui-font-weight-bold);
+}
+
+.subtext {
+  margin: 0;
+  max-width: 40rem;
+  color: var(--ui-color-text-muted);
+  line-height: var(--ui-line-height-normal);
+}
+
+.blockTitle {
+  margin: 0 0 var(--ui-space-4);
+  font-size: var(--ui-font-size-lg);
+  font-weight: var(--ui-font-weight-semibold);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ui-space-3);
+  margin-bottom: var(--ui-space-3);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--ui-space-4);
+  max-width: 48rem;
+}

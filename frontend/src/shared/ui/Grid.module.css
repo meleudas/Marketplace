@@ -1,0 +1,16 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--ui-grid-min, 16rem), 1fr));
+}
+
+.sm {
+  gap: var(--ui-space-3);
+}
+
+.md {
+  gap: var(--ui-space-4);
+}
+
+.lg {
+  gap: var(--ui-space-5);
+}

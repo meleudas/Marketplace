@@ -1,0 +1,102 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  background: var(--ui-color-surface);
+  border: 1px solid var(--ui-color-border);
+  border-radius: var(--ui-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--ui-shadow-md);
+  transition:
+    transform var(--ui-transition-base),
+    box-shadow var(--ui-transition-base);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--ui-shadow-lg);
+}
+
+.media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--ui-color-surface-muted);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.imagePlaceholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #f4f4f5 0%, #e4e4e7 100%);
+}
+
+.badge {
+  position: absolute;
+  top: var(--ui-space-3);
+  left: var(--ui-space-3);
+  padding: var(--ui-space-1) var(--ui-space-2);
+  font-size: var(--ui-font-size-xs);
+  font-weight: var(--ui-font-weight-semibold);
+  color: var(--ui-color-on-primary);
+  background: var(--ui-color-primary);
+  border-radius: var(--ui-radius-sm);
+}
+
+.favorite {
+  position: absolute;
+  top: var(--ui-space-3);
+  right: var(--ui-space-3);
+}
+
+.body {
+  display: grid;
+  gap: var(--ui-space-2);
+  padding: var(--ui-space-4);
+}
+
+.category {
+  font-size: var(--ui-font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ui-color-text-subtle);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--ui-font-size-md);
+  font-weight: var(--ui-font-weight-semibold);
+  line-height: var(--ui-line-height-tight);
+  color: var(--ui-color-text);
+}
+
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ui-space-1);
+  font-size: var(--ui-font-size-sm);
+  color: #f59e0b;
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ui-space-2);
+  margin-top: var(--ui-space-1);
+}
+
+.price {
+  font-size: var(--ui-font-size-lg);
+  font-weight: var(--ui-font-weight-bold);
+  color: var(--ui-color-text);
+}
+
+.oldPrice {
+  font-size: var(--ui-font-size-sm);
+  color: var(--ui-color-text-subtle);
+  text-decoration: line-through;
+}

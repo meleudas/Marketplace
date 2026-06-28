@@ -1,0 +1,60 @@
+.pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  font-family: var(--ui-font-sans);
+}
+
+.page,
+.arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  padding: 0 var(--ui-space-2);
+  border: 1px solid var(--ui-color-border-strong);
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-color-surface);
+  color: var(--ui-color-text);
+  font-size: var(--ui-font-size-sm);
+  font-weight: var(--ui-font-weight-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--ui-transition-fast),
+    border-color var(--ui-transition-fast),
+    color var(--ui-transition-fast);
+}
+
+.page:hover:not(:disabled),
+.arrow:hover:not(:disabled) {
+  border-color: var(--ui-color-primary);
+  background: var(--ui-color-primary-soft);
+  color: var(--ui-color-primary-hover);
+}
+
+.page:focus-visible,
+.arrow:focus-visible {
+  outline: 2px solid var(--ui-color-primary);
+  outline-offset: 2px;
+}
+
+.active,
+.active:hover {
+  background: var(--ui-color-primary);
+  border-color: var(--ui-color-primary);
+  color: var(--ui-color-on-primary);
+}
+
+.arrow:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  color: var(--ui-color-text-subtle);
+}
