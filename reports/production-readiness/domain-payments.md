@@ -1,7 +1,16 @@
 # Domain Report: Payments
 
-- Статус: `Implemented`
-- Оцінка готовності: **100/100**
+- Статус реалізації: `Implemented`
+- Готовність: **88/100**
+- Release status: `Conditional`
+- Confidence: `High`
+- Дата аудиту: 2026-06-29
+
+## Evidence
+
+- CI: `payments-gate`
+- Container: LiqPayWebhookPostgresTests
+- E2E: payment webhook HTTP
 
 ## Межі домену
 

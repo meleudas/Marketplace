@@ -1,15 +1,17 @@
 # Методика оцінки продакшен-готовності
 
+Аудит: **2026-06-29** (evidence-based переоцінка).
+
 ## Шкала
 
-- Кожен домен оцінюється у діапазоні `0..100`.
+- Кожен домен або наскрізний стовп оцінюється у діапазоні `0..100`.
 - `90-100`: production-ready з мінімальними ризиками.
-- `75-89`: можна релізити з контрольованим ризиком.
+- `75-89`: можна релізити з контрольованим ризиком (**Conditional Go**).
 - `60-74`: рання production-ready фаза, потрібні обов'язкові доробки.
 - `40-59`: частково готовий, реліз ризикований.
 - `0-39`: концепт або незавершена реалізація.
 
-## Ваги критеріїв
+## Рівень 1 — критерії всередині домену / стовпа
 
 | Критерій | Вага |
 |---|---:|
@@ -20,30 +22,92 @@
 | Testing & CI Coverage | 20% |
 | Operational Readiness | 10% |
 
-Сума ваг: `100%`.
+`DomainScore = sum(criterion_score * weight)`, де `criterion_score` у діапазоні `0..100`.
 
-## Як рахується оцінка
+## Рівень 2 — загальний backend score
 
-`Score = sum(criterion_score * weight)`
+| Стовп | Вага |
+|---|---:|
+| Business domains (середнє по доменах) | 50% |
+| Infrastructure & platform services | 15% |
+| External integrations | 10% |
+| Security & compliance (наскрізний) | 10% |
+| Testing & quality gates (наскрізний) | 10% |
+| DevOps / CI-CD / deploy | 5% |
 
-де `criterion_score` для кожного критерію у діапазоні `0..100`.
+`OverallScore = sum(pillar_score * pillar_weight)`.
 
-## Статуси доменів
+## Статуси готовності
 
-- `Implemented`: є повний вертикальний зріз (Domain + Application + API + Infrastructure).
-- `Partial`: є частина шарів, але немає production-критичних елементів.
-- `Conceptual`: є тільки доменна модель/документація без робочого потоку.
+| Статус | Умова |
+|---|---|
+| **Ready** | Score ≥ 90, blockers = 0 |
+| **Conditional** | Score 75–89 або є P1 blockers з mitigation plan |
+| **Not ready** | Score < 75 або є P0 blockers |
+
+## Статуси доменів (реалізація)
+
+- `Implemented`: повний вертикальний зріз (Domain + Application + API + Infrastructure).
+- `Partial`: частина шарів без production-критичних елементів.
+- `Conceptual`: лише модель/документація без робочого потоку.
+
+## Confidence (впевненість у оцінці)
+
+- **High**: є прогін тестів + code review + CI gate.
+- **Medium**: code review + часткові тести.
+- **Low**: лише статичний огляд коду.
 
 ## Блокери та типи робіт
 
-- **Blockers**: критичні речі, без яких реліз у прод не рекомендується.
-- **Near-term**: обов'язкові доробки найближчого спринту після/перед релізом.
-- **Optional**: покращення, що знижують довгостроковий ризик.
+- **Blockers (P0)**: без цього реліз у прод не рекомендується.
+- **Near-term (P1)**: обов'язкові доробки найближчого спринту.
+- **Optional (P2)**: зниження довгострокового ризику.
 
-## Джерела даних оцінки
+## Шаблон звіту (єдиний для всіх `*.md`)
 
-- Код доменів: `backend/src/Marketplace.Domain`, `backend/src/Marketplace.Application`.
-- Контролери й контракти: `backend/src/Marketplace.API/Controllers`, `backend/src/Marketplace.API/Docs`.
-- Інфра і міграції: `backend/src/Marketplace.Infrastructure`, `.../Persistence/Migrations`.
-- CI та тести: `.github/workflows/backend-ci.yml`, `backend/tests/Marketplace.Tests`.
-- Конфіг і запуск: `backend/.env.example`, `backend/src/Marketplace.API/appsettings.json`, `docker-compose.yml`.
+```markdown
+# [Назва]
+
+- Статус реалізації: `Implemented` | `Partial` | `Conceptual`
+- Готовність: **NN/100**
+- Release status: `Ready` | `Conditional` | `Not ready`
+- Confidence: `High` | `Medium` | `Low`
+- Дата аудиту: YYYY-MM-DD
+
+## Evidence
+- Команда / файл: результат (exit code, дата)
+
+## Що готово
+- ...
+
+## Blockers (P0)
+- ...
+
+## Near-term (P1)
+- ...
+
+## Optional (P2)
+- ...
+
+## Checklist
+- [x] або [ ] пункт
+```
+
+## Формат Evidence
+
+Артефакти зберігаються в `reports/production-readiness/evidence/`:
+
+- `build-release.log` — `dotnet build -c Release`
+- `test-*.log` — вихід `dotnet test`
+- `vulnerabilities.txt` — `check_vulnerabilities.py` / `dotnet list package --vulnerable`
+- `coverage-matrix-summary.md` — агрегація з `ENDPOINT_COVERAGE_MATRIX.md`
+
+У звітах посилатися як: `Evidence: evidence/build-release.log (exit 0, 2026-06-29)`.
+
+## Джерела даних
+
+- Код: `backend/src/Marketplace.{Domain,Application,API,Infrastructure}`
+- Тести: `backend/tests/`, `backend/tests/ENDPOINT_COVERAGE_MATRIX.md`
+- CI: `.github/workflows/backend-ci.yml`
+- Конфіг: `backend/.env.example`, `appsettings.json`, `docker-compose*.yml`
+- Попередні звіти: `reports/production-readiness/domain-*.md`

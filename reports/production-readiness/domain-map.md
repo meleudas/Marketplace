@@ -1,31 +1,39 @@
 # Карта backend-доменів
 
-Цей файл фіксує цільову карту доменів backend та їх зіставлення з шарами `Domain`, `Application`, `API`, `Infrastructure`.
+Оновлено: **2026-06-29** (після container test expansion).
 
 ## Реалізовані домени
 
-| Домен | Domain | Application | API | Infrastructure |
-|---|---|---|---|---|
-| Identity & Access | `backend/src/Marketplace.Domain/Auth`, `backend/src/Marketplace.Domain/Users` | `backend/src/Marketplace.Application/Auth`, `backend/src/Marketplace.Application/Users` | `backend/src/Marketplace.API/Controllers/AuthController.cs`, `AccountController.cs`, `ExternalAuthController.cs`, `UsersController.cs` | `backend/src/Marketplace.Infrastructure/Identity` |
-| Companies & Workspace | `backend/src/Marketplace.Domain/Companies` | `backend/src/Marketplace.Application/Companies` | `backend/src/Marketplace.API/Controllers/AdminCatalogController.cs`, `CompanyMembersController.cs` | `backend/src/Marketplace.Infrastructure/Persistence/Repositories/Company*` |
-| Catalog & Categories | `backend/src/Marketplace.Domain/Catalog`, `backend/src/Marketplace.Domain/Categories` | `backend/src/Marketplace.Application/Products/Queries`, `backend/src/Marketplace.Application/Categories` | `backend/src/Marketplace.API/Controllers/CatalogController.cs` | `backend/src/Marketplace.Infrastructure/Search`, `.../Repositories/CategoryRepository.cs` |
-| Products & Moderation | `backend/src/Marketplace.Domain/Catalog` | `backend/src/Marketplace.Application/Products` | `backend/src/Marketplace.API/Controllers/ProductsController.cs`, `AdminProductsController.cs` | `backend/src/Marketplace.Infrastructure/Persistence/Repositories/Product*` |
-| Inventory | `backend/src/Marketplace.Domain/Inventory` | `backend/src/Marketplace.Application/Inventory` | `backend/src/Marketplace.API/Controllers/InventoryController.cs` | `backend/src/Marketplace.Infrastructure/Persistence/Repositories/*Stock*` |
-| Cart & Checkout | `backend/src/Marketplace.Domain/Cart` | `backend/src/Marketplace.Application/Carts` | `backend/src/Marketplace.API/Controllers/CartController.cs` | `backend/src/Marketplace.Infrastructure/Persistence/Repositories/Cart*` |
-| Favorites | `backend/src/Marketplace.Domain/Favorites` | `backend/src/Marketplace.Application/Favorites` | `backend/src/Marketplace.API/Controllers/FavoritesController.cs` | `backend/src/Marketplace.Infrastructure/Persistence/Repositories/FavoriteRepository.cs` |
-| Orders | `backend/src/Marketplace.Domain/Orders` | `backend/src/Marketplace.Application/Orders` | `backend/src/Marketplace.API/Controllers/OrdersController.cs` | `backend/src/Marketplace.Infrastructure/Persistence/Repositories/Order*` |
-| Payments | `backend/src/Marketplace.Domain/Payments` | `backend/src/Marketplace.Application/Payments` | `backend/src/Marketplace.API/Controllers/PaymentsIntegrationsController.cs`, `AdminPaymentsController.cs` | `backend/src/Marketplace.Infrastructure/Payments`, `.../Jobs/PaymentJobs.cs` |
-| Reviews | `backend/src/Marketplace.Domain/Reviews` | `backend/src/Marketplace.Application/Reviews` | `backend/src/Marketplace.API/Controllers/ProductReviewsController.cs`, `CompanyReviewsController.cs`, `AdminReviewsController.cs` | `backend/src/Marketplace.Infrastructure/Persistence/Repositories/*Review*` |
-| Notifications | `backend/src/Marketplace.Domain/Notifications` | `backend/src/Marketplace.Application/Notifications` | `backend/src/Marketplace.API/Controllers/PushNotificationsController.cs`, `MeNotificationsController.cs` | `backend/src/Marketplace.Infrastructure/Notifications`, `.../Jobs/AppNotificationJobs.cs` |
-| Platform (Outbox/Idempotency/Jobs) | крос-доменний | `backend/src/Marketplace.Application/Common` | `backend/src/Marketplace.API/Controllers/AdminOutboxController.cs` | `backend/src/Marketplace.Infrastructure/Jobs`, `.../Persistence/Repositories/OutboxRepository.cs`, `HttpIdempotencyStore.cs` |
+| Домен | Domain | Application | API | Infrastructure | Звіт |
+|---|---|---|---|---|---|
+| Identity & Access | `Domain/Auth`, `Domain/Users` | `Application/Auth`, `Application/Users` | `AuthController`, `AccountController`, `ExternalAuthController`, `UsersController` | `Infrastructure/Identity` | [domain-identity-access.md](./domain-identity-access.md) |
+| Companies & Workspace | `Domain/Companies` | `Application/Companies` | `CompanyMembersController`, `AdminCatalogController` | `Repositories/Company*` | [domain-companies-workspace.md](./domain-companies-workspace.md) |
+| Catalog & Categories | `Domain/Catalog`, `Domain/Categories` | `Application/Products/Queries`, `Application/Categories` | `CatalogController` | `External/Search`, `CategoryRepository` | [domain-catalog-categories.md](./domain-catalog-categories.md) |
+| Products & Moderation | `Domain/Catalog` | `Application/Products` | `ProductsController`, `AdminProductsController` | `Repositories/Product*` | [domain-products-moderation.md](./domain-products-moderation.md) |
+| Inventory | `Domain/Inventory` | `Application/Inventory` | `InventoryController` | `Repositories/*Stock*` | [domain-inventory.md](./domain-inventory.md) |
+| Cart & Checkout | `Domain/Cart` | `Application/Carts` | `CartController` | `Repositories/Cart*` | [domain-cart-checkout.md](./domain-cart-checkout.md) |
+| Favorites | `Domain/Favorites` | `Application/Favorites` | `FavoritesController` | `FavoriteRepository` | [domain-favorites.md](./domain-favorites.md) |
+| Orders | `Domain/Orders` | `Application/Orders` | `OrdersController` | `Repositories/Order*` | [domain-orders.md](./domain-orders.md) |
+| Payments | `Domain/Payments` | `Application/Payments` | `PaymentsIntegrationsController`, `AdminPaymentsController` | `Payments`, `PaymentJobs` | [domain-payments.md](./domain-payments.md) |
+| Reviews | `Domain/Reviews` | `Application/Reviews` | `ProductReviewsController`, `CompanyReviewsController`, `AdminReviewsController` | `Repositories/*Review*` | [domain-reviews.md](./domain-reviews.md) |
+| Notifications | `Domain/Notifications` | `Application/Notifications` | `PushNotificationsController`, `MeNotificationsController` | `Notifications`, `AppNotificationJobs` | [domain-notifications.md](./domain-notifications.md) |
+| Platform | крос-доменний | `Application/Common` | `AdminOutboxController` | `Jobs`, `OutboxRepository`, `HttpIdempotencyStore` | [domain-platform.md](./domain-platform.md) |
+| Shipping | `Domain/Shipping` | `Application/Shipping` | `ShippingController`, `UserAddressesController` | `Repositories/Shipment*`, Nova Poshta client | [domain-shipping.md](./domain-shipping.md) |
+| Coupons | `Domain/Coupons` | `Application/Coupons` | `CartController` (coupons), `AdminCouponsController` | `CouponRepository`, rules | [domain-coupons.md](./domain-coupons.md) |
+| Returns (RMA) | `Domain/Returns` | `Application/Returns` | `ReturnsController` | `ReturnRequestRepository` | [domain-returns.md](./domain-returns.md) |
+| Reports (moderation) | `Domain/Reports` | `Application/Reports` | `ReportsController`, admin moderation | `ReportRepository` | [domain-reports-moderation.md](./domain-reports-moderation.md) |
+| Chats | `Domain/Chats` | `Application/Chats` | `ChatsController` | `ChatRepository` | [domain-chats.md](./domain-chats.md) |
+| Support | `Domain/Support` | `Application/Support` | Port contract | `SupportTicket*` repositories | [domain-support.md](./domain-support.md) |
+| Behavior/Analytics & Recommendations | `Domain/Behavior` | `Application/Behavior`, `Products/Ports` | `AnalyticsController`, recommendations endpoints | `ClickHouse*`, `RecommendationModel*` | [domain-analytics-recommendations.md](./domain-analytics-recommendations.md) |
 
-## Planned/Gap домени
+## Залишкові прогалини
 
-| Домен | Поточний стан |
-|---|---|
-| Shipping | Є доменна модель, відсутній повний application/api/infra стек |
-| Coupons | Є доменні сутності, відсутні use-cases і API |
-| Chats | Є доменна модель, відсутні handlers/контролери |
-| Support | Є доменна модель, відсутній прикладний шар |
-| Reports | Є доменна модель, відсутній API/процеси модерації |
-| Behavior/Analytics | Є доменні сутності, відсутній operational data pipeline |
+Див. [domain-gaps-and-proposals.md](./domain-gaps-and-proposals.md) — лише нефункціональні та P2 покращення.
+
+## Наскрізні звіти
+
+- [infrastructure-services-readiness.md](./infrastructure-services-readiness.md)
+- [external-integrations-readiness.md](./external-integrations-readiness.md)
+- [security-readiness.md](./security-readiness.md)
+- [testing-quality-readiness.md](./testing-quality-readiness.md)
+- [devops-cicd-readiness.md](./devops-cicd-readiness.md)

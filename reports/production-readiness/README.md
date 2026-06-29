@@ -1,33 +1,58 @@
 # Backend Production Readiness Audit
 
-Аудит backend-доменів Marketplace з оцінкою готовності до продакшену, переліком блокерів і рекомендованою чергою робіт.
+Аудит backend Marketplace: оцінка готовності до продакшену, blockers і roadmap.
+
+**Останнє оновлення:** 2026-06-29  
+**P0 закрито:** 2026-06-29  
+**Загальний score:** **89/100** — **Ready** (controlled MVP)  
+**Executive summary:** [executive-production-readiness.md](./executive-production-readiness.md)
 
 ## Як читати цей звіт
 
-- Методика оцінювання: [scoring-methodology.md](./scoring-methodology.md)
+- Методика: [scoring-methodology.md](./scoring-methodology.md)
 - Карта доменів: [domain-map.md](./domain-map.md)
-- Gap-домени і пропозиції: [domain-gaps-and-proposals.md](./domain-gaps-and-proposals.md)
+- Gap-аналіз: [domain-gaps-and-proposals.md](./domain-gaps-and-proposals.md)
+- Докази прогонів: [evidence/](./evidence/)
+
+## Наскрізні звіти
+
+| Напрям | Score | Файл |
+|--------|------:|------|
+| Infrastructure & services | 90 | [infrastructure-services-readiness.md](./infrastructure-services-readiness.md) |
+| External integrations | 83 | [external-integrations-readiness.md](./external-integrations-readiness.md) |
+| Security | 88 | [security-readiness.md](./security-readiness.md) |
+| Testing & quality | 88 | [testing-quality-readiness.md](./testing-quality-readiness.md) |
+| DevOps / CI-CD | 84 | [devops-cicd-readiness.md](./devops-cicd-readiness.md) |
 
 ## Зведений рейтинг доменів
 
 | Домен | Готовність |
 |---|---:|
-| Identity & Access | 100/100 |
-| Catalog & Categories | 100/100 |
-| Cart & Checkout | 100/100 |
-| Products & Moderation | 100/100 |
-| Companies & Workspace | 100/100 |
-| Inventory | 100/100 |
-| Orders | 100/100 |
-| Platform (Outbox/Idempotency/Jobs/Observability) | 100/100 |
-| Favorites | 100/100 |
-| Payments | 100/100 |
-| Reviews | 100/100 |
-| Notifications | 100/100 |
+| Platform (Outbox/Jobs/Observability) | 91/100 |
+| Cart & Checkout | 90/100 |
+| Orders | 89/100 |
+| Identity & Access | 88/100 |
+| Inventory | 88/100 |
+| Payments | 88/100 |
+| Products & Moderation | 87/100 |
+| Catalog & Categories | 86/100 |
+| Reviews | 86/100 |
+| Companies & Workspace | 85/100 |
+| Notifications | 85/100 |
+| Analytics & Recommendations | 84/100 |
+| Favorites | 84/100 |
+| Coupons | 83/100 |
+| Shipping | 85/100 |
+| Returns | 81/100 |
+| Reports (moderation) | 80/100 |
+| Chats | 78/100 |
+| Support | 72/100 |
 
-Орієнтовна сумарна готовність реалізованого ядра backend: **~100/100**.
+**Середнє по доменах:** ~84/100
 
-## Домени і детальні звіти
+## Доменні звіти
+
+### Ядро (оригінальний аудит)
 
 - [domain-identity-access.md](./domain-identity-access.md)
 - [domain-companies-workspace.md](./domain-companies-workspace.md)
@@ -42,33 +67,39 @@
 - [domain-notifications.md](./domain-notifications.md)
 - [domain-platform.md](./domain-platform.md)
 
-## Топ-5 критичних доробок перед production
+### Розширення (2026-06)
 
-1. Підняти global `unit-coverage-gate` threshold вище `8%` для сталого quality baseline.
-2. Додати migration/deploy smoke у CI для раннього виявлення schema drift.
-3. Формалізувати production secrets/config policy (`JWT`, `LiqPay`, `VAPID`, email/telegram/storage).
-4. Посилити distributed tracing і operational dashboards для критичних потоків (payments/outbox/reviews).
-5. Продовжити hardening anti-abuse та anomaly-detection шарів (reviews/notifications/payments).
+- [domain-shipping.md](./domain-shipping.md)
+- [domain-coupons.md](./domain-coupons.md)
+- [domain-returns.md](./domain-returns.md)
+- [domain-reports-moderation.md](./domain-reports-moderation.md)
+- [domain-chats.md](./domain-chats.md)
+- [domain-support.md](./domain-support.md)
+- [domain-analytics-recommendations.md](./domain-analytics-recommendations.md)
 
-## Roadmap до production-ready
+## Топ-5 наступних кроків (P2)
+
+1. **Coverage Phase B/C** — global 15% → 25%+.
+2. **Full CD** to registry/K8s.
+3. **Support public API** completion.
+4. **DAST** / penetration test у staging.
+5. **Mutation testing** на payment/checkout handlers.
+
+## Roadmap
 
 ```mermaid
 flowchart TD
-  raiseQualityGates[RaiseQualityGates] --> closeCriticalTests[CloseCriticalDomainTests]
-  closeCriticalTests --> migrationSmoke[MigrationsAndDeploySmoke]
-  migrationSmoke --> reliability[ImproveObservabilityAndAlerts]
-  reliability --> nextDomains[ImplementGapDomainsShippingFirst]
+  secrets[Secrets_and_staging] --> ciSmoke[CI_migration_smoke]
+  ciSmoke --> gates[Raise_coverage_gates]
+  gates --> integrations[Staging_integrations_E2E]
+  integrations --> ops[Runbooks_and_dashboards]
 ```
 
-## Додатково: які домени додати
+## Тестовий контур (evidence 2026-06-29)
 
-Рекомендований порядок реалізації нових/неповних доменів:
+- Unit: 443 passed
+- Integration Light: 50 passed
+- Containers: 32 passed (Postgres, Redis, ES, MinIO, ClickHouse)
+- E2E: 35 passed
 
-1. Shipping (P0)
-2. Coupons (P1)
-3. Reports (P1)
-4. Behavior/Analytics (P1)
-5. Chats (P2)
-6. Support (P2)
-
-Деталі: [domain-gaps-and-proposals.md](./domain-gaps-and-proposals.md)
+Деталі: [evidence/coverage-matrix-summary.md](./evidence/coverage-matrix-summary.md)

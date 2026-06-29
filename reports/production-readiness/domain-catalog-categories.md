@@ -1,7 +1,15 @@
 # Domain Report: Catalog & Categories
 
-- Статус: `Implemented`
-- Оцінка готовності: **100/100**
+- Статус реалізації: `Implemented`
+- Готовність: **86/100**
+- Release status: `Conditional`
+- Confidence: `High`
+- Дата аудиту: 2026-06-29
+
+## Evidence
+
+- CI: `catalog-categories-gate`
+- Container: ElasticsearchSimilarProductsTests, AdminCatalogReindexContainersTests
 
 ## Межі домену
 

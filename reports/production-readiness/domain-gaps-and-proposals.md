@@ -1,85 +1,36 @@
 # Gap Domains and Proposals
 
-Цей звіт описує домени, які є в моделі або документації, але ще не мають повного production-стека.
+Оновлено: **2026-06-29** (P1 закрито — [evidence/p1-completion-log.md](./evidence/p1-completion-log.md)).
 
-## Зведення
+## Зведення залишкових ризиків
 
-| Домен | Поточний стан | Орієнтовна готовність | Пріоритет додавання |
+| Область | Поточний стан | Орієнтовна готовність | Пріоритет |
 |---|---|---:|---|
-| Shipping | Partial | 20/100 | P0 |
-| Coupons | Conceptual | 10/100 | P1 |
-| Chats | Conceptual | 8/100 | P2 |
-| Support | Conceptual | 8/100 | P2 |
-| Reports | Conceptual | 8/100 | P1 |
-| Behavior/Analytics | Conceptual | 5/100 | P1 |
+| Support (повний helpdesk) | Partial — port contract + domain | 72/100 | P2 |
+| Coverage gates Phase B/C | Global 10%, target 25% | 75/100 | P2 |
+| Full CD (registry/K8s) | Release workflow + manual runbook | 80/100 | P2 |
+| Staging E2E ops | Workflow + tests; потрібні secrets + 7d green | 85/100 | Ops |
+| Branch protection | Documented; потрібне admin confirm | 85/100 | Ops |
 
-## Деталізація по доменах
+## P1 — CLOSED (code, 2026-06-29)
 
-### Shipping (P0)
+1. ~~Coverage gates Phase A~~ → global 10%, P0 scoped 14%
+2. ~~Staging E2E~~ → `backend-staging-e2e.yml`, Suite=Staging tests
+3. ~~Anti-abuse~~ → reviews, payments webhook, notifications
+4. ~~Postgres backup~~ → scripts + `docker-compose.ops.yml`
+5. ~~Returns refund E2E~~ → container + E2E
+6. ~~ML ops doc~~ → docs/15
+7. ~~Branch protection doc~~ → docs/16
 
-- Причина пріоритету: без shipping-пайплайну order lifecycle лишається неповним.
-- Мінімум для запуску:
-  - `Application` команди/queries для адрес і методів доставки.
-  - `API` endpoint для CRUD адрес користувача і shipping method selection.
-  - `Infrastructure` репозиторії + міграції таблиць.
-  - Інтеграція з `Orders` і перевірка вартості/термінів.
+## Рекомендований порядок доробок (P2+)
 
-### Coupons (P1)
+1. Coverage Phase B/C (25%+).
+2. Full CD to registry/K8s.
+3. Support public API.
+4. DAST / penetration test.
 
-- Причина пріоритету: критично для комерційної ефективності checkout.
-- Мінімум для запуску:
-  - Валідація купонів (час, квоти, scope, сумісність).
-  - Інтеграція в `Cart/Checkout`.
-  - Анти-abuse логіка та аудит використання.
+## Домени без окремого container-тесту
 
-### Reports (P1)
-
-- Причина пріоритету: потрібен канал для скарг/модерації контенту.
-- Мінімум для запуску:
-  - API для створення та обробки скарг.
-  - Admin moderation queue.
-  - SLA та notification hooks.
-
-### Behavior/Analytics (P1)
-
-- Причина пріоритету: потрібні рішення на основі даних (пошук, каталог, retention).
-- Мінімум для запуску:
-  - Збір подій `ProductView`, `SearchHistory`.
-  - ETL/aggregation pipeline.
-  - Базові dashboard KPI.
-
-### Chats (P2)
-
-- Причина пріоритету: корисно для взаємодії buyer/seller, але не blocker для core checkout.
-- Мінімум для запуску:
-  - Message transport, read-state, moderation hooks.
-  - Anti-spam policy.
-
-### Support (P2)
-
-- Причина пріоритету: потрібен для масштабованої підтримки, але можна стартувати з зовнішнім helpdesk.
-- Мінімум для запуску:
-  - Ticket lifecycle, assignment, SLA.
-  - Інтеграція з notifications і audit.
-
-## Рекомендований порядок додавання
-
-1. Shipping
-2. Coupons + Reports (паралельно)
-3. Behavior/Analytics
-4. Chats
-5. Support
-
-## Dependencies map
-
-```mermaid
-flowchart TD
-  shipping[Shipping] --> orders[Orders]
-  coupons[Coupons] --> checkout[CartCheckout]
-  reports[Reports] --> reviews[Reviews]
-  analytics[BehaviorAnalytics] --> catalog[Catalog]
-  analytics --> products[Products]
-  chats[Chats] --> notifications[Notifications]
-  support[Support] --> notifications
-  support --> companies[Companies]
-```
+- Chats — є integration + E2E seed, немає `Layer=IntegrationContainers` класу.
+- Support — лише `SupportHelpdeskPortContractTests`.
+- Admin coupon CRUD — unit/light, без container flow.

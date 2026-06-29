@@ -1,7 +1,15 @@
 # Domain Report: Companies & Workspace
 
-- Статус: `Implemented`
-- Оцінка готовності: **100/100**
+- Статус реалізації: `Implemented`
+- Готовність: **85/100**
+- Release status: `Conditional`
+- Confidence: `High`
+- Дата аудиту: 2026-06-29
+
+## Evidence
+
+- CI: `companies-workspace-gate`
+- Container: CompanyWorkspacePostgresTests
 
 ## Межі домену
 

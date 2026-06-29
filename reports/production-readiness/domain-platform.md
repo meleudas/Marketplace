@@ -1,7 +1,15 @@
 # Domain Report: Platform (Outbox, Idempotency, Jobs, Observability)
 
-- Статус: `Implemented`
-- Оцінка готовності: **100/100**
+- Статус реалізації: `Implemented`
+- Готовність: **91/100**
+- Release status: `Conditional`
+- Confidence: `High`
+- Дата аудиту: 2026-06-29
+
+## Evidence
+
+- CI: `platform-gate` (12% threshold)
+- Container: OutboxDispatchPostgresTests, IntegrationRetryProcessorPostgresTests, RedisRateLimitingContainersTests, JobSmokePostgresTests
 
 ## Межі домену
 

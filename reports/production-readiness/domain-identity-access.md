@@ -1,7 +1,16 @@
 # Domain Report: Identity & Access
 
-- Статус: `Implemented`
-- Оцінка готовності: **100/100**
+- Статус реалізації: `Implemented`
+- Готовність: **88/100**
+- Release status: `Conditional`
+- Confidence: `High`
+- Дата аудиту: 2026-06-29
+
+## Evidence
+
+- CI: `identity-access-gate`
+- Container: AuthFlowPostgresTests, ExternalAuthCallbackPostgresTests
+- E2E: auth register/login flows
 
 ## Межі домену
 
