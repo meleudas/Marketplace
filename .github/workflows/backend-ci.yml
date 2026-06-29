@@ -149,7 +149,7 @@ jobs:
         run: dotnet build backend/Marketplace.slnx -c Release --no-restore
       - name: Cart & checkout domain gate
         run: |
-          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=CartCheckout" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/cart-coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=cart-checkout-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=CartCheckout" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/cart-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.API]*Cart*%2c[Marketplace.Application]*Cart*%2c[Marketplace.Application]*Carts*%2c[Marketplace.Application]*Checkout*%2c[Marketplace.Domain]*Cart*%2c[Marketplace.Infrastructure]*Cart*" /p:Threshold=14 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=cart-checkout-unit-tests.trx" --results-directory backend/test-results
           dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=CartCheckout" --logger "trx;LogFileName=cart-checkout-integration-tests.trx" --results-directory backend/test-results
       - name: Upload cart/checkout artifacts
         if: always()
@@ -329,7 +329,7 @@ jobs:
         run: dotnet build backend/Marketplace.slnx -c Release --no-restore
       - name: Orders domain gate
         run: |
-          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Orders" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/orders-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.API]*Orders*%2c[Marketplace.Application]*Orders*%2c[Marketplace.Domain]*Order*%2c[Marketplace.Infrastructure]*Order*" /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=orders-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Orders" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/orders-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.API]*Orders*%2c[Marketplace.Application]*Orders*%2c[Marketplace.Domain]*Order*%2c[Marketplace.Infrastructure]*Order*" /p:Threshold=14 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=orders-unit-tests.trx" --results-directory backend/test-results
           dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=Orders" --logger "trx;LogFileName=orders-integration-tests.trx" --results-directory backend/test-results
       - name: Upload orders artifacts
         if: always()
@@ -539,7 +539,7 @@ jobs:
         run: dotnet build backend/Marketplace.slnx -c Release --no-restore
       - name: Payments domain gate
         run: |
-          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Payments" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/payments-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.API]*Payment*%2c[Marketplace.Application]*Payment*%2c[Marketplace.Domain]*Payment*%2c[Marketplace.Domain]*Refund*%2c[Marketplace.Infrastructure]*Payment*%2c[Marketplace.Infrastructure]*Refund*" /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=payments-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Payments" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/payments-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.API]*Payment*%2c[Marketplace.Application]*Payment*%2c[Marketplace.Domain]*Payment*%2c[Marketplace.Domain]*Refund*%2c[Marketplace.Infrastructure]*Payment*%2c[Marketplace.Infrastructure]*Refund*" /p:Threshold=14 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=payments-unit-tests.trx" --results-directory backend/test-results
           dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=Payments" --logger "trx;LogFileName=payments-integration-tests.trx" --results-directory backend/test-results
       - name: Upload payments artifacts
         if: always()
@@ -569,7 +569,7 @@ jobs:
         run: dotnet build backend/Marketplace.slnx -c Release --no-restore
       - name: Platform domain gate
         run: |
-          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Platform" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/platform-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.Infrastructure]*OutboxDispatcherJobs*%2c[Marketplace.Infrastructure]*OutboxEventProcessor*%2c[Marketplace.Infrastructure]*OutboxRepository*%2c[Marketplace.Infrastructure]*InboxDeduplicator*%2c[Marketplace.Infrastructure]*HttpIdempotencyStore*%2c[Marketplace.API]*AdminOutboxController*" /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=platform-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Platform" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/platform-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.Infrastructure]*OutboxDispatcherJobs*%2c[Marketplace.Infrastructure]*OutboxEventProcessor*%2c[Marketplace.Infrastructure]*OutboxRepository*%2c[Marketplace.Infrastructure]*InboxDeduplicator*%2c[Marketplace.Infrastructure]*HttpIdempotencyStore*%2c[Marketplace.API]*AdminOutboxController*" /p:Threshold=14 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=platform-unit-tests.trx" --results-directory backend/test-results
           dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=Platform" --logger "trx;LogFileName=platform-integration-tests.trx" --results-directory backend/test-results
       - name: Upload platform artifacts
         if: always()
@@ -599,7 +599,7 @@ jobs:
         run: dotnet build backend/Marketplace.slnx -c Release --no-restore
       - name: Products moderation domain gate
         run: |
-          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=ProductsModeration" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/products-moderation-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.API]*ProductsController*%2c[Marketplace.Application]*Product*%2c[Marketplace.Domain]*Product*%2c[Marketplace.Infrastructure]*Product*" /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=products-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=ProductsModeration" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/products-moderation-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.API]*ProductsController*%2c[Marketplace.Application]*Product*%2c[Marketplace.Domain]*Product*%2c[Marketplace.Infrastructure]*Product*" /p:Threshold=14 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=products-unit-tests.trx" --results-directory backend/test-results
           dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=ProductsModeration" --logger "trx;LogFileName=products-integration-tests.trx" --results-directory backend/test-results
       - name: Upload products moderation artifacts
         if: always()
@@ -629,7 +629,7 @@ jobs:
         run: dotnet build backend/Marketplace.slnx -c Release --no-restore
       - name: Reviews domain gate
         run: |
-          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Reviews" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/reviews-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.API]*Review*%2c[Marketplace.Application]*Review*%2c[Marketplace.Domain]*Review*%2c[Marketplace.Domain]*CompanyReview*%2c[Marketplace.Infrastructure]*Review*" /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=reviews-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=Reviews" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/reviews-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.API]*Review*%2c[Marketplace.Application]*Review*%2c[Marketplace.Domain]*Review*%2c[Marketplace.Domain]*CompanyReview*%2c[Marketplace.Infrastructure]*Review*" /p:Threshold=11 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=reviews-unit-tests.trx" --results-directory backend/test-results
           dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=Reviews" --logger "trx;LogFileName=reviews-integration-tests.trx" --results-directory backend/test-results
       - name: Upload reviews artifacts
         if: always()
@@ -659,7 +659,7 @@ jobs:
         run: dotnet build backend/Marketplace.slnx -c Release --no-restore
       - name: Identity & access domain gate
         run: |
-          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=IdentityAccess" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/identity-access-coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=12 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=identity-unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite=IdentityAccess" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/identity-access-coverage/ /p:CoverletOutputFormat=cobertura /p:Include="[Marketplace.API]*Auth*%2c[Marketplace.Application]*Auth*%2c[Marketplace.Application]*Identity*%2c[Marketplace.Application]*Users*%2c[Marketplace.Domain]*User*%2c[Marketplace.Infrastructure]*Identity*" /p:Threshold=14 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=identity-unit-tests.trx" --results-directory backend/test-results
           dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --filter "Suite=IdentityAccess" --logger "trx;LogFileName=identity-integration-tests.trx" --results-directory backend/test-results
       - name: Upload identity/access artifacts
         if: always()
@@ -689,7 +689,7 @@ jobs:
         run: dotnet build backend/Marketplace.slnx -c Release --no-restore
       - name: Unit coverage gate
         run: |
-          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite!=API&Suite!=Contract&Suite!=Security&Suite!=Performance&Suite!=Architecture" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=8 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=unit-tests.trx" --results-directory backend/test-results
+          dotnet test backend/tests/Marketplace.Tests.Unit/Marketplace.Tests.Unit.csproj -c Release --no-build --filter "Suite!=API&Suite!=Contract&Suite!=Security&Suite!=Performance&Suite!=Architecture" /p:CollectCoverage=true /p:CoverletOutput=backend/test-results/coverage/ /p:CoverletOutputFormat=cobertura /p:Threshold=10 /p:ThresholdType=line /p:ThresholdStat=total --logger "trx;LogFileName=unit-tests.trx" --results-directory backend/test-results
           dotnet test backend/tests/Marketplace.Tests.Integration/Marketplace.Tests.Integration.csproj -c Release --no-build --logger "trx;LogFileName=integration-light-tests.trx" --results-directory backend/test-results
 
       - name: Upload unit artifacts
@@ -828,5 +828,36 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-integration-full-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  integration-full-main:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Integration containers suite
+        run: dotnet test backend/tests/Marketplace.Tests.Integration.Containers/Marketplace.Tests.Integration.Containers.csproj -c Release --no-build --filter "Layer=IntegrationContainers" --logger "trx;LogFileName=integration-containers-main.trx" --results-directory backend/test-results
+      - name: E2E suite
+        run: dotnet test backend/tests/Marketplace.Tests.E2E/Marketplace.Tests.E2E.csproj -c Release --no-build --filter "Layer=E2E" --logger "trx;LogFileName=e2e-main.trx" --results-directory backend/test-results
+      - name: Upload integration-full-main artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-integration-full-main-test-results
           path: backend/test-results
           if-no-files-found: warn

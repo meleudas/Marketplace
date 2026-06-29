@@ -7,8 +7,8 @@
 | `Marketplace.Tests.Common` | — | Fakes, `SqliteDbFixture`, shared builders | — |
 | `Marketplace.Tests.Unit` | `Unit` | Domain, handlers, API wiring, contracts, security | Every PR |
 | `Marketplace.Tests.Integration` | `IntegrationLight` | SQLite handler + repository flows | Every PR |
-| `Marketplace.Tests.Integration.Containers` | `IntegrationContainers` | Postgres, Redis, Elasticsearch, MinIO via Testcontainers | PR label `integration-full` |
-| `Marketplace.Tests.E2E` | `E2E` | HTTP via `WebApplicationFactory` | PR label `integration-full` |
+| `Marketplace.Tests.Integration.Containers` | `IntegrationContainers` | Postgres, Redis, Elasticsearch, MinIO, ClickHouse via Testcontainers | PR label `integration-full`, **push `main`**, release tag `v*` |
+| `Marketplace.Tests.E2E` | `E2E` | HTTP via `WebApplicationFactory` | PR label `integration-full`, **push `main`**, release tag `v*` |
 
 Domain folders mirror `Docs/Endpoints` (`IdentityAccess`, `Cart`, `Orders`, `Payments`, `Platform`, …).
 
@@ -19,9 +19,13 @@ Domain folders mirror `Docs/Endpoints` (`IdentityAccess`, `Cart`, `Orders`, `Pay
 dotnet test backend/tests/Marketplace.Tests.Unit
 dotnet test backend/tests/Marketplace.Tests.Integration
 
-# Full (Docker Desktop required)
+# Full (Docker Desktop required, ~4 GB RAM recommended for ES 512m + ClickHouse)
+# Mandatory on main merge (integration-full-main) and release tags (backend-release workflow)
 dotnet test backend/tests/Marketplace.Tests.Integration.Containers --filter "Layer=IntegrationContainers"
 dotnet test backend/tests/Marketplace.Tests.E2E --filter "Layer=E2E"
+
+# Pre-release deploy smoke (postgres + API + /health/ready)
+./backend/scripts/ci/deploy-smoke.sh
 
 # Seeded P4 scenarios (requires Testcontainers)
 dotnet test backend/tests/Marketplace.Tests.E2E --filter "Layer=E2E&Suite=Seed"
@@ -33,6 +37,16 @@ dotnet test backend/tests/Marketplace.Tests.E2E --filter "Suite=ApiCatalogSmoke"
 Seed data is loaded from `backend/scripts/seed-test-data.sql` via `TestSeedDataLoader` in `Marketplace.Tests.Common` (users: `buyer@marketplace.test`, `seller@marketplace.test`, `admin@marketplace.test`, password `Admin123!`).
 
 Filter by domain suite: `--filter "Suite=CartCheckout"`.
+
+## Coverage gates (CI)
+
+| Gate | Threshold (line %) | Notes |
+|------|-------------------|-------|
+| Global `unit-coverage-gate` | 10 | Phase A (target 25) |
+| P0 scoped (Cart, Payments, Orders, Identity) | 14 | `Include=` domain assemblies |
+| Інші domain gates | 12 | |
+
+Baseline: [coverage-baseline-2026-06-29.md](../../reports/production-readiness/evidence/coverage-baseline-2026-06-29.md).
 
 ## PR rules
 

@@ -10,9 +10,9 @@ Legend: **U** = Unit.Api, **L** = Integration.Light, **C** = Integration.Contain
 | `POST /me/cart/items` | U | | | | Api CartController |
 | `PATCH /me/cart/items/{id}` | U | | | | |
 | `DELETE /me/cart/items/{id}` | U | | | | |
-| `POST /me/cart/coupons/validate` | U | L | | | Coupons validate |
-| `POST /me/cart/coupons/apply` | U | L | | | Coupons apply |
-| `DELETE /me/cart/coupons/{code}` | U | L | | | Coupons remove |
+| `POST /me/cart/coupons/validate` | U | L | C | | CouponEligibilityPostgresTests |
+| `POST /me/cart/coupons/apply` | U | L | C | | CouponEligibilityPostgresTests |
+| `DELETE /me/cart/coupons/{code}` | U | L | C | | CouponEligibilityPostgresTests |
 | `POST /me/cart/checkout` | U | L | C | | CheckoutPostgresTests |
 | `POST /admin/coupons` | U | L | | | Admin coupon create |
 | `PATCH /admin/coupons/{id}` | U | | | | Admin coupon update |
@@ -24,22 +24,39 @@ Legend: **U** = Unit.Api, **L** = Integration.Light, **C** = Integration.Contain
 | `DELETE /me/addresses/{id}` | U | | | | Shipping address delete |
 | `POST /me/addresses/{id}/default` | U | | | | Shipping default policy |
 | `GET /shipping/methods` | U | L | | | Active shipping methods |
-| `POST /shipping/quote` | U | L | | | Shipping quote calculation |
+| `POST /shipping/quote` | U | L | | E | Shipping quote + NovaPoshtaSandboxE2ETests (Staging) |
 | `GET /me/shipments` | U | | | | Shipment list |
 | `POST /integrations/shipping/novaposhta/webhook` | U | | C | | Webhook dedup |
-| `POST /integrations/liqpay/webhook` | U | L | C | E | Handler + HTTP |
+| `POST /integrations/liqpay/webhook` | U | L | C | E | Handler + HTTP + LiqPaySandboxE2ETests (Staging) |
 | `POST /integrations/telegram/webhook` | | | | E | Secret header |
-| `POST /auth/register` | U | | | E | |
-| `POST /auth/login` | U | | | E | |
-| `POST /auth/refresh` | U | | | | Cookie flow |
+| `POST /auth/register` | U | | C | E | AuthFlowPostgresTests |
+| `POST /auth/login` | U | | C | E | AuthFlowPostgresTests |
+| `POST /auth/refresh` | U | | C | | AuthFlowPostgresTests |
+| `POST /auth/external/google/callback` | | | C | | ExternalAuthCallbackPostgresTests |
 | `GET /me/orders` | U | L | | E | |
 | `GET /me/orders/{id}` | U | L | | | |
 | `POST /orders/{id}/status` | U | L | C | | Outbox + notification schedule |
 | `GET /me/in-app-notifications` | | L | C | E | After status / direct insert |
 | `GET /catalog/products/search` | U | L | | E | |
 | `GET /catalog/products/{slug}` | U | | | | |
-| `GET /me/push-subscriptions/vapid-public-key` | | | | E | |
+| `GET /me/push-subscriptions/vapid-public-key` | | | C | E | PushSubscriptionPostgresTests |
+| `POST /me/push-subscriptions` | | | C | | PushSubscriptionPostgresTests |
+| `GET /me/favorites` | U | | C | | FavoritesPostgresTests |
+| `POST /me/favorites/{productId}` | U | | C | | FavoritesPostgresTests |
+| `DELETE /me/favorites/{productId}` | U | | C | | FavoritesPostgresTests |
+| `POST /catalog/products/{id}/reviews` | U | L | C | | ReviewsModerationPostgresTests |
+| `POST /admin/reports/{id}/resolve` | U | | C | | ReportsWorkflowPostgresTests |
+| `POST /reports` | U | | C | | ReportsWorkflowPostgresTests |
+| `GET /me/returns` | U | | C | E | ReturnRequestWorkflowPostgresTests |
+| `POST /admin/products/{id}/approve` | U | L | C | | AdminCatalogReindexContainersTests |
+| `GET /catalog/products/similar/{id}` | U | | C | | ElasticsearchSimilarProductsTests |
+| `GET /catalog/products/recommendations` | | | C | | RecommendationPipelineContainersTests |
+| `GET /companies/{id}/members` | U | | C | | CompanyWorkspacePostgresTests |
 | Outbox dispatch job | U | | C | | OutboxDispatcherJobs + Postgres |
+| Integration retry processor | | | C | | IntegrationRetryProcessorPostgresTests |
+| Redis rate limiting | | | C | | RedisRateLimitingContainersTests |
+| ClickHouse analytics warehouse | | | C | | ClickHouseWarehousePipelineContainersTests |
+| ML recommendation training | | | C | | RecommendationPipelineContainersTests |
 | Inventory expire job | | | C | | JobSmokePostgresTests |
 | Payment sync job | | | C | | JobSmokePostgresTests |
 | Elasticsearch reachability | | | C | | Ping container |
