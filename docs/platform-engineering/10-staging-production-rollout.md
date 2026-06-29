@@ -8,7 +8,10 @@
 
 ## 2. As-is
 
-Лише dev Compose documented.
+- Dev Compose: [09-local-docker-compose-runbook.md](09-local-docker-compose-runbook.md)
+- Production deploy: [13-production-deploy-runbook.md](13-production-deploy-runbook.md)
+- Secrets policy: [12-production-secrets-policy.md](12-production-secrets-policy.md)
+- Release CI: [backend-release.yml](../../.github/workflows/backend-release.yml)
 
 ## 3. To-be
 

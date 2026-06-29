@@ -8,7 +8,9 @@
 
 ## 2. As-is
 
-[`.github/workflows/backend-ci.yml`](../../.github/workflows/backend-ci.yml) — api-regression, contract, security, domain gates з Coverlet.
+[`.github/workflows/backend-ci.yml`](../../.github/workflows/backend-ci.yml) — api-regression, contract, security, domain gates з Coverlet, **`integration-full-main` на push `main`**.
+
+[`.github/workflows/backend-release.yml`](../../.github/workflows/backend-release.yml) — release tag `v*`: integration-full + deploy-smoke + docker build.
 
 ## 3. To-be
 
@@ -16,6 +18,8 @@
 
 | Job | Filter / command |
 |-----|------------------|
+| `integration-full-main` | containers + E2E на кожен push `main` |
+| `backend-release` | tag `v*`: integration-full + deploy-smoke + docker build |
 | `architecture-gate` | `--filter "Suite=Architecture"` |
 | `observability-config-validate` | `otelcol validate`, `promtool check rules` |
 | `sonar-analysis` | dotnet-sonarscanner begin/end + tests |
