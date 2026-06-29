@@ -1,0 +1,98 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ui-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--ui-radius-md);
+  font-family: var(--ui-font-sans);
+  font-weight: var(--ui-font-weight-medium);
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--ui-transition-fast),
+    border-color var(--ui-transition-fast),
+    color var(--ui-transition-fast),
+    transform var(--ui-transition-fast);
+}
+
+.button:active {
+  transform: translateY(1px);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--ui-color-primary);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Sizes */
+.sm {
+  padding: var(--ui-space-2) var(--ui-space-3);
+  font-size: var(--ui-font-size-sm);
+}
+
+.md {
+  padding: var(--ui-space-3) var(--ui-space-4);
+  font-size: var(--ui-font-size-md);
+}
+
+.lg {
+  padding: var(--ui-space-4) var(--ui-space-5);
+  font-size: var(--ui-font-size-lg);
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+/* Variants */
+.primary {
+  background: var(--ui-color-primary);
+  color: var(--ui-color-on-primary);
+  border-color: var(--ui-color-primary);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--ui-color-primary-hover);
+  border-color: var(--ui-color-primary-hover);
+}
+
+.secondary {
+  background: var(--ui-color-surface);
+  color: var(--ui-color-text);
+  border-color: var(--ui-color-border-strong);
+}
+
+.secondary:hover:not(:disabled) {
+  border-color: var(--ui-color-primary);
+  color: var(--ui-color-primary-hover);
+  background: var(--ui-color-primary-soft);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--ui-color-text);
+  border-color: transparent;
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--ui-color-surface-muted);
+}
+
+.danger {
+  background: var(--ui-color-danger);
+  color: var(--ui-color-on-primary);
+  border-color: var(--ui-color-danger);
+}
+
+.danger:hover:not(:disabled) {
+  background: var(--ui-color-danger-hover);
+  border-color: var(--ui-color-danger-hover);
+}

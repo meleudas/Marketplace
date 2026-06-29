@@ -26,6 +26,11 @@ export function WorkspaceOverviewScreen() {
       try {
         setLoading(true);
         setErrorKind(null);
+        setMembership(null);
+
+        if (isGlobalAdmin) {
+          return;
+        }
 
         const data = await getMyCompanyMembership(WORKSPACE_COMPANY_ID);
         if (!cancelled) {

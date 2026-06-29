@@ -201,17 +201,6 @@ export function WorkspaceInventoryScreen() {
 
       if (!isGlobalAdmin) {
         membershipData = await getMyCompanyMembership(WORKSPACE_COMPANY_ID);
-      } else {
-        try {
-          membershipData = await getMyCompanyMembership(WORKSPACE_COMPANY_ID);
-        } catch (membershipError) {
-          if (
-            !(membershipError instanceof WorkspaceMembershipError) ||
-            (membershipError.kind !== "forbidden" && membershipError.kind !== "notFound")
-          ) {
-            throw membershipError;
-          }
-        }
       }
 
       const [warehousesData, productsData, stocksData, movementsData] = await Promise.all([

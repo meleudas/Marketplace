@@ -47,17 +47,6 @@ export function WorkspaceProductsScreen() {
 
       if (!isGlobalAdmin) {
         membershipData = await getMyCompanyMembership(WORKSPACE_COMPANY_ID);
-      } else {
-        try {
-          membershipData = await getMyCompanyMembership(WORKSPACE_COMPANY_ID);
-        } catch (membershipError) {
-          if (
-            !(membershipError instanceof WorkspaceMembershipError) ||
-            (membershipError.kind !== "forbidden" && membershipError.kind !== "notFound")
-          ) {
-            throw membershipError;
-          }
-        }
       }
 
       const [productsData, categoriesData] = await Promise.all([

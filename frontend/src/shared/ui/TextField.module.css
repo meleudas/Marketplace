@@ -1,0 +1,92 @@
+.wrapper {
+  display: grid;
+  gap: var(--ui-space-2);
+  width: 100%;
+}
+
+.label {
+  font-family: var(--ui-font-sans);
+  font-size: var(--ui-font-size-sm);
+  font-weight: var(--ui-font-weight-medium);
+  color: var(--ui-color-text);
+}
+
+.control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.field {
+  width: 100%;
+  font-family: var(--ui-font-sans);
+  font-size: var(--ui-font-size-md);
+  color: var(--ui-color-text);
+  background: var(--ui-color-surface);
+  border: 1px solid var(--ui-color-border-strong);
+  border-radius: var(--ui-radius-md);
+  padding: var(--ui-space-3) var(--ui-space-4);
+  transition:
+    border-color var(--ui-transition-fast),
+    box-shadow var(--ui-transition-fast);
+}
+
+.field::placeholder {
+  color: var(--ui-color-text-subtle);
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--ui-color-primary);
+  box-shadow: 0 0 0 3px var(--ui-color-primary-soft);
+}
+
+.field:disabled {
+  background: var(--ui-color-surface-muted);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.hasLeading {
+  padding-left: 2.5rem;
+}
+
+.hasTrailing {
+  padding-right: 2.5rem;
+}
+
+.fieldError {
+  border-color: var(--ui-color-danger);
+}
+
+.fieldError:focus {
+  border-color: var(--ui-color-danger);
+  box-shadow: 0 0 0 3px rgb(220 38 38 / 0.12);
+}
+
+.adornment {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ui-color-text-subtle);
+  pointer-events: none;
+}
+
+.leading {
+  left: var(--ui-space-3);
+}
+
+.trailing {
+  right: var(--ui-space-3);
+}
+
+.hint {
+  font-size: var(--ui-font-size-xs);
+  color: var(--ui-color-text-muted);
+}
+
+.error {
+  font-size: var(--ui-font-size-xs);
+  color: var(--ui-color-danger);
+}

@@ -1,0 +1,71 @@
+/**
+ * Design tokens for the UI skeleton (shared/ui kit).
+ * Plain CSS custom properties so they can be consumed from any *.module.css.
+ * Imported by the /design showcase page; safe to import elsewhere later.
+ */
+:root {
+  /* Colors */
+  --ui-color-bg: #f8fafc;
+  --ui-color-surface: #ffffff;
+  --ui-color-surface-muted: #f4f4f5;
+  --ui-color-text: #18181b;
+  --ui-color-text-muted: #52525b;
+  --ui-color-text-subtle: #71717a;
+  --ui-color-border: #e4e4e7;
+  --ui-color-border-strong: #d4d4d8;
+
+  --ui-color-primary: #2563eb;
+  --ui-color-primary-hover: #1d4ed8;
+  --ui-color-primary-soft: #eff6ff;
+  --ui-color-on-primary: #ffffff;
+
+  --ui-color-danger: #dc2626;
+  --ui-color-danger-hover: #b91c1c;
+  --ui-color-success: #16a34a;
+
+  /* Typography */
+  --ui-font-sans: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  --ui-font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --ui-font-size-xs: 0.78rem;
+  --ui-font-size-sm: 0.86rem;
+  --ui-font-size-md: 0.95rem;
+  --ui-font-size-lg: 1.1rem;
+  --ui-font-size-xl: 1.5rem;
+  --ui-font-size-2xl: 2rem;
+
+  --ui-font-weight-regular: 400;
+  --ui-font-weight-medium: 500;
+  --ui-font-weight-semibold: 600;
+  --ui-font-weight-bold: 700;
+
+  --ui-line-height-tight: 1.2;
+  --ui-line-height-normal: 1.5;
+
+  /* Spacing */
+  --ui-space-1: 0.25rem;
+  --ui-space-2: 0.5rem;
+  --ui-space-3: 0.75rem;
+  --ui-space-4: 1rem;
+  --ui-space-5: 1.5rem;
+  --ui-space-6: 2rem;
+  --ui-space-7: 3rem;
+
+  /* Radius */
+  --ui-radius-sm: 0.4rem;
+  --ui-radius-md: 0.6rem;
+  --ui-radius-lg: 0.9rem;
+  --ui-radius-full: 999px;
+
+  /* Shadows */
+  --ui-shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06);
+  --ui-shadow-md: 0 6px 22px rgb(15 23 42 / 0.06);
+  --ui-shadow-lg: 0 10px 28px rgb(15 23 42 / 0.1);
+
+  /* Layout */
+  --ui-container-max: 74rem;
+
+  /* Motion */
+  --ui-transition-fast: 120ms ease;
+  --ui-transition-base: 160ms ease;
+}
