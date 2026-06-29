@@ -57,6 +57,7 @@ public sealed class ClickHouseAnalyticsWarehouseWriter : IAnalyticsWarehouseWrit
                 ENGINE = MergeTree
                 PARTITION BY toDate(occurred_at_utc)
                 ORDER BY (event_type, user_id, session_id, occurred_at_utc, event_id)
+                SETTINGS allow_nullable_key = 1
                 """, ct);
 
             await ExecuteAsync($"""
