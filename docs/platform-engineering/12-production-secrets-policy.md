@@ -1,0 +1,63 @@
+# 12 — Production secrets policy
+
+Політика секретів для Production deploy Marketplace backend.
+
+## Принципи
+
+1. **Жодних dev-placeholder** у `ASPNETCORE_ENVIRONMENT=Production`.
+2. Секрети **не комітяться** в git; лише [backend/.env.example](../../backend/.env.example) як шаблон.
+3. **Fail-fast** при старті API: [ProductionConfigurationValidator.cs](../../backend/src/Marketplace.Infrastructure/Configuration/ProductionConfigurationValidator.cs).
+4. Pre-deploy перевірка: `backend/scripts/ci/validate-production-env.ps1` або `validate-production-env.sh`.
+
+## Таблиця секретів
+
+| Secret | Env var (double underscore) | Обов'язковий у prod | Rotation |
+|--------|----------------------------|---------------------|----------|
+| JWT signing key | `JWT__SECRETKEY` | Так (≥32 байт) | Кожні 90 днів або при компрометації |
+| LiqPay public/private | `LIQPAY__PUBLICKEY`, `LIQPAY__PRIVATEKEY` | Так | За політикою LiqPay |
+| Google OAuth | `GOOGLEAUTH__CLIENTID`, `GOOGLEAUTH__CLIENTSECRET` | Якщо OAuth увімкнено | При ротації OAuth client |
+| SendGrid | `SENDGRID__APIKEY` | Якщо `APPNOTIFICATIONS__EMAILENABLED=true` | За політикою SendGrid |
+| Web Push VAPID | `WEBPUSH__PUBLICKEY`, `WEBPUSH__PRIVATEKEY` | Якщо `WEBPUSH__ENABLED=true` | Рідко; invalidate subscriptions |
+| MinIO/S3 | `STORAGE__ACCESSKEY`, `STORAGE__SECRETKEY` | Якщо `STORAGE__ENABLED=true` | Кожні 90 днів |
+| Nova Poshta | `NOVAPOSHTA__APIKEY` | Якщо `SHIPPING__NOVAPOSHTAENABLED=true` | За політикою NP |
+| Postgres | `POSTGRES_PASSWORD` | Так (compose) | Scheduled + on incident |
+| ClickHouse | `CLICKHOUSE_PASSWORD` | Якщо ClickHouse enabled | Scheduled |
+
+## Заборонені значення (Production)
+
+| Поле | Заборонено |
+|------|------------|
+| `Jwt:SecretKey` | `ChangeThis`, `DevSecret`, `AtLeast32`, `YourSecret`, `ReplaceMe` |
+| `LiqPay:*` | `sandbox_test`, `sandbox`, `test` |
+| `Storage:*` | `minioadmin` / `minioadmin` pair |
+| `GoogleAuth` | Напівконфіг (лише ClientId або лише ClientSecret) |
+
+## Pre-deploy checklist
+
+- [ ] `ASPNETCORE_ENVIRONMENT=Production`
+- [ ] `./backend/scripts/ci/validate-production-env.ps1 -EnvFile backend/.env` → PASS
+- [ ] `dotnet run --project backend/src/Marketplace.API -- --validate-config-only` → PASS
+- [ ] LiqPay keys — production (не sandbox)
+- [ ] JWT — унікальний, ≥32 символів
+- [ ] Postgres password — не `postgres`
+- [ ] Backup Postgres виконано перед deploy
+
+## Валідація в коді
+
+```csharp
+// Program.cs — після Build()
+ProductionConfigurationValidator.Validate(app.Configuration, app.Environment);
+```
+
+CLI без запуску сервера:
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Production"
+dotnet run --project backend/src/Marketplace.API -- --validate-config-only
+```
+
+## Пов'язані документи
+
+- [13-production-deploy-runbook.md](13-production-deploy-runbook.md)
+- [10-staging-production-rollout.md](10-staging-production-rollout.md)
+- [reports/production-readiness/security-readiness.md](../../reports/production-readiness/security-readiness.md)
