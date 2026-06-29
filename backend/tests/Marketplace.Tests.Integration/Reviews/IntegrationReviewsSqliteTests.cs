@@ -1,4 +1,5 @@
 using Marketplace.Application.Common.Ports;
+using Marketplace.Tests.Common.Fakes;
 using Marketplace.Application.Reviews.Commands.CreateProductReview;
 using Marketplace.Application.Reviews.Commands.DeleteOwnProductReview;
 using Marketplace.Application.Reviews.Commands.ModerateProductReview;
@@ -27,7 +28,8 @@ public sealed class IntegrationReviewsSqliteTests
             reviews,
             new AlwaysVerifiedPurchaseService(),
             new NoopRatingAggregationService(),
-            new NoopCachePort());
+            new NoopCachePort(),
+            AntiAbuseTestDoubles.PermissiveReviewCreate());
 
         var create = await createHandler.Handle(
             new CreateProductReviewCommand(product.Id.Value, Guid.NewGuid(), "buyer", null, 5, "title", "great"),
@@ -50,7 +52,8 @@ public sealed class IntegrationReviewsSqliteTests
             reviewRepo,
             new AlwaysVerifiedPurchaseService(),
             new NoopRatingAggregationService(),
-            new NoopCachePort());
+            new NoopCachePort(),
+            AntiAbuseTestDoubles.PermissiveReviewCreate());
         var deleteHandler = new DeleteOwnProductReviewCommandHandler(
             reviewRepo,
             new NoopRatingAggregationService(),

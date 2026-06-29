@@ -3,6 +3,7 @@ using Marketplace.API.Controllers;
 using Marketplace.Application.Carts.Commands.CheckoutCart;
 using Marketplace.Application.Carts.DTOs;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Tests.Common.Fakes;
 using Marketplace.Application.Orders.Commands.CancelOrder;
 using Marketplace.Application.Orders.DTOs;
 using Marketplace.Application.Payments.Commands.HandleLiqPayWebhook;
@@ -139,7 +140,7 @@ public sealed class ApiRegressionIdempotencyTests
     public async Task Webhook_Uses_Provider_Native_Dedup_Without_Idempotency_Header()
     {
         var sender = new RecordingSender { NextResult = Result.Success() };
-        var controller = new PaymentsIntegrationsController(sender, new FixedIdempotencyStore(HttpIdempotencyBeginState.Started))
+        var controller = new PaymentsIntegrationsController(sender, new FixedIdempotencyStore(HttpIdempotencyBeginState.Started), AntiAbuseTestDoubles.PermissivePaymentWebhook())
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -160,7 +161,7 @@ public sealed class ApiRegressionIdempotencyTests
         var store = new FixedIdempotencyStore(
             HttpIdempotencyBeginState.Completed,
             new HttpIdempotencyStoredResponse(401, null));
-        var controller = new PaymentsIntegrationsController(sender, store)
+        var controller = new PaymentsIntegrationsController(sender, store, AntiAbuseTestDoubles.PermissivePaymentWebhook())
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

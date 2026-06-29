@@ -98,7 +98,7 @@ public sealed class SecurityRegressionTests
     public async Task Webhook_Returns_Unauthorized_On_Failed_Command_Result()
     {
         var sender = new RecordingSender { NextResult = Result.Failure("Invalid LiqPay signature") };
-        var controller = new PaymentsIntegrationsController(sender, new StartedIdempotencyStore())
+        var controller = new PaymentsIntegrationsController(sender, new StartedIdempotencyStore(), AntiAbuseTestDoubles.PermissivePaymentWebhook())
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
