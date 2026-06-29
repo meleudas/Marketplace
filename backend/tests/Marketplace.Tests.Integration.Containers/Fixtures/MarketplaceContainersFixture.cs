@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
+using Testcontainers.ClickHouse;
 using Testcontainers.Elasticsearch;
 using Testcontainers.Minio;
 using Testcontainers.PostgreSql;
@@ -43,10 +44,17 @@ public sealed class MarketplaceContainersFixture : IAsyncLifetime
         .WithPassword("minioadmin")
         .Build();
 
+    private readonly ClickHouseContainer _clickhouse = new ClickHouseBuilder()
+        .WithImage("clickhouse/clickhouse-server:24.8")
+        .WithUsername("default")
+        .WithPassword("clickhouse")
+        .Build();
+
     public string PostgresConnectionString { get; private set; } = string.Empty;
     public string RedisConnectionString { get; private set; } = string.Empty;
     public string ElasticsearchUrl { get; private set; } = string.Empty;
     public string MinioEndpoint { get; private set; } = string.Empty;
+    public string ClickHouseUrl { get; private set; } = string.Empty;
 
     public async Task InitializeAsync()
     {
@@ -54,12 +62,14 @@ public sealed class MarketplaceContainersFixture : IAsyncLifetime
             _postgres.StartAsync(),
             _redis.StartAsync(),
             _elasticsearch.StartAsync(),
-            _minio.StartAsync());
+            _minio.StartAsync(),
+            _clickhouse.StartAsync());
 
         PostgresConnectionString = _postgres.GetConnectionString();
         RedisConnectionString = _redis.GetConnectionString();
         ElasticsearchUrl = $"http://{_elasticsearch.Hostname}:{_elasticsearch.GetMappedPublicPort(9200)}";
         MinioEndpoint = $"{_minio.Hostname}:{_minio.GetMappedPublicPort(9000)}";
+        ClickHouseUrl = $"http://{_clickhouse.Hostname}:{_clickhouse.GetMappedPublicPort(8123)}";
 
         await using var scope = CreateServiceProvider().CreateAsyncScope();
         await Marketplace.Infrastructure.DependencyInjection.InitializeDatabaseAsync(scope.ServiceProvider);
@@ -74,7 +84,8 @@ public sealed class MarketplaceContainersFixture : IAsyncLifetime
             _postgres.DisposeAsync().AsTask(),
             _redis.DisposeAsync().AsTask(),
             _elasticsearch.DisposeAsync().AsTask(),
-            _minio.DisposeAsync().AsTask());
+            _minio.DisposeAsync().AsTask(),
+            _clickhouse.DisposeAsync().AsTask());
     }
 
     public IServiceProvider CreateServiceProvider()
@@ -97,6 +108,7 @@ public sealed class MarketplaceContainersFixture : IAsyncLifetime
                 ["Jwt:SecretKey"] = "TestContainers_SecretKey_AtLeast32CharsLong!!",
                 ["Jwt:Issuer"] = "marketplace-test",
                 ["Jwt:Audience"] = "marketplace-test",
+                ["Identity:RequireConfirmedEmail"] = "false",
                 ["Cors:AllowedOrigins:0"] = "http://localhost:3000",
                 ["Frontend:BaseUrl"] = "http://localhost:3000",
                 ["LiqPay:PublicKey"] = "sandbox_test",
@@ -112,7 +124,15 @@ public sealed class MarketplaceContainersFixture : IAsyncLifetime
                 ["Chats:Enabled"] = "true",
                 ["Chats:ModerationEnabled"] = "true",
                 ["BehaviorAnalytics:BehaviorTrackingEnabled"] = "true",
-                ["ClickHouse:Enabled"] = "false",
+                ["ClickHouse:Enabled"] = "true",
+                ["ClickHouse:Url"] = ClickHouseUrl,
+                ["ClickHouse:Database"] = "default",
+                ["ClickHouse:Username"] = "default",
+                ["ClickHouse:Password"] = "clickhouse",
+                ["RecommendationModel:Enabled"] = "true",
+                ["RecommendationModel:MinUserInteractions"] = "1",
+                ["RecommendationModel:CandidatePoolSize"] = "50",
+                ["RecommendationTraining:MaxTrainingRows"] = "10000",
             })
             .Build();
 
