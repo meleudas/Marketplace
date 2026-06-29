@@ -1,0 +1,47 @@
+name: backend-staging-e2e
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *"
+  push:
+    branches:
+      - staging
+
+jobs:
+  staging-e2e:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Staging E2E (LiqPay + Nova Poshta)
+        env:
+          LIQPAY_SANDBOX_PUBLIC: ${{ secrets.LIQPAY_SANDBOX_PUBLIC }}
+          LIQPAY_SANDBOX_PRIVATE: ${{ secrets.LIQPAY_SANDBOX_PRIVATE }}
+          NOVAPOSHTA_API_KEY: ${{ secrets.NOVAPOSHTA_API_KEY }}
+        run: |
+          dotnet test backend/tests/Marketplace.Tests.E2E/Marketplace.Tests.E2E.csproj -c Release --no-build \
+            --filter "Suite=Staging&Layer=E2E" \
+            --logger "trx;LogFileName=staging-e2e-tests.trx" \
+            --results-directory backend/test-results
+      - name: Upload staging E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-staging-e2e-results
+          path: backend/test-results
+          if-no-files-found: warn
