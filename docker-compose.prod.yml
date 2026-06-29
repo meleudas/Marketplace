@@ -2,7 +2,12 @@
 # Usage: docker compose -f docker-compose.prod.yml up -d --build
 #
 # Required: copy and fill backend/.env (JWT, SendGrid, OAuth, LiqPay, etc.).
-# Optional root .env: POSTGRES_PASSWORD, NEXT_PUBLIC_API_URL, FRONTEND__BASEURL.
+# Secrets policy: docs/platform-engineering/12-production-secrets-policy.md
+# Pre-deploy: backend/scripts/ci/validate-production-env.ps1 -EnvFile backend/.env
+# Deploy runbook: docs/platform-engineering/13-production-deploy-runbook.md
+#
+# IMPORTANT: set non-default MINIO_ROOT_USER/PASSWORD and NOVAPOSHTA_API_KEY before Production start.
+# API fail-fast validator rejects minioadmin credentials and sandbox LiqPay keys.
 services:
   api:
     build:
@@ -41,6 +46,12 @@ services:
       ClickHouse__Enabled: "true"
       ClickHouse__Url: "http://clickhouse:8123"
       ClickHouse__Database: "marketplace"
+      ClickHouse__Username: "${CLICKHOUSE_USER:-default}"
+      ClickHouse__Password: "${CLICKHOUSE_PASSWORD:-clickhouse}"
+      Shipping__Enabled: "${SHIPPING__ENABLED:-true}"
+      Shipping__NovaPoshtaEnabled: "${SHIPPING__NOVAPOSHTAENABLED:-true}"
+      NovaPoshta__Enabled: "true"
+      NovaPoshta__ApiKey: "${NOVAPOSHTA_API_KEY:-}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -155,6 +166,8 @@ services:
     environment:
       CLICKHOUSE_DB: marketplace
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+      CLICKHOUSE_USER: "${CLICKHOUSE_USER:-default}"
+      CLICKHOUSE_PASSWORD: "${CLICKHOUSE_PASSWORD:-clickhouse}"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
     healthcheck:

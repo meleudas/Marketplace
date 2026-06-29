@@ -1,0 +1,62 @@
+name: backend-release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  integration-full:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: |
+            backend/**/*.csproj
+            backend/**/*.props
+            backend/**/*.targets
+      - name: Restore
+        run: dotnet restore backend/Marketplace.slnx
+      - name: Build
+        run: dotnet build backend/Marketplace.slnx -c Release --no-restore
+      - name: Integration containers suite
+        run: dotnet test backend/tests/Marketplace.Tests.Integration.Containers/Marketplace.Tests.Integration.Containers.csproj -c Release --no-build --filter "Layer=IntegrationContainers" --logger "trx;LogFileName=integration-containers-tests.trx" --results-directory backend/test-results
+      - name: E2E suite
+        run: dotnet test backend/tests/Marketplace.Tests.E2E/Marketplace.Tests.E2E.csproj -c Release --no-build --filter "Layer=E2E" --logger "trx;LogFileName=e2e-tests.trx" --results-directory backend/test-results
+      - name: Upload integration-full artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-release-integration-test-results
+          path: backend/test-results
+          if-no-files-found: warn
+
+  deploy-smoke:
+    runs-on: ubuntu-latest
+    needs: integration-full
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Deploy smoke (postgres + API + health/ready)
+        run: |
+          chmod +x backend/scripts/ci/deploy-smoke.sh
+          backend/scripts/ci/deploy-smoke.sh
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [integration-full, deploy-smoke]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -t marketplace-api:${{ github.ref_name }} ./backend
+      - name: Image build summary
+        run: |
+          echo "Built marketplace-api:${{ github.ref_name }}"
+          echo "Push to registry manually or extend this workflow with ghcr.io login."

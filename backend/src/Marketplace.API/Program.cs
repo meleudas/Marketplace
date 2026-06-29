@@ -3,6 +3,7 @@ using Marketplace.API.Extensions;
 using Marketplace.API.Options;
 using Marketplace.Application.Payments.Ports;
 using Marketplace.Application.Products.Options;
+using Marketplace.Infrastructure.Configuration;
 using Marketplace.Infrastructure.External.Email;
 using Marketplace.Infrastructure.Jobs;
 using Microsoft.AspNetCore.Authorization;
@@ -14,10 +15,19 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (args.Contains("--validate-config-only", StringComparer.OrdinalIgnoreCase))
+{
+    ProductionConfigurationValidator.Validate(builder.Configuration, builder.Environment);
+    Console.WriteLine("Production configuration validation passed.");
+    return;
+}
+
 builder.Logging.AddMarketplaceOpenTelemetryLogging(builder.Configuration);
 builder.Services.AddMarketplaceApi(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
+
+ProductionConfigurationValidator.Validate(app.Configuration, app.Environment);
 
 if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Database:AutoMigrate"))
     await InitializeDevelopmentDatabaseWithRetriesAsync(app.Services, app.Logger);

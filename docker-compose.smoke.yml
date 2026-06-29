@@ -1,0 +1,48 @@
+# Minimal stack for CI deploy-smoke and local pre-release checks.
+# Usage: backend/scripts/ci/deploy-smoke.sh
+#
+# Validates: Postgres migrate + API start + GET /health/ready
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "${API_PORT:-8080}:8080"
+    env_file:
+      - ./backend/.env.smoke.ci
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      Database__AutoMigrate: "true"
+      ConnectionStrings__Database: "Host=postgres;Port=5432;Database=marketplace_smoke;Username=postgres;Password=${POSTGRES_PASSWORD:-smoke_postgres}"
+      Elasticsearch__Enabled: "false"
+      Elasticsearch__Url: "http://localhost:9200"
+      Storage__Enabled: "false"
+      ClickHouse__Enabled: "false"
+      RecommendationModel__Enabled: "false"
+      OpenTelemetry__Enabled: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - marketplace_smoke
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smoke_postgres}
+      POSTGRES_DB: marketplace_smoke
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d marketplace_smoke"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - marketplace_smoke
+
+networks:
+  marketplace_smoke:
+    driver: bridge
