@@ -1,4 +1,5 @@
 using Marketplace.Application.Payments.Commands.HandleLiqPayWebhook;
+using Marketplace.Application.Payments.Policies;
 using Marketplace.Application.Common.Ports;
 using Marketplace.API.Extensions;
 using Marketplace.Application.Common.Observability;
@@ -16,17 +17,35 @@ public sealed class PaymentsIntegrationsController : ControllerBase
 {
     private readonly ISender _sender;
     private readonly IHttpIdempotencyStore _idempotency;
+    private readonly PaymentWebhookAntiAbusePolicy _antiAbuse;
 
-    public PaymentsIntegrationsController(ISender sender, IHttpIdempotencyStore idempotency)
+    public PaymentsIntegrationsController(
+        ISender sender,
+        IHttpIdempotencyStore idempotency,
+        PaymentWebhookAntiAbusePolicy antiAbuse)
     {
         _sender = sender;
         _idempotency = idempotency;
+        _antiAbuse = antiAbuse;
     }
 
     [HttpPost("webhook")]
     public async Task<IActionResult> Webhook([FromBody] LiqPayWebhookRequest request, CancellationToken ct)
     {
         using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.WebhookLatencyMs, new KeyValuePair<string, object?>("provider", "liqpay"));
+        var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var abuseCheck = await _antiAbuse.EvaluateClientIpAsync(clientIp, ct);
+        if (!abuseCheck.Allowed)
+        {
+            MarketplaceMetrics.AbuseRejected.Add(1,
+            [
+                new KeyValuePair<string, object?>("domain", "payments"),
+                new KeyValuePair<string, object?>("reason", abuseCheck.Reason ?? "webhook_ip_blocked"),
+            ]);
+            Response.Headers.RetryAfter = abuseCheck.RetryAfterSeconds.ToString();
+            return StatusCode(StatusCodes.Status429TooManyRequests, abuseCheck.Reason);
+        }
+
         var scope = "liqpay-webhook";
         var requestHash = HttpIdempotencyExtensions.BuildRequestHash(request.Data, request.Signature);
         // Provider-native idempotency: LiqPay callback payload is the dedup key.
@@ -43,7 +62,18 @@ public sealed class PaymentsIntegrationsController : ControllerBase
         if (result.IsSuccess)
             MarketplaceMetrics.WebhookOps.Add(1, [new KeyValuePair<string, object?>("provider", "liqpay"), new KeyValuePair<string, object?>("status", "success")]);
         else
+        {
             MarketplaceMetrics.WebhookErrors.Add(1, [new KeyValuePair<string, object?>("provider", "liqpay")]);
+            if (string.Equals(result.Error, "Invalid LiqPay signature", StringComparison.Ordinal))
+            {
+                await _antiAbuse.RecordFailedSignatureAsync(clientIp, ct);
+                MarketplaceMetrics.AbuseRejected.Add(1,
+                [
+                    new KeyValuePair<string, object?>("domain", "payments"),
+                    new KeyValuePair<string, object?>("reason", "invalid_signature"),
+                ]);
+            }
+        }
         IActionResult actionResult = result.IsSuccess ? Ok() : Unauthorized();
         var snapshot = actionResult.SnapshotResult();
         await _idempotency.CompleteAsync(scope, idempotencyKey, requestHash, snapshot.StatusCode, snapshot.BodyJson, ct);

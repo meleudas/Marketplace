@@ -1,6 +1,8 @@
 using Marketplace.Application.Catalog.Cache;
+using Marketplace.Application.Common.Observability;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Reviews.Cache;
+using Marketplace.Application.Reviews.Policies;
 using Marketplace.Application.Reviews.DTOs;
 using Marketplace.Application.Reviews.Mappings;
 using Marketplace.Application.Reviews.Services;
@@ -20,25 +22,39 @@ public sealed class CreateProductReviewCommandHandler : IRequestHandler<CreatePr
     private readonly IReviewPurchaseVerificationService _verificationService;
     private readonly IReviewRatingAggregationService _ratingAggregationService;
     private readonly IAppCachePort _cache;
+    private readonly ReviewCreateAntiAbusePolicy _antiAbuse;
 
     public CreateProductReviewCommandHandler(
         IProductRepository productRepository,
         IProductReviewRepository productReviewRepository,
         IReviewPurchaseVerificationService verificationService,
         IReviewRatingAggregationService ratingAggregationService,
-        IAppCachePort cache)
+        IAppCachePort cache,
+        ReviewCreateAntiAbusePolicy antiAbuse)
     {
         _productRepository = productRepository;
         _productReviewRepository = productReviewRepository;
         _verificationService = verificationService;
         _ratingAggregationService = ratingAggregationService;
         _cache = cache;
+        _antiAbuse = antiAbuse;
     }
 
     public async Task<Result<ReviewDto>> Handle(CreateProductReviewCommand request, CancellationToken ct)
     {
         try
         {
+            var abuse = await _antiAbuse.EvaluateCreateAsync(request.ActorUserId, request.ProductId, ct);
+            if (!abuse.Allowed)
+            {
+                MarketplaceMetrics.AbuseRejected.Add(1,
+                [
+                    new KeyValuePair<string, object?>("domain", "reviews"),
+                    new KeyValuePair<string, object?>("reason", abuse.Reason ?? "rate_exceeded"),
+                ]);
+                return Result.Failure<ReviewDto>(abuse.Reason ?? "Review create rate limit exceeded");
+            }
+
             var productId = ProductId.From(request.ProductId);
             var product = await _productRepository.GetByIdAsync(productId, ct);
             if (product is null)

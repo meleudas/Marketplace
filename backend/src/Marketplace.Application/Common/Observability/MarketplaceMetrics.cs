@@ -71,6 +71,7 @@ public static class MarketplaceMetrics
     public static readonly Counter<long> ShipmentDeliveryStatus = Meter.CreateCounter<long>("shipment_delivery_status_total");
     public static readonly Counter<long> ShippingWebhookEvents = Meter.CreateCounter<long>("shipping_webhook_events_total");
     public static readonly Counter<long> RateLimitRejected = Meter.CreateCounter<long>("rate_limit_rejected_total");
+    public static readonly Counter<long> AbuseRejected = Meter.CreateCounter<long>("abuse_rejected_total");
     public static readonly Counter<long> CouponOps = Meter.CreateCounter<long>("coupon_operations_total");
     public static readonly Counter<long> CouponErrors = Meter.CreateCounter<long>("coupon_errors_total");
     public static readonly Counter<long> CouponValidationFailures = Meter.CreateCounter<long>("coupon_validation_failures_total");

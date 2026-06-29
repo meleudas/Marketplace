@@ -108,6 +108,12 @@ public static class DependencyInjection
         services.Configure<ReportsOptions>(configuration.GetSection(ReportsOptions.SectionName));
         services.Configure<ChatsOptions>(configuration.GetSection(ChatsOptions.SectionName));
         services.Configure<SupportOptions>(configuration.GetSection(SupportOptions.SectionName));
+        services.Configure<Marketplace.Application.Reviews.Options.ReviewsAntiAbuseOptions>(
+            configuration.GetSection(Marketplace.Application.Reviews.Options.ReviewsAntiAbuseOptions.SectionName));
+        services.Configure<Marketplace.Application.Payments.Options.PaymentWebhookAntiAbuseOptions>(
+            configuration.GetSection(Marketplace.Application.Payments.Options.PaymentWebhookAntiAbuseOptions.SectionName));
+        services.Configure<Marketplace.Application.Notifications.Options.NotificationDispatchAntiAbuseOptions>(
+            configuration.GetSection(Marketplace.Application.Notifications.Options.NotificationDispatchAntiAbuseOptions.SectionName));
         services.Configure<BehaviorAnalyticsOptions>(configuration.GetSection(BehaviorAnalyticsOptions.SectionName));
         services.Configure<ClickHouseOptions>(configuration.GetSection(ClickHouseOptions.SectionName));
         services.Configure<NovaPoshtaOptions>(configuration.GetSection(NovaPoshtaOptions.SectionName));
