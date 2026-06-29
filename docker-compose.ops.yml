@@ -1,0 +1,26 @@
+# Optional ops profile: scheduled Postgres backups to host-mounted volume.
+# Usage:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.ops.yml --profile ops up -d postgres-backup
+#
+# Schedule on host (recommended for production):
+#   0 2 * * * POSTGRES_PASSWORD=... BACKUP_DIR=/var/backups/marketplace ./backend/scripts/ops/postgres-backup.sh
+
+services:
+  postgres-backup:
+    profiles: ["ops"]
+    image: postgres:17-alpine
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: marketplace
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      BACKUP_DIR: /backups
+    volumes:
+      - ${POSTGRES_BACKUP_DIR:-./backups/postgres}:/backups
+      - ./backend/scripts/ops/postgres-backup.sh:/scripts/postgres-backup.sh:ro
+    entrypoint: ["/bin/sh", "-c", "chmod +x /scripts/postgres-backup.sh && /scripts/postgres-backup.sh"]
