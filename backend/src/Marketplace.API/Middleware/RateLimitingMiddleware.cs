@@ -54,6 +54,14 @@ public sealed class RateLimitingMiddleware
                 return;
         }
 
+        if (group == "password-reset")
+        {
+            var emailKey = await TryReadEmailPartitionAsync(context);
+            if (!string.IsNullOrWhiteSpace(emailKey)
+                && !await AcquireAsync("password-reset-email", _options.PasswordReset, emailKey, context))
+                return;
+        }
+
         await _next(context);
     }
 
@@ -87,6 +95,9 @@ public sealed class RateLimitingMiddleware
 
         if (p is "/auth/register" or "/auth/login" or "/auth/refresh")
             return ("auth", _options.Auth, ip);
+
+        if (p is "/account/forgot-password" or "/account/reset-password")
+            return ("password-reset", _options.PasswordReset, ip);
 
         if (p == "/me/cart/checkout")
             return ("checkout", _options.Checkout, userId ?? ip);
