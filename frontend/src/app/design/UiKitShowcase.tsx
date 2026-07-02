@@ -1,6 +1,5 @@
 "use client";
 
-import "@/shared/ui/tokens.css";
 import {
   Button,
   Container,
@@ -11,6 +10,7 @@ import {
   Pagination,
   ProductCard,
   TextField,
+  Typography,
 } from "@/shared/ui";
 import { MOCK_PRODUCTS } from "@/shared/ui/mock";
 import styles from "./UiKitShowcase.module.css";
@@ -23,16 +23,33 @@ export function UiKitShowcase() {
       <main>
         <Container as="section" className={styles.section}>
           <header className={styles.sectionHead}>
-            <h1 className={styles.heading}>UI Skeleton</h1>
-            <p className={styles.subtext}>
+            <Typography variant="h1">UI Skeleton</Typography>
+            <Typography variant="body1" className={styles.subtext}>
               Презентаційні компоненти для нового дизайну. Без бізнес-логіки, лише
               верстка та токени.
-            </p>
+            </Typography>
           </header>
         </Container>
 
         <Container as="section" className={styles.section}>
-          <h2 className={styles.blockTitle}>Buttons</h2>
+          <Typography variant="h2" className={styles.blockTitle}>
+            Typography
+          </Typography>
+          <div className={styles.typographyStack}>
+            <Typography variant="h1">Heading 1</Typography>
+            <Typography variant="h2">Heading 2</Typography>
+            <Typography variant="h3">Heading 3</Typography>
+            <Typography variant="body1">Body 1 — основний текст</Typography>
+            <Typography variant="body2">Body 2 — дрібний текст</Typography>
+            <Typography variant="body3">Body 3 — напівжирний текст</Typography>
+            <Typography variant="body4">Body 4 — звичайний текст</Typography>
+          </div>
+        </Container>
+
+        <Container as="section" className={styles.section}>
+          <Typography variant="h2" className={styles.blockTitle}>
+            Buttons
+          </Typography>
           <div className={styles.row}>
             <Button variant="primary">Primary</Button>
             <Button variant="secondary">Secondary</Button>
@@ -50,7 +67,7 @@ export function UiKitShowcase() {
         </Container>
 
         <Container as="section" className={styles.section}>
-          <h2 className={styles.blockTitle}>Icon buttons</h2>
+          <Typography variant="h2" className={styles.blockTitle}>Icon buttons</Typography>
           <div className={styles.row}>
             <IconButton label="Обране" icon={<span>♡</span>} />
             <IconButton label="Кошик" icon={<span>🛒</span>} variant="solid" />
@@ -59,7 +76,7 @@ export function UiKitShowcase() {
         </Container>
 
         <Container as="section" className={styles.section}>
-          <h2 className={styles.blockTitle}>Inputs / TextField</h2>
+          <Typography variant="h2" className={styles.blockTitle}>Inputs / TextField</Typography>
           <div className={styles.formGrid}>
             <TextField label="Email" name="email" placeholder="you@example.com" />
             <TextField
@@ -79,7 +96,7 @@ export function UiKitShowcase() {
         </Container>
 
         <Container as="section" className={styles.section}>
-          <h2 className={styles.blockTitle}>Product grid</h2>
+          <Typography variant="h2" className={styles.blockTitle}>Product grid</Typography>
           <Grid minColumnWidth="15rem">
             {MOCK_PRODUCTS.map((product) => (
               <ProductCard key={product.id} product={product} />
@@ -88,7 +105,7 @@ export function UiKitShowcase() {
         </Container>
 
         <Container as="section" className={styles.section}>
-          <h2 className={styles.blockTitle}>Pagination</h2>
+          <Typography variant="h2" className={styles.blockTitle}>Pagination</Typography>
           <Pagination currentPage={3} totalPages={12} />
         </Container>
       </main>

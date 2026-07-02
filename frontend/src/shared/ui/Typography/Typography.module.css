@@ -1,0 +1,55 @@
+.h1 {
+  margin: 0;
+  font-family: var(--font-family-secondary);
+  font-size: var(--typography-h1-font-size);
+  font-weight: var(--typography-h1-font-weight);
+  line-height: var(--typography-h1-line-height);
+}
+
+.h2 {
+  margin: 0;
+  font-family: var(--font-family-secondary);
+  font-size: var(--typography-h2-font-size);
+  font-weight: var(--typography-h2-font-weight);
+  line-height: var(--typography-h2-line-height);
+}
+
+.h3 {
+  margin: 0;
+  font-family: var(--font-family-secondary);
+  font-size: var(--typography-h3-font-size);
+  font-weight: var(--typography-h3-font-weight);
+  line-height: var(--typography-h3-line-height);
+}
+
+.body1 {
+  margin: 0;
+  font-family: var(--font-family-primary);
+  font-size: var(--typography-body1-font-size);
+  font-weight: var(--typography-body1-font-weight);
+  line-height: var(--typography-body1-line-height);
+}
+
+.body2 {
+  margin: 0;
+  font-family: var(--font-family-primary);
+  font-size: var(--typography-body2-font-size);
+  font-weight: var(--typography-body2-font-weight);
+  line-height: var(--typography-body2-line-height);
+}
+
+.body3 {
+  margin: 0;
+  font-family: var(--font-family-primary);
+  font-size: var(--typography-body3-font-size);
+  font-weight: var(--typography-body3-font-weight);
+  line-height: var(--typography-body3-line-height);
+}
+
+.body4 {
+  margin: 0;
+  font-family: var(--font-family-primary);
+  font-size: var(--typography-body4-font-size);
+  font-weight: var(--typography-body4-font-weight);
+  line-height: var(--typography-body4-line-height);
+}

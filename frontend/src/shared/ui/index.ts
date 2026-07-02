@@ -1,3 +1,5 @@
+export { Typography } from "./Typography";
+export type { TypographyProps, TypographyVariant } from "./Typography";
 export { Button } from "./Button";
 export { IconButton } from "./IconButton";
 export { TextField } from "./TextField";

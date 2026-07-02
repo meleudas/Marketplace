@@ -1,38 +1,113 @@
 /**
- * Design tokens for the UI skeleton (shared/ui kit).
- * Plain CSS custom properties so they can be consumed from any *.module.css.
- * Imported by the /design showcase page; safe to import elsewhere later.
+ * Design tokens — UI Kit values as CSS custom properties.
+ * Consumed from global styles and *.module.css across shared/ui.
  */
 :root {
-  /* Colors */
-  --ui-color-bg: #f8fafc;
-  --ui-color-surface: #ffffff;
+  /* Fonts */
+  --font-family-primary: "Inter", system-ui, sans-serif;
+  --font-family-secondary: "Montserrat", system-ui, sans-serif;
+
+  /* Primary colors */
+  --color-primary-1: #535ddf;
+  --color-primary-2: #ee0290;
+  --color-primary-3: #a3c2e0;
+  --color-primary-4: #131417;
+  --color-primary-5: #ffffff;
+
+  /* Secondary colors */
+  --color-secondary-green: #17870e;
+  --color-secondary-red: #dc362e;
+  --color-secondary-blue: #224487;
+  --color-secondary-purple: #7c90e0;
+
+  /* Neutral colors */
+  --color-neutral-1: #08083d;
+  --color-neutral-2: #2f2f2f;
+  --color-neutral-3: #5f7081;
+  --color-neutral-4: #80838d;
+
+  /* Spacing */
+  --spacing-4: 4px;
+  --spacing-8: 8px;
+  --spacing-12: 12px;
+  --spacing-16: 16px;
+  --spacing-20: 20px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-40: 40px;
+  --spacing-56: 56px;
+
+  /* Border radius */
+  --border-radius: 8px;
+
+  /* Typography — Heading 1 */
+  --typography-h1-font-size: 24px;
+  --typography-h1-font-weight: 600;
+  --typography-h1-line-height: 21px;
+
+  /* Typography — Heading 2 */
+  --typography-h2-font-size: 20px;
+  --typography-h2-font-weight: 500;
+  --typography-h2-line-height: 21px;
+
+  /* Typography — Heading 3 */
+  --typography-h3-font-size: 20px;
+  --typography-h3-font-weight: 400;
+  --typography-h3-line-height: 21px;
+
+  /* Typography — Body 1 */
+  --typography-body1-font-size: 16px;
+  --typography-body1-font-weight: 400;
+  --typography-body1-line-height: 16px;
+
+  /* Typography — Body 2 */
+  --typography-body2-font-size: 12px;
+  --typography-body2-font-weight: 400;
+  --typography-body2-line-height: 16px;
+
+  /* Typography — Body 3 */
+  --typography-body3-font-size: 16px;
+  --typography-body3-font-weight: 500;
+  --typography-body3-line-height: 16px;
+
+  /* Typography — Body 4 */
+  --typography-body4-font-size: 16px;
+  --typography-body4-font-weight: 400;
+  --typography-body4-line-height: 16px;
+
+  /* Grid */
+  --grid-container-padding: 20px;
+  --grid-gap: 18px;
+  --grid-columns: 5;
+
+  /* Legacy aliases (shared/ui components) */
+  --ui-color-bg: var(--color-primary-5);
+  --ui-color-surface: var(--color-primary-5);
   --ui-color-surface-muted: #f4f4f5;
-  --ui-color-text: #18181b;
-  --ui-color-text-muted: #52525b;
-  --ui-color-text-subtle: #71717a;
-  --ui-color-border: #e4e4e7;
-  --ui-color-border-strong: #d4d4d8;
+  --ui-color-text: var(--color-primary-4);
+  --ui-color-text-muted: var(--color-neutral-3);
+  --ui-color-text-subtle: var(--color-neutral-4);
+  --ui-color-border: var(--color-primary-3);
+  --ui-color-border-strong: var(--color-neutral-4);
 
-  --ui-color-primary: #2563eb;
-  --ui-color-primary-hover: #1d4ed8;
-  --ui-color-primary-soft: #eff6ff;
-  --ui-color-on-primary: #ffffff;
+  --ui-color-primary: var(--color-primary-1);
+  --ui-color-primary-hover: #4249b8;
+  --ui-color-primary-soft: rgb(83 93 223 / 0.12);
+  --ui-color-on-primary: var(--color-primary-5);
 
-  --ui-color-danger: #dc2626;
-  --ui-color-danger-hover: #b91c1c;
-  --ui-color-success: #16a34a;
+  --ui-color-danger: var(--color-secondary-red);
+  --ui-color-danger-hover: #b82d26;
+  --ui-color-success: var(--color-secondary-green);
 
-  /* Typography */
-  --ui-font-sans: var(--font-geist-sans), Arial, Helvetica, sans-serif;
-  --ui-font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --ui-font-sans: var(--font-family-primary);
+  --ui-font-mono: ui-monospace, monospace;
 
-  --ui-font-size-xs: 0.78rem;
-  --ui-font-size-sm: 0.86rem;
-  --ui-font-size-md: 0.95rem;
-  --ui-font-size-lg: 1.1rem;
-  --ui-font-size-xl: 1.5rem;
-  --ui-font-size-2xl: 2rem;
+  --ui-font-size-xs: var(--typography-body2-font-size);
+  --ui-font-size-sm: 14px;
+  --ui-font-size-md: var(--typography-body1-font-size);
+  --ui-font-size-lg: var(--typography-h2-font-size);
+  --ui-font-size-xl: var(--typography-h1-font-size);
+  --ui-font-size-2xl: 28px;
 
   --ui-font-weight-regular: 400;
   --ui-font-weight-medium: 500;
@@ -42,30 +117,28 @@
   --ui-line-height-tight: 1.2;
   --ui-line-height-normal: 1.5;
 
-  /* Spacing */
-  --ui-space-1: 0.25rem;
-  --ui-space-2: 0.5rem;
-  --ui-space-3: 0.75rem;
-  --ui-space-4: 1rem;
-  --ui-space-5: 1.5rem;
-  --ui-space-6: 2rem;
-  --ui-space-7: 3rem;
+  --ui-space-1: var(--spacing-4);
+  --ui-space-2: var(--spacing-8);
+  --ui-space-3: var(--spacing-12);
+  --ui-space-4: var(--spacing-16);
+  --ui-space-5: var(--spacing-20);
+  --ui-space-6: var(--spacing-24);
+  --ui-space-7: var(--spacing-32);
+  --ui-space-8: var(--spacing-40);
+  --ui-space-9: var(--spacing-56);
 
-  /* Radius */
-  --ui-radius-sm: 0.4rem;
-  --ui-radius-md: 0.6rem;
-  --ui-radius-lg: 0.9rem;
+  --ui-radius-sm: var(--border-radius);
+  --ui-radius-md: var(--border-radius);
+  --ui-radius-lg: var(--border-radius);
   --ui-radius-full: 999px;
 
-  /* Shadows */
-  --ui-shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06);
-  --ui-shadow-md: 0 6px 22px rgb(15 23 42 / 0.06);
-  --ui-shadow-lg: 0 10px 28px rgb(15 23 42 / 0.1);
+  --ui-shadow-sm: 0 1px 2px rgb(8 8 61 / 0.06);
+  --ui-shadow-md: 0 6px 22px rgb(8 8 61 / 0.08);
+  --ui-shadow-lg: 0 10px 28px rgb(8 8 61 / 0.12);
 
-  /* Layout */
   --ui-container-max: 74rem;
+  --ui-grid-min: 16rem;
 
-  /* Motion */
   --ui-transition-fast: 120ms ease;
   --ui-transition-base: 160ms ease;
 }

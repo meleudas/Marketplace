@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/montserrat": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",
     "@refinedev/core": "^5.0.0",
     "@refinedev/react-hook-form": "^5.0.0",
