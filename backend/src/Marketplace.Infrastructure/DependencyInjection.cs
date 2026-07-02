@@ -28,6 +28,7 @@ using Marketplace.Application.Support.Ports;
 using Marketplace.Application.Chats.Ports;
 using Marketplace.Application.Finance.Ports;
 using Marketplace.Infrastructure.Chats;
+using Marketplace.Infrastructure.Persistence.Seeders;
 using Marketplace.Application.Behavior.Options;
 using Marketplace.Application.Behavior.Ports;
 using Marketplace.Domain.Categories.Repositories;
@@ -463,5 +464,23 @@ public static class DependencyInjection
             if (!r.Succeeded)
                 throw new InvalidOperationException(string.Join(" ", r.Errors.Select(e => e.Description)));
         }
+
+        var seeders = new IDbSeeder[]
+        {
+            new BookCategorySeeder(),
+            new CompanySeeder(),
+            new UserSeeder(),
+            new CompanyMemberSeeder(),
+            new ProductSeeder(),
+            new ShippingWarehouseSeeder(),
+            new OrderSeeder(),
+            new InteractionSeeder(),
+            new SupportChatSeeder(),
+            new RemainingDomainsSeeder(),
+            new FinalBatchSeeder(),
+        };
+
+        foreach (var seeder in seeders)
+            await seeder.SeedAsync(db, sp, ct);
     }
 }
