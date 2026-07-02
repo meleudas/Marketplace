@@ -7,11 +7,15 @@
   box-sizing: border-box;
 }
 
+html {
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
-  background: var(--color-primary-5);
-  color: var(--color-primary-4);
-  font-family: var(--font-family-primary);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-primary);
 }
 
 button,

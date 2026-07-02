@@ -1,15 +1,19 @@
 import type { CSSProperties, HTMLAttributes } from "react";
 import styles from "./Grid.module.css";
 
-type GridGap = "sm" | "md" | "lg";
+type GridGap = "sm" | "md" | "lg" | "grid";
+type GridLayout = "auto" | "columns";
 
 interface GridProps extends HTMLAttributes<HTMLDivElement> {
-  /** Minimum column width; grid auto-fills responsively. */
+  /** `auto` — responsive minmax columns; `columns` — fixed mobile grid (5 cols). */
+  layout?: GridLayout;
+  /** Minimum column width when layout is `auto`. */
   minColumnWidth?: string;
   gap?: GridGap;
 }
 
 export function Grid({
+  layout = "auto",
   minColumnWidth = "16rem",
   gap = "md",
   className,
@@ -17,10 +21,18 @@ export function Grid({
   children,
   ...props
 }: GridProps) {
-  const classes = [styles.grid, styles[gap], className ?? ""].filter(Boolean).join(" ");
+  const classes = [
+    styles.grid,
+    layout === "columns" ? styles.columns : styles.auto,
+    gap === "grid" ? styles.gridGap : styles[gap],
+    className ?? "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   const gridStyle = {
     ...style,
-    ["--ui-grid-min" as string]: minColumnWidth,
+    ...(layout === "auto" ? { ["--ui-grid-min" as string]: minColumnWidth } : {}),
   } as CSSProperties;
 
   return (

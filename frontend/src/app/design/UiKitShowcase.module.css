@@ -1,44 +1,240 @@
 .page {
   min-height: 100vh;
-  background: var(--ui-color-bg);
-  font-family: var(--ui-font-sans);
-  color: var(--ui-color-text);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-primary);
+}
+
+.main {
+  display: grid;
+  gap: var(--space-32);
+  padding-block: var(--space-24);
+}
+
+.hero {
+  display: grid;
+  gap: var(--space-8);
 }
 
 .section {
-  padding-block: var(--ui-space-6);
-}
-
-.sectionHead {
   display: grid;
-  gap: var(--ui-space-2);
+  gap: var(--space-16);
+  padding-bottom: var(--space-8);
+  border-bottom: 1px solid var(--ui-color-border);
 }
 
-.subtext {
-  max-width: 40rem;
-  color: var(--color-neutral-3);
+.sectionTitle {
+  margin: 0;
 }
 
-.blockTitle {
-  margin-bottom: var(--spacing-16);
+.groupTitle {
+  margin: 0;
+  color: var(--color-neutral-600);
+}
+
+.muted {
+  color: var(--color-neutral-600);
+}
+
+.colorRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  gap: var(--space-16);
+}
+
+.colorItem {
+  display: grid;
+  gap: var(--space-8);
+  margin: 0;
+  text-align: center;
+}
+
+.colorSwatch {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+}
+
+.colorSwatchBordered {
+  border: 1px solid var(--color-border);
+}
+
+.swatchPrimaryBlue {
+  background: var(--color-primary-blue);
+}
+
+.swatchPrimaryPink {
+  background: var(--color-primary-pink);
+}
+
+.swatchPrimaryLightBlue {
+  background: var(--color-primary-light-blue);
+}
+
+.swatchPrimaryDark {
+  background: var(--color-primary-dark);
+  border: 1px solid var(--color-border);
+}
+
+.swatchWhite {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+}
+
+.swatchSuccess {
+  background: var(--color-success);
+}
+
+.swatchError {
+  background: var(--color-error);
+}
+
+.swatchSecondaryBlue {
+  background: var(--color-secondary-blue);
+}
+
+.swatchSecondaryLightBlue {
+  background: var(--color-secondary-light-blue);
+}
+
+.swatchNeutralDark {
+  background: var(--color-neutral-dark);
+  border: 1px solid var(--color-border);
+}
+
+.swatchNeutral800 {
+  background: var(--color-neutral-800);
+}
+
+.swatchNeutral600 {
+  background: var(--color-neutral-600);
+}
+
+.swatchNeutral400 {
+  background: var(--color-neutral-400);
+}
+
+.spaceBlock4 {
+  width: var(--space-4);
+  height: var(--space-4);
+}
+
+.spaceBlock8 {
+  width: var(--space-8);
+  height: var(--space-8);
+}
+
+.spaceBlock12 {
+  width: var(--space-12);
+  height: var(--space-12);
+}
+
+.spaceBlock16 {
+  width: var(--space-16);
+  height: var(--space-16);
+}
+
+.spaceBlock20 {
+  width: var(--space-20);
+  height: var(--space-20);
+}
+
+.spaceBlock24 {
+  width: var(--space-24);
+  height: var(--space-24);
+}
+
+.spaceBlock32 {
+  width: var(--space-32);
+  height: var(--space-32);
+}
+
+.spaceBlock36 {
+  width: var(--space-36);
+  height: var(--space-36);
+}
+
+.fontSamples {
+  display: grid;
+  gap: var(--space-16);
+}
+
+.fontSample {
+  display: grid;
+  gap: var(--space-8);
 }
 
 .typographyStack {
   display: grid;
-  gap: var(--spacing-12);
+  gap: var(--space-12);
 }
 
-.row {
+.spacingRow {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--ui-space-3);
-  margin-bottom: var(--ui-space-3);
+  align-items: flex-end;
+  gap: var(--space-16);
 }
 
-.formGrid {
+.spacingItem {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  gap: var(--ui-space-4);
-  max-width: 48rem;
+  gap: var(--space-8);
+  justify-items: center;
+}
+
+.spacingBlock {
+  background: var(--color-neutral-800);
+  border-radius: 2px;
+}
+
+.gridDemo {
+  padding: var(--space-12);
+  border: 1px dashed var(--color-primary-blue);
+  border-radius: var(--radius-sm);
+}
+
+.gridColumn {
+  height: 7rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary-light-blue);
+}
+
+.radiusDemo {
+  display: grid;
+  gap: var(--space-8);
+  justify-items: start;
+}
+
+.radiusBox {
+  width: var(--space-36);
+  height: var(--space-36);
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary-light-blue);
+}
+
+.iconGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  gap: var(--space-12);
+}
+
+.iconItem {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: center;
+  text-align: center;
+  color: var(--color-text);
+}
+
+.buttonShowcase {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-12);
+  width: 100%;
+  max-width: var(--button-width-lg);
+  padding: var(--space-20);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--ui-color-border);
+  background: var(--color-bg);
 }

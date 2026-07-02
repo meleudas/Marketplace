@@ -1,0 +1,144 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  gap: var(--space-8);
+  height: var(--button-height);
+  padding: 0 var(--button-padding-x-sm);
+  border: 1px solid transparent;
+  border-radius: var(--button-border-radius-pill);
+  font-family: var(--font-primary);
+  font-size: var(--button-font-size);
+  font-weight: var(--button-font-weight);
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--ui-transition-fast),
+    border-color var(--ui-transition-fast),
+    color var(--ui-transition-fast),
+    opacity var(--ui-transition-fast),
+    transform var(--ui-transition-fast);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--button-focus-ring);
+  outline-offset: 2px;
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.button:disabled {
+  opacity: var(--button-disabled-opacity);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.sm {
+  width: var(--button-width-sm);
+  min-width: var(--button-width-sm);
+}
+
+.lg {
+  width: var(--button-width-lg);
+  min-width: var(--button-width-lg);
+  padding-inline: var(--button-padding-x-lg);
+}
+
+.icon {
+  width: var(--button-icon-size);
+  min-width: var(--button-icon-size);
+  padding: 0;
+}
+
+.fullWidth {
+  width: 100%;
+  min-width: 0;
+  max-width: var(--button-width-lg);
+}
+
+.iconOnly .label {
+  display: none;
+}
+
+.spread {
+  justify-content: space-between;
+}
+
+.leadingIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.leadingIcon svg {
+  width: var(--button-icon-inner-size);
+  height: var(--button-icon-inner-size);
+}
+
+.label {
+  min-width: 0;
+}
+
+.primary {
+  background: var(--color-primary-pink);
+  border-color: var(--color-primary-pink);
+  color: var(--color-button-text);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--color-primary-pink-hover);
+  border-color: var(--color-primary-pink-hover);
+}
+
+.primary:active:not(:disabled) {
+  background: var(--color-primary-pink-active);
+  border-color: var(--color-primary-pink-active);
+}
+
+.secondary {
+  background: var(--color-button-secondary-bg);
+  border-color: var(--color-button-secondary-bg);
+  color: var(--color-button-secondary-text);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--color-button-secondary-hover);
+  border-color: var(--color-button-secondary-hover);
+}
+
+.secondary:active:not(:disabled) {
+  background: var(--color-button-secondary-active);
+  border-color: var(--color-button-secondary-active);
+}
+
+.gradient {
+  background: var(--button-gradient-discount);
+  border-color: var(--color-primary-pink);
+  color: var(--color-button-text);
+}
+
+.gradient:hover:not(:disabled) {
+  background: var(--button-gradient-discount-hover);
+  border-color: var(--color-primary-pink-hover);
+}
+
+.dark {
+  background: var(--color-bg);
+  border-color: var(--color-button-dark-border);
+  color: var(--color-button-text);
+}
+
+.dark:hover:not(:disabled) {
+  background: var(--color-button-dark-hover-bg);
+  border-color: var(--color-primary-light-blue);
+}
+
+.dark .leadingIcon svg {
+  width: var(--space-24);
+  height: var(--space-24);
+}

@@ -47,7 +47,7 @@ export function Header({ brand = "Marketplace", navItems = DEFAULT_NAV }: Header
         <div className={styles.actions}>
           <IconButton label="Обране" icon={<span>♡</span>} />
           <IconButton label="Кошик" icon={<span>🛒</span>} />
-          <Button variant="secondary" size="sm">
+          <Button variant="primary" size="sm">
             Увійти
           </Button>
         </div>

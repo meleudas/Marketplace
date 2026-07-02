@@ -1,44 +1,76 @@
 /**
- * Design tokens — UI Kit values as CSS custom properties.
+ * Design tokens — mobile-first UI Kit values as CSS custom properties.
  * Consumed from global styles and *.module.css across shared/ui.
  */
 :root {
   /* Fonts */
-  --font-family-primary: "Inter", system-ui, sans-serif;
-  --font-family-secondary: "Montserrat", system-ui, sans-serif;
+  --font-primary: "Inter", system-ui, sans-serif;
+  --font-secondary: "Montserrat", system-ui, sans-serif;
+  --font-family-primary: var(--font-primary);
+  --font-family-secondary: var(--font-secondary);
 
-  /* Primary colors */
-  --color-primary-1: #535ddf;
-  --color-primary-2: #ee0290;
-  --color-primary-3: #a3c2e0;
-  --color-primary-4: #131417;
-  --color-primary-5: #ffffff;
+  /* Raw — primary colors */
+  --color-primary-blue: #535ddf;
+  --color-primary-pink: #ee0290;
+  --color-primary-light-blue: #a3c2e0;
+  --color-primary-dark: #131417;
+  --color-white: #ffffff;
 
-  /* Secondary colors */
-  --color-secondary-green: #17870e;
-  --color-secondary-red: #dc362e;
+  /* Raw — secondary colors */
+  --color-success: #17870e;
+  --color-error: #dc362e;
   --color-secondary-blue: #224487;
-  --color-secondary-purple: #7c90e0;
+  --color-secondary-light-blue: #7c90e0;
 
-  /* Neutral colors */
-  --color-neutral-1: #08083d;
-  --color-neutral-2: #2f2f2f;
-  --color-neutral-3: #5f7081;
-  --color-neutral-4: #80838d;
+  /* Raw — neutral colors */
+  --color-neutral-dark: #08083d;
+  --color-neutral-800: #2f2f2f;
+  --color-neutral-600: #5f7081;
+  --color-neutral-400: #80838d;
 
-  /* Spacing */
-  --spacing-4: 4px;
-  --spacing-8: 8px;
-  --spacing-12: 12px;
-  --spacing-16: 16px;
-  --spacing-20: 20px;
-  --spacing-24: 24px;
-  --spacing-32: 32px;
-  --spacing-40: 40px;
-  --spacing-56: 56px;
+  /* Numbered aliases (backward compatibility) */
+  --color-primary-1: var(--color-primary-blue);
+  --color-primary-2: var(--color-primary-pink);
+  --color-primary-3: var(--color-primary-light-blue);
+  --color-primary-4: var(--color-primary-dark);
+  --color-primary-5: var(--color-white);
+  --color-secondary-green: var(--color-success);
+  --color-secondary-red: var(--color-error);
+  --color-secondary-purple: var(--color-secondary-light-blue);
+  --color-neutral-1: var(--color-neutral-dark);
+  --color-neutral-2: var(--color-neutral-800);
+  --color-neutral-3: var(--color-neutral-600);
+  --color-neutral-4: var(--color-neutral-400);
+
+  /* Semantic colors */
+  --color-bg: var(--color-primary-dark);
+  --color-text: var(--color-white);
+  --color-accent: var(--color-primary-pink);
+  --color-border: var(--color-neutral-400);
+  --color-app-bg: var(--color-bg);
+
+  /* Spacing scale (mobile UI kit) */
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-36: 36px;
+
+  --spacing-4: var(--space-4);
+  --spacing-8: var(--space-8);
+  --spacing-12: var(--space-12);
+  --spacing-16: var(--space-16);
+  --spacing-20: var(--space-20);
+  --spacing-24: var(--space-24);
+  --spacing-32: var(--space-32);
+  --spacing-36: var(--space-36);
 
   /* Border radius */
-  --border-radius: 8px;
+  --radius-sm: 8px;
+  --border-radius: var(--radius-sm);
 
   /* Typography — Heading 1 */
   --typography-h1-font-size: 24px;
@@ -75,39 +107,104 @@
   --typography-body4-font-weight: 400;
   --typography-body4-line-height: 16px;
 
-  /* Grid */
-  --grid-container-padding: 20px;
-  --grid-gap: 18px;
+  /* Grid / container (mobile-first) */
   --grid-columns: 5;
+  --grid-gap: 20px;
+  --container-padding: 20px;
+  --grid-container-padding: var(--container-padding);
+
+  /* Button — mobile UI kit */
+  --button-height: 40px;
+  --button-width-sm: 194px;
+  --button-width-lg: 390px;
+  --button-icon-size: 40px;
+  --button-icon-inner-size: 20px;
+  --button-border-radius-pill: 999px;
+  --button-padding-x-sm: var(--space-20);
+  --button-padding-x-lg: var(--space-24);
+  --button-font-size: var(--typography-body3-font-size);
+  --button-font-weight: var(--typography-body3-font-weight);
+  --button-focus-ring: var(--color-primary-blue);
+  --button-disabled-opacity: 0.55;
+
+  --color-primary-pink-hover: #ff1a9e;
+  --color-primary-pink-active: #d9027f;
+  --color-button-text: var(--color-white);
+  --color-button-secondary-bg: #a3c2e0;
+  --color-button-secondary-text: var(--color-white);
+  --color-button-secondary-hover: #96b8d4;
+  --color-button-secondary-active: #89afd0;
+  --color-button-dark-border: rgb(163 194 224 / 0.45);
+  --color-button-dark-hover-bg: #1a1a1f;
+
+  --color-button-accent-shade-3: #52013b;
+  --color-button-accent-shade-4: #720158;
+  --color-button-accent-outer: #860163;
+
+  --button-gradient-discount: linear-gradient(
+    90deg,
+    var(--color-button-accent-outer) 0%,
+    var(--color-button-accent-shade-4) 28%,
+    var(--color-button-accent-shade-3) 48%,
+    var(--color-primary-pink) 72%,
+    var(--color-primary-pink-hover) 100%
+  );
+  --button-gradient-discount-hover: linear-gradient(
+    90deg,
+    var(--color-button-accent-outer) 0%,
+    var(--color-button-accent-shade-4) 24%,
+    var(--color-button-accent-shade-3) 44%,
+    var(--color-primary-pink-hover) 76%,
+    var(--color-primary-pink-hover) 100%
+  );
+
+  /* Legacy button aliases */
+  --button-height-sm: var(--button-height);
+  --button-height-md: var(--button-height);
+  --button-height-lg: var(--button-height);
+  --button-height-xl: var(--button-height);
+  --button-min-width-sm: var(--button-width-sm);
+  --button-min-width-lg: var(--button-width-lg);
+  --button-min-width-xl: var(--button-width-lg);
+  --button-font-size-sm: var(--button-font-size);
+  --button-font-size-md: var(--button-font-size);
+  --button-font-size-lg: var(--button-font-size);
+  --button-font-size-xl: var(--button-font-size);
+  --button-font-weight-sm: var(--button-font-weight);
+  --button-font-weight-md: var(--button-font-weight);
+  --button-font-weight-lg: var(--button-font-weight);
+  --button-font-weight-xl: var(--button-font-weight);
+  --button-padding-x-md: var(--button-padding-x-sm);
+  --button-padding-x-xl: var(--button-padding-x-lg);
 
   /* Legacy aliases (shared/ui components) */
-  --ui-color-bg: var(--color-primary-5);
-  --ui-color-surface: var(--color-primary-5);
-  --ui-color-surface-muted: #f4f4f5;
-  --ui-color-text: var(--color-primary-4);
-  --ui-color-text-muted: var(--color-neutral-3);
-  --ui-color-text-subtle: var(--color-neutral-4);
-  --ui-color-border: var(--color-primary-3);
-  --ui-color-border-strong: var(--color-neutral-4);
+  --ui-color-bg: var(--color-bg);
+  --ui-color-surface: var(--color-neutral-800);
+  --ui-color-surface-muted: #25252b;
+  --ui-color-text: var(--color-text);
+  --ui-color-text-muted: var(--color-neutral-400);
+  --ui-color-text-subtle: var(--color-neutral-600);
+  --ui-color-border: rgb(163 194 224 / 0.18);
+  --ui-color-border-strong: rgb(163 194 224 / 0.32);
 
-  --ui-color-primary: var(--color-primary-1);
+  --ui-color-primary: var(--color-primary-blue);
   --ui-color-primary-hover: #4249b8;
   --ui-color-primary-soft: rgb(83 93 223 / 0.12);
-  --ui-color-on-primary: var(--color-primary-5);
+  --ui-color-on-primary: var(--color-white);
 
-  --ui-color-danger: var(--color-secondary-red);
+  --ui-color-danger: var(--color-error);
   --ui-color-danger-hover: #b82d26;
-  --ui-color-success: var(--color-secondary-green);
+  --ui-color-success: var(--color-success);
 
-  --ui-font-sans: var(--font-family-primary);
+  --ui-font-sans: var(--font-primary);
   --ui-font-mono: ui-monospace, monospace;
 
   --ui-font-size-xs: var(--typography-body2-font-size);
-  --ui-font-size-sm: 14px;
+  --ui-font-size-sm: var(--typography-body2-font-size);
   --ui-font-size-md: var(--typography-body1-font-size);
   --ui-font-size-lg: var(--typography-h2-font-size);
   --ui-font-size-xl: var(--typography-h1-font-size);
-  --ui-font-size-2xl: 28px;
+  --ui-font-size-2xl: var(--typography-h1-font-size);
 
   --ui-font-weight-regular: 400;
   --ui-font-weight-medium: 500;
@@ -117,27 +214,23 @@
   --ui-line-height-tight: 1.2;
   --ui-line-height-normal: 1.5;
 
-  --ui-space-1: var(--spacing-4);
-  --ui-space-2: var(--spacing-8);
-  --ui-space-3: var(--spacing-12);
-  --ui-space-4: var(--spacing-16);
-  --ui-space-5: var(--spacing-20);
-  --ui-space-6: var(--spacing-24);
-  --ui-space-7: var(--spacing-32);
-  --ui-space-8: var(--spacing-40);
-  --ui-space-9: var(--spacing-56);
+  --ui-space-1: var(--space-4);
+  --ui-space-2: var(--space-8);
+  --ui-space-3: var(--space-12);
+  --ui-space-4: var(--space-16);
+  --ui-space-5: var(--space-20);
+  --ui-space-6: var(--space-24);
+  --ui-space-7: var(--space-32);
+  --ui-space-8: var(--space-36);
 
-  --ui-radius-sm: var(--border-radius);
-  --ui-radius-md: var(--border-radius);
-  --ui-radius-lg: var(--border-radius);
+  --ui-radius-sm: var(--radius-sm);
+  --ui-radius-md: var(--radius-sm);
+  --ui-radius-lg: var(--radius-sm);
   --ui-radius-full: 999px;
 
-  --ui-shadow-sm: 0 1px 2px rgb(8 8 61 / 0.06);
-  --ui-shadow-md: 0 6px 22px rgb(8 8 61 / 0.08);
-  --ui-shadow-lg: 0 10px 28px rgb(8 8 61 / 0.12);
-
-  --ui-container-max: 74rem;
-  --ui-grid-min: 16rem;
+  --ui-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+  --ui-shadow-md: 0 6px 22px rgb(0 0 0 / 0.4);
+  --ui-shadow-lg: 0 10px 28px rgb(0 0 0 / 0.5);
 
   --ui-transition-fast: 120ms ease;
   --ui-transition-base: 160ms ease;

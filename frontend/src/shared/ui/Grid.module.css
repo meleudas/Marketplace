@@ -1,6 +1,14 @@
 .grid {
   display: grid;
+}
+
+.auto {
   grid-template-columns: repeat(auto-fill, minmax(var(--ui-grid-min, 16rem), 1fr));
+}
+
+.columns {
+  grid-template-columns: repeat(var(--grid-columns), minmax(0, 1fr));
+  gap: var(--grid-gap);
 }
 
 .sm {
@@ -13,4 +21,8 @@
 
 .lg {
   gap: var(--ui-space-5);
+}
+
+.gridGap {
+  gap: var(--grid-gap);
 }

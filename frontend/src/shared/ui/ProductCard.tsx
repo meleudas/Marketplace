@@ -1,5 +1,6 @@
 import styles from "./ProductCard.module.css";
 import { Button } from "./Button";
+import { CartIcon } from "./icons";
 import { IconButton } from "./IconButton";
 
 export interface ProductCardData {
@@ -18,7 +19,7 @@ interface ProductCardProps {
 }
 
 const formatPrice = (value: number): string =>
-  new Intl.NumberFormat("uk-UA", { style: "currency", currency: "UAH", maximumFractionDigits: 0 }).format(value);
+  `${new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 0 }).format(value)} грн`;
 
 export function ProductCard({ product }: ProductCardProps) {
   return (
@@ -60,8 +61,8 @@ export function ProductCard({ product }: ProductCardProps) {
           ) : null}
         </div>
 
-        <Button size="sm" fullWidth>
-          У кошик
+        <Button variant="primary" size="sm" fullWidth leadingIcon={<CartIcon />}>
+          До кошика
         </Button>
       </div>
     </article>
