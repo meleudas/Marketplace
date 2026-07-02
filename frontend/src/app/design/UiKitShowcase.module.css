@@ -238,3 +238,58 @@
   border: 1px solid var(--ui-color-border);
   background: var(--color-bg);
 }
+
+.inputShowcase {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  width: 100%;
+  max-width: var(--button-width-lg);
+  padding: var(--space-20);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--ui-color-border);
+  background: var(--color-bg);
+}
+
+.inputForm {
+  display: grid;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.inputSuccess {
+  color: var(--color-success);
+}
+
+.selectionShowcase {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-24);
+  width: 100%;
+  max-width: var(--button-width-lg);
+  padding: var(--space-20);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--ui-color-border);
+  background: var(--color-bg);
+}
+
+.selectionBlock {
+  display: grid;
+  gap: var(--space-12);
+}
+
+.selectionCaption {
+  margin: 0;
+  color: var(--color-neutral-600);
+  text-transform: capitalize;
+}
+
+.selectionStatus {
+  margin: 0;
+  color: var(--color-neutral-600);
+}
+
+.cardDemo {
+  display: flex;
+  justify-content: flex-start;
+}

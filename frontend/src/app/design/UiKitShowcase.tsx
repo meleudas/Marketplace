@@ -1,6 +1,9 @@
 "use client";
 
-import { Button, Container, Grid, QuantityStepper, Typography } from "@/shared/ui";
+import { Button, Container, Grid, ProductCard, QuantityStepper, Typography } from "@/shared/ui";
+import { MOCK_PRODUCTS } from "@/shared/ui/mock";
+import { InputFieldsDemo } from "./InputFieldsDemo";
+import { SelectionsDemo } from "./SelectionsDemo";
 import {
   ArrowsSortIcon,
   BookFlipIcon,
@@ -254,6 +257,35 @@ export function UiKitShowcase() {
 
         <section className={styles.section}>
           <Typography variant="h2" className={styles.sectionTitle}>
+            Input fields
+          </Typography>
+          <Typography variant="body2" className={styles.muted}>
+            Наведи, сфокусуй або введи некоректні дані — стани працюють через CSS та zod + react-hook-form.
+          </Typography>
+          <InputFieldsDemo />
+        </section>
+
+        <section className={styles.section}>
+          <Typography variant="h2" className={styles.sectionTitle}>
+            Selections
+          </Typography>
+          <Typography variant="body2" className={styles.muted}>
+            Checkbox та Radio Button на існуючих іконках — клікни, щоб перемкнути стан.
+          </Typography>
+          <SelectionsDemo />
+        </section>
+
+        <section className={styles.section}>
+          <Typography variant="h2" className={styles.sectionTitle}>
+            Card
+          </Typography>
+          <div className={styles.cardDemo}>
+            <ProductCard product={MOCK_PRODUCTS[0]} />
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <Typography variant="h2" className={styles.sectionTitle}>
             Buttons
           </Typography>
           <div className={styles.buttonShowcase}>
@@ -265,13 +297,13 @@ export function UiKitShowcase() {
               До кошика
             </Button>
 
-            <Button variant="secondary" size="lg">
+            <Button variant="secondary" size="lg" fullWidth>
               Надіслати відгук
             </Button>
 
             <QuantityStepper value={1} />
 
-            <Button variant="gradient" size="lg" fullWidth>
+            <Button variant="gradient" size="sm">
               Отримати знижку
             </Button>
 
@@ -279,7 +311,7 @@ export function UiKitShowcase() {
               Увійти або зареєструватися
             </Button>
 
-            <Button variant="dark" size="sm" leadingIcon={<OpenBookIcon />}>
+            <Button variant="secondary" size="sm" leadingIcon={<OpenBookIcon />}>
               950грн
             </Button>
 

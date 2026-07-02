@@ -15,9 +15,11 @@
   cursor: pointer;
   white-space: nowrap;
   transition:
-    background var(--ui-transition-fast),
+    background-color var(--ui-transition-fast),
+    background-image var(--ui-transition-fast),
     border-color var(--ui-transition-fast),
     color var(--ui-transition-fast),
+    box-shadow var(--ui-transition-fast),
     opacity var(--ui-transition-fast),
     transform var(--ui-transition-fast);
 }
@@ -117,14 +119,17 @@
 }
 
 .gradient {
-  background: var(--button-gradient-discount);
   border-color: var(--color-primary-pink);
   color: var(--color-button-text);
+  background-color: rgb(238 2 144 / 0.2);
+  background-image: var(--button-gradient-discount-overlay), var(--button-gradient-discount);
+  box-shadow: var(--button-shadow-discount-inset), var(--button-shadow-discount-drop);
 }
 
 .gradient:hover:not(:disabled) {
-  background: var(--button-gradient-discount-hover);
   border-color: var(--color-primary-pink-hover);
+  background-color: rgb(255 26 158 / 0.2);
+  background-image: var(--button-gradient-discount-hover-overlay), var(--button-gradient-discount-hover);
 }
 
 .dark {

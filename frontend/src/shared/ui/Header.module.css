@@ -2,59 +2,86 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--ui-color-surface);
-  border-bottom: 1px solid var(--ui-color-border);
+  background: var(--header-bg);
 }
 
 .inner {
-  display: flex;
+  display: grid;
+  gap: var(--header-row-gap);
+  padding-block: var(--header-padding-y);
+}
+
+.topRow {
+  display: grid;
+  grid-template-columns: var(--header-side-width) 1fr var(--header-side-width);
   align-items: center;
-  gap: var(--ui-space-5);
-  padding-block: var(--ui-space-4);
 }
 
-.brand {
-  font-family: var(--ui-font-sans);
-  font-size: var(--ui-font-size-xl);
-  font-weight: var(--ui-font-weight-bold);
-  color: var(--ui-color-primary);
-  white-space: nowrap;
-}
-
-.nav {
-  display: flex;
-  align-items: center;
-  gap: var(--ui-space-4);
-}
-
-.link {
-  font-family: var(--ui-font-sans);
-  font-size: var(--ui-font-size-sm);
-  font-weight: var(--ui-font-weight-medium);
-  color: var(--ui-color-text-muted);
+.logo {
+  display: inline-flex;
+  justify-self: center;
   text-decoration: none;
-  transition: color var(--ui-transition-fast);
+  line-height: 0;
 }
 
-.link:hover {
-  color: var(--ui-color-primary);
-}
-
-.search {
-  flex: 1;
-  max-width: 24rem;
-  margin-left: auto;
+.logoImage {
+  display: block;
+  width: var(--header-logo-width);
+  height: var(--header-logo-height);
 }
 
 .actions {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: var(--ui-space-2);
+  justify-content: flex-end;
+  gap: var(--space-4);
+  justify-self: end;
 }
 
-@media (max-width: 860px) {
-  .nav,
-  .search {
-    display: none;
-  }
+.iconAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--header-icon-action-size);
+  height: var(--header-icon-action-size);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-white);
+  background: transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity var(--ui-transition-fast);
+}
+
+.iconAction:hover {
+  opacity: 0.75;
+}
+
+.iconAction:focus-visible {
+  outline: 2px solid var(--color-primary-blue);
+  outline-offset: 2px;
+}
+
+.search input {
+  height: var(--header-search-height);
+  border-color: var(--color-white);
+  border-radius: var(--header-search-radius);
+  background: var(--header-bg);
+}
+
+.search input::placeholder {
+  color: var(--color-neutral-600);
+}
+
+.search input:hover:not(:focus):not(:disabled) {
+  border-color: var(--color-primary-light-blue);
+}
+
+.search input:focus {
+  border-color: var(--color-primary-blue);
+}
+
+.search svg {
+  color: var(--color-white);
 }

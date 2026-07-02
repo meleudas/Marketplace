@@ -1,56 +1,60 @@
+import Link from "next/link";
 import { Container } from "./Container";
-import { Button } from "./Button";
-import { IconButton } from "./IconButton";
 import { TextField } from "./TextField";
+import { BookTopLogo, CartIcon, MenuIcon, MicrophoneIcon, SearchIcon, UserIcon } from "./icons";
+import iconStyles from "./icons/Icon.module.css";
 import styles from "./Header.module.css";
 
-interface NavItem {
-  label: string;
-  href: string;
-}
-
 interface HeaderProps {
-  brand?: string;
-  navItems?: NavItem[];
+  homeHref?: string;
+  userHref?: string;
+  cartHref?: string;
+  searchPlaceholder?: string;
+  onMenuClick?: () => void;
 }
 
-const DEFAULT_NAV: NavItem[] = [
-  { label: "Каталог", href: "#" },
-  { label: "Категорії", href: "#" },
-  { label: "Про нас", href: "#" },
-  { label: "Контакти", href: "#" },
-];
-
-export function Header({ brand = "Marketplace", navItems = DEFAULT_NAV }: HeaderProps) {
+export function Header({
+  homeHref = "/",
+  userHref = "/auth",
+  cartHref = "#",
+  searchPlaceholder = "Пошук",
+  onMenuClick,
+}: HeaderProps) {
   return (
     <header className={styles.header}>
       <Container className={styles.inner}>
-        <span className={styles.brand}>{brand}</span>
+        <div className={styles.topRow}>
+          <button
+            type="button"
+            className={styles.iconAction}
+            aria-label="Відкрити меню"
+            onClick={onMenuClick}
+          >
+            <MenuIcon className={iconStyles.icon} />
+          </button>
 
-        <nav className={styles.nav} aria-label="Головна навігація">
-          {navItems.map((item) => (
-            <a key={item.label} href={item.href} className={styles.link}>
-              {item.label}
-            </a>
-          ))}
-        </nav>
+          <Link href={homeHref} className={styles.logo} aria-label="BOOK TOP — на головну">
+            <BookTopLogo className={styles.logoImage} />
+          </Link>
 
-        <div className={styles.search}>
-          <TextField
-            type="search"
-            placeholder="Пошук товарів..."
-            aria-label="Пошук товарів"
-            leadingIcon={<span>⌕</span>}
-          />
+          <div className={styles.actions}>
+            <Link href={userHref} className={styles.iconAction} aria-label="Профіль">
+              <UserIcon className={iconStyles.icon} />
+            </Link>
+            <Link href={cartHref} className={styles.iconAction} aria-label="Кошик">
+              <CartIcon className={iconStyles.icon} />
+            </Link>
+          </div>
         </div>
 
-        <div className={styles.actions}>
-          <IconButton label="Обране" icon={<span>♡</span>} />
-          <IconButton label="Кошик" icon={<span>🛒</span>} />
-          <Button variant="primary" size="sm">
-            Увійти
-          </Button>
-        </div>
+        <TextField
+          kind="search"
+          className={styles.search}
+          placeholder={searchPlaceholder}
+          aria-label="Пошук"
+          leadingIcon={<SearchIcon className={iconStyles.icon} />}
+          trailingIcon={<MicrophoneIcon className={iconStyles.icon} />}
+        />
       </Container>
     </header>
   );

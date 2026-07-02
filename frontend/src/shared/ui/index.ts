@@ -4,11 +4,16 @@ export { Button } from "./Button";
 export type { ButtonProps, ButtonSize, ButtonVariant } from "./Button";
 export { QuantityStepper } from "./QuantityStepper";
 export type { QuantityStepperProps } from "./QuantityStepper";
+export { Checkbox } from "./Checkbox";
+export type { CheckboxProps } from "./Checkbox";
+export { Radio, RadioGroup } from "./Radio";
+export type { RadioGroupProps, RadioProps } from "./Radio";
 export {
   ArrowsSortIcon,
   BagIcon,
   BookFlipIcon,
   BookIcon,
+  BookTopLogo,
   CartIcon,
   CheckboxCheckedIcon,
   CheckboxIcon,
@@ -34,9 +39,10 @@ export {
   UserIcon,
   ViberIcon,
 } from "./icons";
-export type { IconProps } from "./icons";
+export type { BookTopLogoProps, IconProps } from "./icons";
 export { IconButton } from "./IconButton";
 export { TextField } from "./TextField";
+export type { TextFieldKind, TextFieldProps } from "./TextField";
 export { Container } from "./Container";
 export { Grid } from "./Grid";
 export { ProductCard } from "./ProductCard";

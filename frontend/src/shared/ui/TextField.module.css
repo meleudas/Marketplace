@@ -1,14 +1,15 @@
 .wrapper {
   display: grid;
-  gap: var(--ui-space-2);
+  gap: var(--input-label-gap);
   width: 100%;
 }
 
 .label {
-  font-family: var(--ui-font-sans);
-  font-size: var(--ui-font-size-sm);
-  font-weight: var(--ui-font-weight-medium);
-  color: var(--ui-color-text);
+  font-family: var(--font-primary);
+  font-size: var(--input-label-font-size);
+  font-weight: var(--input-label-font-weight);
+  line-height: var(--input-label-line-height);
+  color: var(--input-label-color);
 }
 
 .control {
@@ -18,50 +19,54 @@
 }
 
 .field {
+  box-sizing: border-box;
   width: 100%;
-  font-family: var(--ui-font-sans);
-  font-size: var(--ui-font-size-md);
-  color: var(--ui-color-text);
-  background: var(--ui-color-surface);
-  border: 1px solid var(--ui-color-border-strong);
-  border-radius: var(--ui-radius-md);
-  padding: var(--ui-space-3) var(--ui-space-4);
-  transition:
-    border-color var(--ui-transition-fast),
-    box-shadow var(--ui-transition-fast);
+  height: var(--input-height);
+  padding: 0 var(--input-padding-x);
+  font-family: var(--font-primary);
+  font-size: var(--input-font-size);
+  font-weight: var(--input-font-weight);
+  line-height: var(--input-line-height);
+  color: var(--input-text-color);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border-default);
+  border-radius: var(--input-border-radius);
+  caret-color: var(--input-caret-color);
+  transition: border-color var(--ui-transition-fast);
 }
 
 .field::placeholder {
-  color: var(--ui-color-text-subtle);
+  color: var(--input-placeholder-color);
+}
+
+.control:hover .field:not(:focus):not(:disabled):not(.fieldError) {
+  border-color: var(--input-border-hover);
 }
 
 .field:focus {
   outline: none;
-  border-color: var(--ui-color-primary);
-  box-shadow: 0 0 0 3px var(--ui-color-primary-soft);
+  border-color: var(--input-border-focus);
 }
 
 .field:disabled {
-  background: var(--ui-color-surface-muted);
+  opacity: var(--input-disabled-opacity);
   cursor: not-allowed;
-  opacity: 0.7;
 }
 
 .hasLeading {
-  padding-left: 2.5rem;
+  padding-left: var(--input-padding-x-with-icon);
 }
 
 .hasTrailing {
-  padding-right: 2.5rem;
+  padding-right: var(--input-padding-x-with-icon);
 }
 
 .fieldError {
-  border-color: var(--ui-color-danger);
+  border-color: var(--input-border-error);
 }
 
 .fieldError:focus {
-  border-color: var(--ui-color-danger);
-  box-shadow: 0 0 0 3px rgb(220 38 38 / 0.12);
+  border-color: var(--input-border-error);
 }
 
 .adornment {
@@ -69,24 +74,26 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--ui-color-text-subtle);
+  color: var(--input-placeholder-color);
   pointer-events: none;
 }
 
 .leading {
-  left: var(--ui-space-3);
+  left: var(--input-padding-x);
 }
 
 .trailing {
-  right: var(--ui-space-3);
+  right: var(--input-padding-x);
 }
 
 .hint {
-  font-size: var(--ui-font-size-xs);
-  color: var(--ui-color-text-muted);
+  font-size: var(--input-message-font-size);
+  line-height: var(--input-message-line-height);
+  color: var(--input-placeholder-color);
 }
 
 .error {
-  font-size: var(--ui-font-size-xs);
-  color: var(--ui-color-danger);
+  font-size: var(--input-message-font-size);
+  line-height: var(--input-message-line-height);
+  color: var(--input-border-error);
 }

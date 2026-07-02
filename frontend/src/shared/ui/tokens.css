@@ -119,7 +119,7 @@
   --button-width-lg: 390px;
   --button-icon-size: 40px;
   --button-icon-inner-size: 20px;
-  --button-border-radius-pill: 999px;
+  --button-border-radius-pill: 8px;
   --button-padding-x-sm: var(--space-20);
   --button-padding-x-lg: var(--space-24);
   --button-font-size: var(--typography-body3-font-size);
@@ -137,25 +137,66 @@
   --color-button-dark-border: rgb(163 194 224 / 0.45);
   --color-button-dark-hover-bg: #1a1a1f;
 
-  --color-button-accent-shade-3: #52013b;
-  --color-button-accent-shade-4: #720158;
-  --color-button-accent-outer: #860163;
+  --color-button-accent-center: #520c36;
+  --color-button-accent-shade-1: #651842;
+  --color-button-accent-shade-2: #7c1c50;
+  --color-button-accent-shade-3: #951a64;
+  --color-button-accent-outer: #b00478;
+  --color-button-accent-center-hover: #631845;
+  --color-button-accent-shade-1-hover: #761c4e;
+  --color-button-accent-shade-2-hover: #8f205c;
+  --color-button-accent-shade-3-hover: #a8226c;
+  --color-button-accent-outer-hover: #c80582;
 
+  --button-discount-ellipse-size-x: 72%;
+  --button-discount-ellipse-size-y: 140%;
+  --button-shadow-discount-inset: inset 0 2px 30px 4px rgb(238 2 144 / 1);
+  --button-shadow-discount-drop: 0 45px 25px 0 rgb(0 0 0 / 0.05);
   --button-gradient-discount: linear-gradient(
     90deg,
-    var(--color-button-accent-outer) 0%,
-    var(--color-button-accent-shade-4) 28%,
-    var(--color-button-accent-shade-3) 48%,
-    var(--color-primary-pink) 72%,
-    var(--color-primary-pink-hover) 100%
+    var(--color-primary-pink) 0%,
+    var(--color-primary-pink) 7%,
+    var(--color-button-accent-outer) 14%,
+    var(--color-button-accent-shade-3) 24%,
+    var(--color-button-accent-shade-2) 34%,
+    var(--color-button-accent-shade-1) 42%,
+    var(--color-button-accent-center) 50%,
+    var(--color-button-accent-shade-1) 58%,
+    var(--color-button-accent-shade-2) 66%,
+    var(--color-button-accent-shade-3) 76%,
+    var(--color-button-accent-outer) 86%,
+    var(--color-primary-pink) 93%,
+    var(--color-primary-pink) 100%
   );
   --button-gradient-discount-hover: linear-gradient(
     90deg,
-    var(--color-button-accent-outer) 0%,
-    var(--color-button-accent-shade-4) 24%,
-    var(--color-button-accent-shade-3) 44%,
-    var(--color-primary-pink-hover) 76%,
+    var(--color-primary-pink-hover) 0%,
+    var(--color-primary-pink-hover) 7%,
+    var(--color-button-accent-outer-hover) 14%,
+    var(--color-button-accent-shade-3-hover) 24%,
+    var(--color-button-accent-shade-2-hover) 34%,
+    var(--color-button-accent-shade-1-hover) 42%,
+    var(--color-button-accent-center-hover) 50%,
+    var(--color-button-accent-shade-1-hover) 58%,
+    var(--color-button-accent-shade-2-hover) 66%,
+    var(--color-button-accent-shade-3-hover) 76%,
+    var(--color-button-accent-outer-hover) 86%,
+    var(--color-primary-pink-hover) 93%,
     var(--color-primary-pink-hover) 100%
+  );
+  --button-gradient-discount-overlay: radial-gradient(
+    ellipse var(--button-discount-ellipse-size-x) var(--button-discount-ellipse-size-y) at 50% 50%,
+    rgb(82 12 54 / 0.35) 0%,
+    rgb(82 12 54 / 0.2) 38%,
+    rgb(82 12 54 / 0.08) 62%,
+    transparent 78%
+  );
+  --button-gradient-discount-hover-overlay: radial-gradient(
+    ellipse var(--button-discount-ellipse-size-x) var(--button-discount-ellipse-size-y) at 50% 50%,
+    rgb(99 24 69 / 0.3) 0%,
+    rgb(99 24 69 / 0.18) 38%,
+    rgb(99 24 69 / 0.07) 62%,
+    transparent 78%
   );
 
   /* Legacy button aliases */
@@ -176,6 +217,74 @@
   --button-font-weight-xl: var(--button-font-weight);
   --button-padding-x-md: var(--button-padding-x-sm);
   --button-padding-x-xl: var(--button-padding-x-lg);
+
+  /* Input fields — mobile UI kit */
+  --input-height: 40px;
+  --input-border-radius: var(--radius-sm);
+  --input-padding-x: var(--space-12);
+  --input-padding-x-with-icon: 2.5rem;
+  --input-label-gap: var(--space-8);
+  --input-label-font-size: var(--typography-body1-font-size);
+  --input-label-font-weight: var(--typography-body1-font-weight);
+  --input-label-line-height: var(--typography-body1-line-height);
+  --input-label-color: var(--color-white);
+  --input-font-size: var(--typography-body1-font-size);
+  --input-font-weight: var(--typography-body1-font-weight);
+  --input-line-height: var(--typography-body1-line-height);
+  --input-text-color: var(--color-white);
+  --input-placeholder-color: var(--color-neutral-600);
+  --input-bg: transparent;
+  --input-border-default: var(--color-white);
+  --input-border-hover: var(--color-primary-light-blue);
+  --input-border-focus: var(--color-primary-blue);
+  --input-border-error: var(--color-error);
+  --input-caret-color: var(--color-primary-pink);
+  --input-message-font-size: var(--typography-body2-font-size);
+  --input-message-line-height: var(--typography-body2-line-height);
+  --input-disabled-opacity: 0.55;
+
+  /* Selection controls — checkbox / radio */
+  --selection-size: 24px;
+  --selection-checked-fill: var(--color-primary-blue);
+  --selection-color-unchecked: var(--color-white);
+  --selection-color-checked-mark: var(--color-white);
+  --selection-label-gap: var(--space-8);
+  --selection-focus-ring: var(--color-primary-blue);
+
+  /* Header — mobile UI kit */
+  --header-bg: #000000;
+  --header-padding-y: var(--space-12);
+  --header-row-gap: var(--space-12);
+  --header-side-width: 4.5rem;
+  --header-icon-action-size: 2.5rem;
+  --header-logo-width: 89px;
+  --header-logo-height: 40px;
+  --header-search-height: 40px;
+  --header-search-radius: var(--button-border-radius-pill);
+
+  /* Footer — mobile UI kit */
+  --footer-bg: #000000;
+  --footer-width: 85%;
+  --footer-padding-y: var(--space-32);
+  --footer-section-gap: var(--space-24);
+  --footer-divider: var(--color-neutral-800);
+  --footer-title-color: var(--color-white);
+  --footer-link-color: var(--color-neutral-600);
+  --footer-link-gap: var(--space-12);
+  --footer-social-size: 40px;
+  --footer-social-bg: var(--color-neutral-600);
+  --footer-cat-width: 120px;
+  --footer-cat-height: 162px;
+
+  /* Product card — mobile UI kit */
+  --product-card-width: 194px;
+  --product-card-bg: var(--color-neutral-800);
+  --product-card-radius: var(--radius-sm);
+  --product-card-padding: var(--space-12);
+  --product-card-gap: var(--space-8);
+  --product-card-image-ratio: 1 / 1;
+  --product-card-author-color: var(--color-neutral-600);
+  --product-card-availability-color: var(--color-success);
 
   /* Legacy aliases (shared/ui components) */
   --ui-color-bg: var(--color-bg);

@@ -1,3 +1,7 @@
+export { FooterCatIllustration } from "./FooterCatIllustration";
+export type { FooterCatIllustrationProps } from "./FooterCatIllustration";
+export { BookTopLogo } from "./BookTopLogo";
+export type { BookTopLogoProps } from "./BookTopLogo";
 export {
   ArrowsSortIcon,
   BagIcon,
