@@ -6,7 +6,6 @@ using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Notifications;
 using Marketplace.Application.Notifications.Ports;
 using Marketplace.Infrastructure.Notifications;
-using Marketplace.Application.Common.Observability;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text.Json;

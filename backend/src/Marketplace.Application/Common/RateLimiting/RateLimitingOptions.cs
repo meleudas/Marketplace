@@ -21,6 +21,7 @@ public sealed class RateLimitingOptions
     public bool Enabled { get; set; } = true;
     public RateLimitPolicyOptions Auth { get; set; } = new() { PermitLimit = 10, WindowSeconds = 60 };
     public RateLimitPolicyOptions AuthEmail { get; set; } = new() { PermitLimit = 5, WindowSeconds = 60, PartitionBy = RateLimitPartitionKind.EmailHash };
+    public RateLimitPolicyOptions PasswordReset { get; set; } = new() { PermitLimit = 3, WindowSeconds = 3600, PartitionBy = RateLimitPartitionKind.EmailHash };
     public RateLimitPolicyOptions Checkout { get; set; } = new() { PermitLimit = 5, WindowSeconds = 60, PartitionBy = RateLimitPartitionKind.UserId };
     public RateLimitPolicyOptions Review { get; set; } = new() { PermitLimit = 10, WindowSeconds = 3600, PartitionBy = RateLimitPartitionKind.UserId };
     public RateLimitPolicyOptions PaymentWebhook { get; set; } = new() { PermitLimit = 120, WindowSeconds = 60 };
