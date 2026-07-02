@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const ukPhonePattern = /^(\+380|380|0)\s?\(?\d{2}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}$/;
 
-export const emailFieldDemoSchema = z.object({
+export const emailFieldSchema = z.object({
   email: z
     .string()
     .trim()
@@ -10,7 +10,7 @@ export const emailFieldDemoSchema = z.object({
     .pipe(z.email("Введіть коректний email")),
 });
 
-export const phoneFieldDemoSchema = z.object({
+export const phoneFieldSchema = z.object({
   phone: z
     .string()
     .trim()
@@ -18,5 +18,5 @@ export const phoneFieldDemoSchema = z.object({
     .regex(ukPhonePattern, "Невірний формат номера, наприклад +380 XX XXX XX XX"),
 });
 
-export type EmailFieldDemoValues = z.infer<typeof emailFieldDemoSchema>;
-export type PhoneFieldDemoValues = z.infer<typeof phoneFieldDemoSchema>;
+export type EmailFieldValues = z.infer<typeof emailFieldSchema>;
+export type PhoneFieldValues = z.infer<typeof phoneFieldSchema>;

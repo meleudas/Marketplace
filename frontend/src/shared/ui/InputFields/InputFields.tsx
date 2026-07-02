@@ -3,48 +3,46 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Button, TextField, Typography } from "@/shared/ui";
+import { Button } from "../Button";
+import { TextField } from "../TextField";
+import { Typography } from "../Typography";
 import {
-  emailFieldDemoSchema,
-  phoneFieldDemoSchema,
-  type EmailFieldDemoValues,
-  type PhoneFieldDemoValues,
-} from "./input-fields-demo.schema";
-import styles from "./UiKitShowcase.module.css";
+  emailFieldSchema,
+  phoneFieldSchema,
+  type EmailFieldValues,
+  type PhoneFieldValues,
+} from "./input-fields.schema";
+import styles from "./InputFields.module.css";
 
-export function InputFieldsDemo() {
+export function InputFields() {
   const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
   const [phoneSuccess, setPhoneSuccess] = useState<string | null>(null);
 
-  const emailForm = useForm<EmailFieldDemoValues>({
-    resolver: zodResolver(emailFieldDemoSchema),
+  const emailForm = useForm<EmailFieldValues>({
+    resolver: zodResolver(emailFieldSchema),
     defaultValues: { email: "" },
     mode: "onBlur",
     reValidateMode: "onBlur",
   });
 
-  const phoneForm = useForm<PhoneFieldDemoValues>({
-    resolver: zodResolver(phoneFieldDemoSchema),
+  const phoneForm = useForm<PhoneFieldValues>({
+    resolver: zodResolver(phoneFieldSchema),
     defaultValues: { phone: "" },
     mode: "onBlur",
     reValidateMode: "onBlur",
   });
 
-  const onEmailSubmit = (values: EmailFieldDemoValues) => {
+  const onEmailSubmit = (values: EmailFieldValues) => {
     setEmailSuccess(`Email прийнято: ${values.email}`);
   };
 
-  const onPhoneSubmit = (values: PhoneFieldDemoValues) => {
+  const onPhoneSubmit = (values: PhoneFieldValues) => {
     setPhoneSuccess(`Номер прийнято: ${values.phone}`);
   };
 
   return (
-    <div className={styles.inputShowcase}>
-      <form
-        className={styles.inputForm}
-        noValidate
-        onSubmit={emailForm.handleSubmit(onEmailSubmit)}
-      >
+    <div className={styles.showcase}>
+      <form className={styles.form} noValidate onSubmit={emailForm.handleSubmit(onEmailSubmit)}>
         <TextField
           label="Email"
           kind="email"
@@ -58,17 +56,13 @@ export function InputFieldsDemo() {
           Перевірити email
         </Button>
         {emailSuccess ? (
-          <Typography variant="body2" className={styles.inputSuccess}>
+          <Typography variant="body2" className={styles.success}>
             {emailSuccess}
           </Typography>
         ) : null}
       </form>
 
-      <form
-        className={styles.inputForm}
-        noValidate
-        onSubmit={phoneForm.handleSubmit(onPhoneSubmit)}
-      >
+      <form className={styles.form} noValidate onSubmit={phoneForm.handleSubmit(onPhoneSubmit)}>
         <TextField
           label="Телефон"
           kind="tel"
@@ -82,7 +76,7 @@ export function InputFieldsDemo() {
           Перевірити телефон
         </Button>
         {phoneSuccess ? (
-          <Typography variant="body2" className={styles.inputSuccess}>
+          <Typography variant="body2" className={styles.success}>
             {phoneSuccess}
           </Typography>
         ) : null}

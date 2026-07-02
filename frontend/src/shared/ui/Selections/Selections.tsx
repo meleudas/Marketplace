@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Checkbox, Radio, RadioGroup, Typography } from "@/shared/ui";
-import styles from "./UiKitShowcase.module.css";
+import { Checkbox } from "../Checkbox";
+import { Radio, RadioGroup } from "../Radio";
+import { Typography } from "../Typography";
+import styles from "./Selections.module.css";
 
-export function SelectionsDemo() {
+export function Selections() {
   const [newsletter, setNewsletter] = useState(false);
   const [delivery, setDelivery] = useState("pickup");
 
   return (
-    <div className={styles.selectionShowcase}>
-      <div className={styles.selectionBlock}>
-        <Typography variant="body2" className={styles.selectionCaption}>
+    <div className={styles.showcase}>
+      <div className={styles.block}>
+        <Typography variant="body2" className={styles.caption}>
           Checkbox
         </Typography>
         <Checkbox
@@ -20,13 +22,13 @@ export function SelectionsDemo() {
           checked={newsletter}
           onCheckedChange={setNewsletter}
         />
-        <Typography variant="body2" className={styles.selectionStatus}>
+        <Typography variant="body2" className={styles.status}>
           Стан: {newsletter ? "обрано" : "не обрано"}
         </Typography>
       </div>
 
-      <div className={styles.selectionBlock}>
-        <Typography variant="body2" className={styles.selectionCaption}>
+      <div className={styles.block}>
+        <Typography variant="body2" className={styles.caption}>
           Radio Button
         </Typography>
         <RadioGroup
@@ -39,7 +41,7 @@ export function SelectionsDemo() {
           <Radio value="courier" label="Кур'єр" />
           <Radio value="post" label="Нова пошта" />
         </RadioGroup>
-        <Typography variant="body2" className={styles.selectionStatus}>
+        <Typography variant="body2" className={styles.status}>
           Обрано: {delivery}
         </Typography>
       </div>

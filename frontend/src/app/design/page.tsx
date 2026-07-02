@@ -1,13 +1,5 @@
-import { Footer } from "@/shared/ui/Footer";
-import { Header } from "@/shared/ui/Header";
-import { UiKitShowcase } from "./UiKitShowcase";
+import { DesignScreen } from "@/features/design/screens/DesignScreen";
 
 export default function DesignPage() {
-  return (
-    <>
-      <Header />
-      <UiKitShowcase />
-      <Footer />
-    </>
-  );
+  return <DesignScreen />;
 }
