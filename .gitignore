@@ -68,6 +68,11 @@ pnpm-debug.log*
 
 # testing
 /coverage
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/playwright/.cache/
+frontend/tests/e2e/.auth/
 
 # next.js
 .next/
