@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { getCatalogCategories, getCatalogProducts } from "@/features/storefront/api/catalog.api";
+import {
+  getCatalogCategories,
+  getCatalogProductBySlug,
+  getCatalogProducts,
+} from "@/features/storefront/api/catalog.api";
 import {
   CATALOG_PRODUCT_SORT_OPTIONS,
   getCatalogProductSortLabel,
@@ -29,10 +33,14 @@ import styles from "./HomeScreen.module.css";
 
 const PAGE_SIZE = 8;
 
-const mapProductToCard = (product: CatalogProductListItemDto): ProductCardData => ({
+const mapProductToCard = (
+  product: CatalogProductListItemDto,
+  imageUrl?: string | null,
+): ProductCardData => ({
   id: String(product.id),
   title: product.name,
   price: product.price,
+  imageUrl: imageUrl ?? undefined,
   inStock: product.availabilityStatus !== "out_of_stock" && product.availableQty > 0,
 });
 
@@ -41,6 +49,7 @@ export function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<CatalogCategoryDto[]>([]);
   const [products, setProducts] = useState<CatalogProductListItemDto[]>([]);
+  const [productImages, setProductImages] = useState<Record<string, string | null>>({});
 
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [inStockOnly, setInStockOnly] = useState(false);
@@ -111,6 +120,50 @@ export function HomeScreen() {
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
   );
+
+  useEffect(() => {
+    const slugsToLoad = paginatedProducts
+      .map((product) => product.slug)
+      .filter((slug) => !(slug in productImages));
+
+    if (slugsToLoad.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadImages = async () => {
+      const entries = await Promise.all(
+        slugsToLoad.map(async (slug) => {
+          try {
+            const details = await getCatalogProductBySlug(slug);
+            const image = details.images[0]?.thumbnailUrl ?? details.images[0]?.imageUrl ?? null;
+            return [slug, image] as const;
+          } catch {
+            return [slug, null] as const;
+          }
+        }),
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      setProductImages((current) => {
+        const next = { ...current };
+        for (const [slug, image] of entries) {
+          next[slug] = image;
+        }
+        return next;
+      });
+    };
+
+    void loadImages();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [paginatedProducts, productImages]);
 
   const sortButtonLabel = selectedSort ? getCatalogProductSortLabel(selectedSort) : "Сортувати";
 
@@ -233,7 +286,7 @@ export function HomeScreen() {
                 href={`/products/${product.slug}`}
                 className={styles.cardLink}
               >
-                <ProductCard product={mapProductToCard(product)} />
+                <ProductCard product={mapProductToCard(product, productImages[product.slug])} />
               </Link>
             ))}
           </div>

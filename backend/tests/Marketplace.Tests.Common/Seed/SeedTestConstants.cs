@@ -32,7 +32,7 @@ public static class SeedTestConstants
     public const long ShipmentOrder2Wh1Id = 1;
 
     public const string CouponCode = "SEED10";
-    public const string ProductSlug = "seed-phone-alpha";
+    public const string ProductSlug = "seed-book-001";
 
     public static readonly Guid OrderChatId = Guid.Parse("c1000001-0000-4000-8000-000000000001");
 

@@ -52,24 +52,40 @@
 
 .productGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(var(--product-card-width), var(--product-card-width)));
+  justify-content: start;
   gap: var(--space-12);
 }
 
 .cardLink {
   display: block;
+  width: var(--product-card-width);
+  max-width: 100%;
   text-decoration: none;
   color: inherit;
 }
 
 .cardLink article {
-  width: 100%;
   max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  .productGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cardLink,
+  .cardLink article {
+    width: 100%;
+  }
 }
 
 .paginationWrap {
   display: flex;
   justify-content: center;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
   padding-block: var(--space-8);
 }
 

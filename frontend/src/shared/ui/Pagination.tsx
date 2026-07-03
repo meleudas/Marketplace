@@ -8,20 +8,23 @@ interface PaginationProps {
 
 /** Presentational pagination. Builds a simple page range with ellipsis. */
 function buildPages(current: number, total: number): (number | "...")[] {
-  if (total <= 7) {
+  if (total <= 5) {
     return Array.from({ length: total }, (_, i) => i + 1);
   }
 
-  const pages: (number | "...")[] = [1];
-  const start = Math.max(2, current - 1);
-  const end = Math.min(total - 1, current + 1);
+  if (current <= 3) {
+    return [1, 2, 3, "...", total];
+  }
 
-  if (start > 2) pages.push("...");
-  for (let page = start; page <= end; page += 1) pages.push(page);
-  if (end < total - 1) pages.push("...");
+  if (current >= total - 2) {
+    return [1, "...", total - 2, total - 1, total];
+  }
 
-  pages.push(total);
-  return pages;
+  return [1, "...", current, "...", total];
+}
+
+function isPageNumber(page: number | "..."): page is number {
+  return page !== "...";
 }
 
 export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
@@ -40,7 +43,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       </button>
 
       {pages.map((page, index) =>
-        page === "..." ? (
+        !isPageNumber(page) ? (
           <span key={`gap-${index}`} className={styles.ellipsis} aria-hidden="true">
             …
           </span>

@@ -437,7 +437,7 @@ VALUES
     NULL
 );
 
--- 5) Categories (ProductCount removed in migration RemoveCountersFromDbModels)
+-- 5) Categories (bookstore)
 INSERT INTO categories (
     "Name",
     "Slug",
@@ -453,12 +453,12 @@ INSERT INTO categories (
     "DeletedAt"
 ) VALUES
 (
-    'Electronics',
-    'electronics',
+    'Художня література',
+    'fiction',
     NULL,
     NULL,
-    'Devices and gadgets',
-    '{"seed":true}',
+    'Романи, повісті та класика',
+    '{"seed":true,"segment":"books"}',
     1,
     TRUE,
     NOW(),
@@ -467,12 +467,12 @@ INSERT INTO categories (
     NULL
 ),
 (
-    'Smartphones',
-    'smartphones',
+    'Детективи',
+    'detectives',
     NULL,
     1,
-    'Smartphones and accessories',
-    '{"seed":true}',
+    'Детективні романи та трилери',
+    '{"seed":true,"segment":"books"}',
     2,
     TRUE,
     NOW(),
@@ -481,13 +481,27 @@ INSERT INTO categories (
     NULL
 ),
 (
-    'Home',
-    'home',
+    'Нон-фікшн',
+    'non-fiction',
     NULL,
     NULL,
-    'Home and kitchen',
-    '{"seed":true}',
+    'Біографії, історія, наука, бізнес',
+    '{"seed":true,"segment":"books"}',
     3,
+    TRUE,
+    NOW(),
+    NOW(),
+    FALSE,
+    NULL
+),
+(
+    'Дитяча література',
+    'children',
+    NULL,
+    NULL,
+    'Книги для дітей та підлітків',
+    '{"seed":true,"segment":"books"}',
+    4,
     TRUE,
     NOW(),
     NOW(),
@@ -527,16 +541,16 @@ BEGIN
                     "IsApproved","ApprovedAt","ApprovedByUserId","Rating","MetaRaw","CreatedAt","UpdatedAt","IsDeleted","DeletedAt"
                 ) VALUES
                 (
-                    1,'Tech Store','tech-store','Electronics seller',NULL,
-                    'contact@tech-store.test','+380500000001',
-                    'Tech','Store','Main street 1','Kyiv','Kyiv','01001','UA','+380500000001',
-                    TRUE,NOW(),'11111111-1111-1111-1111-111111111111',4.7,'{"seed":true,"segment":"electronics"}',NOW(),NOW(),FALSE,NULL
+                    1,'Книжковий світ','book-world','Книжкова крамниця з художньою та дитячою літературою',NULL,
+                    'contact@book-world.test','+380500000001',
+                    'Book','World','Main street 1','Kyiv','Kyiv','01001','UA','+380500000001',
+                    TRUE,NOW(),'11111111-1111-1111-1111-111111111111',4.7,'{"seed":true,"segment":"books"}',NOW(),NOW(),FALSE,NULL
                 ),
                 (
-                    2,'Home Comfort','home-comfort','Home goods seller',NULL,
-                    'hello@home-comfort.test','+380500000002',
-                    'Home','Comfort','Comfort ave 7','Lviv','Lviv','79000','UA','+380500000002',
-                    TRUE,NOW(),'11111111-1111-1111-1111-111111111111',4.2,'{"seed":true,"segment":"home"}',NOW(),NOW(),FALSE,NULL
+                    2,'Література Плюс','literatura-plus','Магазин нон-фікшн та детективів',NULL,
+                    'hello@literatura-plus.test','+380500000002',
+                    'Literature','Plus','Comfort ave 7','Lviv','Lviv','79000','UA','+380500000002',
+                    TRUE,NOW(),'11111111-1111-1111-1111-111111111111',4.2,'{"seed":true,"segment":"books"}',NOW(),NOW(),FALSE,NULL
                 );
             $sql$;
         ELSE
@@ -548,16 +562,16 @@ BEGIN
                     "IsApproved","ApprovedAt","ApprovedByUserId","Rating","MetaRaw","CreatedAt","UpdatedAt","IsDeleted","DeletedAt"
                 ) VALUES
                 (
-                    1,'Tech Store','tech-store','Electronics seller',NULL,
-                    'contact@tech-store.test','+380500000001',
+                    1,'Книжковий світ','book-world','Книжкова крамниця з художньою та дитячою літературою',NULL,
+                    'contact@book-world.test','+380500000001',
                     'Main street 1','Kyiv','Kyiv','01001','UA',
-                    TRUE,NOW(),'11111111-1111-1111-1111-111111111111',4.7,'{"seed":true,"segment":"electronics"}',NOW(),NOW(),FALSE,NULL
+                    TRUE,NOW(),'11111111-1111-1111-1111-111111111111',4.7,'{"seed":true,"segment":"books"}',NOW(),NOW(),FALSE,NULL
                 ),
                 (
-                    2,'Home Comfort','home-comfort','Home goods seller',NULL,
-                    'hello@home-comfort.test','+380500000002',
+                    2,'Література Плюс','literatura-plus','Магазин нон-фікшн та детективів',NULL,
+                    'hello@literatura-plus.test','+380500000002',
                     'Comfort ave 7','Lviv','Lviv','79000','UA',
-                    TRUE,NOW(),'11111111-1111-1111-1111-111111111111',4.2,'{"seed":true,"segment":"home"}',NOW(),NOW(),FALSE,NULL
+                    TRUE,NOW(),'11111111-1111-1111-1111-111111111111',4.2,'{"seed":true,"segment":"books"}',NOW(),NOW(),FALSE,NULL
                 );
             $sql$;
         END IF;
@@ -570,16 +584,16 @@ BEGIN
                 "IsApproved","ApprovedAt","ApprovedByUserId","Rating","MetaRaw","CreatedAt","UpdatedAt","IsDeleted","DeletedAt"
             ) VALUES
             (
-                'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','Tech Store','tech-store','Electronics seller',NULL,
-                'contact@tech-store.test','+380500000001',
+                'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','Книжковий світ','book-world','Книжкова крамниця з художньою та дитячою літературою',NULL,
+                'contact@book-world.test','+380500000001',
                 'Main street 1','Kyiv','Kyiv','01001','UA',
-                TRUE,NOW(),'11111111-1111-1111-1111-111111111111',4.7,'{"seed":true,"segment":"electronics"}',NOW(),NOW(),FALSE,NULL
+                TRUE,NOW(),'11111111-1111-1111-1111-111111111111',4.7,'{"seed":true,"segment":"books"}',NOW(),NOW(),FALSE,NULL
             ),
             (
-                'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb','Home Comfort','home-comfort','Home goods seller',NULL,
-                'hello@home-comfort.test','+380500000002',
+                'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb','Література Плюс','literatura-plus','Магазин нон-фікшн та детективів',NULL,
+                'hello@literatura-plus.test','+380500000002',
                 'Comfort ave 7','Lviv','Lviv','79000','UA',
-                TRUE,NOW(),'11111111-1111-1111-1111-111111111111',4.2,'{"seed":true,"segment":"home"}',NOW(),NOW(),FALSE,NULL
+                TRUE,NOW(),'11111111-1111-1111-1111-111111111111',4.2,'{"seed":true,"segment":"books"}',NOW(),NOW(),FALSE,NULL
             );
         $sql$;
     END IF;
@@ -590,6 +604,54 @@ DO $$
 DECLARE
     cid_type text;
     has_company_members boolean;
+    i int;
+    book_titles text[] := ARRAY[
+        'Кобзар', 'Лісова пісня', 'Тіні забутих предків', 'Intermezzo', 'Земля',
+        'Майстер і Маргарита', '1984', 'Старий і море', 'Великий Гетсбі', 'Гордість і упередження',
+        'Джейн Ейр', 'Війна і мир', 'Анна Кареніна', 'Злочин і кара', 'Ідіот',
+        'Брати Карамазови', 'Маленький принц', 'Гаррі Поттер і філософський камінь', 'Гаррі Поттер і таємна кімната', 'Гаррі Поттер і в''язень Азкабану',
+        'Хобіт', 'Володар перснів: Братство персня', 'Володар перснів: Дві вежі', 'Володар перснів: Повернення короля', 'Аліса в Країні чудес',
+        'Пригоди Тома Сойєра', 'Пригоди Гекльберрі Фінна', 'Етюд у багряних тонах', 'Знак чотирьох', 'Собака Баскервілів',
+        'І не лишилось жодного', 'Вбивство у Східному експресі', 'Вбивство Роджера Екройда', 'Довге прощання', 'Великий сон',
+        'Sapiens', 'Homo Deus', '21 урок для 21 століття', 'Коротка історія майже всього', 'Thinking, Fast and Slow',
+        'Atomic Habits', 'Deep Work', 'The Psychology of Money', 'Zero to One', 'Clean Code',
+        'The Pragmatic Programmer', 'Design Patterns', 'Refactoring', 'Domain-Driven Design', 'Мистецтво війни'
+    ];
+    book_authors text[] := ARRAY[
+        'Тарас Шевченко', 'Леся Українка', 'Михайло Коцюбинський', 'Михайло Коцюбинський', 'Ольга Кобилянська',
+        'Михайло Булгаков', 'Джордж Орвелл', 'Ернест Гемінгуей', 'Ф. Скотт Фіцджеральд', 'Джейн Остін',
+        'Шарлотта Бронте', 'Лев Толстой', 'Лев Толстой', 'Федір Достоєвський', 'Федір Достоєвський',
+        'Федір Достоєвський', 'Antoine de Saint-Exupéry', 'J.K. Rowling', 'J.K. Rowling', 'J.K. Rowling',
+        'J.R.R. Tolkien', 'J.R.R. Tolkien', 'J.R.R. Tolkien', 'J.R.R. Tolkien', 'Lewis Carroll',
+        'Mark Twain', 'Mark Twain', 'Arthur Conan Doyle', 'Arthur Conan Doyle', 'Arthur Conan Doyle',
+        'Agatha Christie', 'Agatha Christie', 'Agatha Christie', 'Raymond Chandler', 'Raymond Chandler',
+        'Yuval Noah Harari', 'Yuval Noah Harari', 'Yuval Noah Harari', 'Bill Bryson', 'Daniel Kahneman',
+        'James Clear', 'Cal Newport', 'Morgan Housel', 'Peter Thiel', 'Robert Martin',
+        'David Thomas', 'Gang of Four', 'Martin Fowler', 'Eric Evans', 'Sun Tzu'
+    ];
+    book_categories int[] := ARRAY[
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        2, 2, 2, 2, 2, 2, 2, 2,
+        3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3
+    ];
+    book_prices numeric[] := ARRAY[
+        349, 299, 279, 249, 269, 459, 389, 319, 329, 349, 339, 599, 549, 429, 449, 499,
+        199, 399, 399, 419, 359, 449, 449, 449, 229, 259, 269,
+        289, 289, 309, 319, 329, 299, 349, 339,
+        499, 519, 459, 429, 479, 399, 369, 389, 419, 549, 579, 649, 599, 699, 279
+    ];
+    book_company_is_second boolean[] := ARRAY[
+        FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+        FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+        FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE,
+        FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE
+    ];
+    book_company uuid;
+    book_slug text;
+    book_tag text;
+    book_image text;
+    book_thumb text;
 BEGIN
     SELECT c.data_type
       INTO cid_type
@@ -604,7 +666,7 @@ BEGIN
     ) INTO has_company_members;
 
     IF cid_type = 'uuid' AND has_company_members THEN
-    -- Tech Store: full role set (CompanyMembershipRole: Owner=0..Logistics=4)
+    -- Книжковий світ: full role set (CompanyMembershipRole: Owner=0..Logistics=4)
     INSERT INTO company_members ("CompanyId", "UserId", "IsOwner", "Role", "PermissionsRaw", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt")
     VALUES
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '22222222-2222-2222-2222-222222222222', TRUE, 0, NULL, NOW(), NOW(), FALSE, NULL),
@@ -613,24 +675,94 @@ BEGIN
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '88888888-8888-8888-8888-888888888888', FALSE, 3, NULL, NOW(), NOW(), FALSE, NULL),
     ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '99999999-9999-9999-9999-999999999999', FALSE, 4, NULL, NOW(), NOW(), FALSE, NULL);
 
-    -- Home Comfort: buyer as owner (second storefront demo)
+    -- Література Плюс: buyer as owner (second storefront demo)
     INSERT INTO company_members ("CompanyId", "UserId", "IsOwner", "Role", "PermissionsRaw", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt")
     VALUES
     ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '33333333-3333-3333-3333-333333333333', TRUE, 0, NULL, NOW(), NOW(), FALSE, NULL);
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'products') THEN
-        INSERT INTO products (
-            "Id", "CompanyId", "Name", "Slug", "Description", "Price", "OldPrice", "Stock", "MinStock", "CategoryId", "Status",
-            "Rating", "ReviewCount", "ViewCount", "SalesCount", "HasVariants", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
-        ) VALUES
-        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Seed Phone Alpha', 'seed-phone-alpha',
-         'Demo smartphone for catalog + stock', 12999.00, 14999.00, 0, 5, 2, 1, 4.6, 12, 100, 3, FALSE, NOW(), NOW(), FALSE, NULL),
-        (2, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Seed Laptop Beta', 'seed-laptop-beta',
-         'Demo laptop', 45999.00, NULL, 0, 3, 1, 1, 4.8, 40, 500, 10, FALSE, NOW(), NOW(), FALSE, NULL),
-        (3, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Seed Earbuds Gamma', 'seed-earbuds-gamma',
-         'Demo earbuds', 1999.00, 2499.00, 0, 10, 2, 1, 4.3, 7, 80, 5, FALSE, NOW(), NOW(), FALSE, NULL),
-        (4, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Seed Kettle Home', 'seed-kettle-home',
-         'Demo kettle (second company)', 899.00, NULL, 0, 4, 3, 1, 4.5, 5, 30, 2, FALSE, NOW(), NOW(), FALSE, NULL);
+        FOR i IN 1..50 LOOP
+            book_company := CASE
+                WHEN book_company_is_second[i] THEN 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid
+                ELSE 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid
+            END;
+            book_slug := 'seed-book-' || lpad(i::text, 3, '0');
+            book_tag := CASE book_categories[i]
+                WHEN 1 THEN 'fiction'
+                WHEN 2 THEN 'detective'
+                WHEN 3 THEN 'non-fiction'
+                WHEN 4 THEN 'children'
+                ELSE 'book'
+            END;
+            book_image := 'https://picsum.photos/seed/marketplace-book-' || i || '/400/600';
+            book_thumb := 'https://picsum.photos/seed/marketplace-book-' || i || '/200/300';
+
+            INSERT INTO products (
+                "Id", "CompanyId", "Name", "Slug", "Description", "Price", "OldPrice", "Stock", "MinStock", "CategoryId", "Status",
+                "Rating", "ReviewCount", "ViewCount", "SalesCount", "HasVariants", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+            ) VALUES (
+                i,
+                book_company,
+                book_titles[i],
+                book_slug,
+                book_authors[i] || '. Книга для книжкового маркетплейсу.',
+                book_prices[i],
+                CASE WHEN i % 3 = 0 THEN book_prices[i] + 50 ELSE NULL END,
+                0,
+                5,
+                book_categories[i],
+                1,
+                round((3.8 + (i % 12) * 0.1)::numeric, 1),
+                3 + ((i * 7) % 40),
+                50 + i * 17,
+                i % 15,
+                FALSE,
+                NOW(),
+                NOW(),
+                FALSE,
+                NULL
+            );
+
+            INSERT INTO product_details (
+                "Id", "ProductId", "Slug", "AttributesRaw", "VariantsRaw", "SpecificationsRaw", "SeoRaw", "ContentBlocksRaw", "Tags", "Brands",
+                "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+            ) VALUES (
+                i,
+                i,
+                book_slug,
+                jsonb_build_object('seed', true, 'author', book_authors[i]),
+                '{}'::jsonb,
+                '{}'::jsonb,
+                '{}'::jsonb,
+                '{}'::jsonb,
+                ARRAY['seed', 'book', book_tag]::text[],
+                ARRAY[book_authors[i]]::text[],
+                NOW(),
+                NOW(),
+                FALSE,
+                NULL
+            );
+
+            INSERT INTO product_images (
+                "Id", "ProductId", "ImageUrl", "ThumbnailUrl", "AltText", "SortOrder", "IsMain", "Width", "Height", "FileSize",
+                "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+            ) VALUES (
+                i,
+                i,
+                book_image,
+                book_thumb,
+                book_titles[i],
+                0,
+                TRUE,
+                400,
+                600,
+                NULL,
+                NOW(),
+                NOW(),
+                FALSE,
+                NULL
+            );
+        END LOOP;
 
         IF EXISTS (
             SELECT 1 FROM information_schema.columns
@@ -641,50 +773,54 @@ BEGIN
                 "Rating", "ReviewCount", "ViewCount", "SalesCount", "HasVariants", "SubmittedByUserId", "ModerationRejectionReason",
                 "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
             ) VALUES
-            (5, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Seed Smartwatch Pending', 'seed-watch-pending',
-             'Awaiting moderator approval', 5999.00, NULL, 0, 2, 2, 3, 0, 0, 0, 0, FALSE,
+            (51, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Книга на модерації', 'seed-book-pending',
+             'Рідкісне видання, очікує перевірки модератором.', 899.00, NULL, 0, 2, 2, 3, 0, 0, 0, 0, FALSE,
              '22222222-2222-2222-2222-222222222222', NULL, NOW(), NOW(), FALSE, NULL),
-            (6, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Seed Tablet Rejected', 'seed-tablet-rejected',
-             'Rejected listing example', 8999.00, NULL, 0, 2, 1, 0, 0, 0, 0, 0, FALSE,
-             '77777777-7777-7777-7777-777777777777', 'Photos do not match product description.', NOW(), NOW(), FALSE, NULL);
+            (52, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Відхилена книга', 'seed-book-rejected',
+             'Приклад відхиленого видання.', 749.00, NULL, 0, 2, 1, 0, 0, 0, 0, 0, FALSE,
+             '77777777-7777-7777-7777-777777777777', 'Обкладинка не відповідає опису книги.', NOW(), NOW(), FALSE, NULL);
+
+            INSERT INTO product_details (
+                "Id", "ProductId", "Slug", "AttributesRaw", "VariantsRaw", "SpecificationsRaw", "SeoRaw", "ContentBlocksRaw", "Tags", "Brands",
+                "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+            ) VALUES
+            (51, 51, 'seed-book-pending', '{"seed":true,"moderation":"pending"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
+             ARRAY['book','moderation']::text[], ARRAY['Seed Press']::text[], NOW(), NOW(), FALSE, NULL),
+            (52, 52, 'seed-book-rejected', '{"seed":true,"moderation":"rejected"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
+             ARRAY['book','moderation']::text[], ARRAY['Seed Press']::text[], NOW(), NOW(), FALSE, NULL);
+
+            INSERT INTO product_images (
+                "Id", "ProductId", "ImageUrl", "ThumbnailUrl", "AltText", "SortOrder", "IsMain", "Width", "Height", "FileSize",
+                "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+            ) VALUES
+            (51, 51, 'https://picsum.photos/seed/marketplace-book-pending/400/600', 'https://picsum.photos/seed/marketplace-book-pending/200/300', 'Книга на модерації', 0, TRUE, 400, 600, NULL, NOW(), NOW(), FALSE, NULL),
+            (52, 52, 'https://picsum.photos/seed/marketplace-book-rejected/400/600', 'https://picsum.photos/seed/marketplace-book-rejected/200/300', 'Відхилена книга', 0, TRUE, 400, 600, NULL, NOW(), NOW(), FALSE, NULL);
         ELSE
             INSERT INTO products (
                 "Id", "CompanyId", "Name", "Slug", "Description", "Price", "OldPrice", "Stock", "MinStock", "CategoryId", "Status",
                 "Rating", "ReviewCount", "ViewCount", "SalesCount", "HasVariants", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
             ) VALUES
-            (5, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Seed Smartwatch Pending', 'seed-watch-pending',
-             'Awaiting moderator approval', 5999.00, NULL, 0, 2, 2, 3, 0, 0, 0, 0, FALSE, NOW(), NOW(), FALSE, NULL),
-            (6, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Seed Tablet Rejected', 'seed-tablet-rejected',
-             'Rejected listing example', 8999.00, NULL, 0, 2, 1, 0, 0, 0, 0, 0, FALSE, NOW(), NOW(), FALSE, NULL);
+            (51, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Книга на модерації', 'seed-book-pending',
+             'Рідкісне видання, очікує перевірки модератором.', 899.00, NULL, 0, 2, 2, 3, 0, 0, 0, 0, FALSE, NOW(), NOW(), FALSE, NULL),
+            (52, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Відхилена книга', 'seed-book-rejected',
+             'Приклад відхиленого видання.', 749.00, NULL, 0, 2, 1, 0, 0, 0, 0, 0, FALSE, NOW(), NOW(), FALSE, NULL);
+
+            INSERT INTO product_details (
+                "Id", "ProductId", "Slug", "AttributesRaw", "VariantsRaw", "SpecificationsRaw", "SeoRaw", "ContentBlocksRaw", "Tags", "Brands",
+                "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+            ) VALUES
+            (51, 51, 'seed-book-pending', '{"seed":true,"moderation":"pending"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
+             ARRAY['book','moderation']::text[], ARRAY['Seed Press']::text[], NOW(), NOW(), FALSE, NULL),
+            (52, 52, 'seed-book-rejected', '{"seed":true,"moderation":"rejected"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
+             ARRAY['book','moderation']::text[], ARRAY['Seed Press']::text[], NOW(), NOW(), FALSE, NULL);
+
+            INSERT INTO product_images (
+                "Id", "ProductId", "ImageUrl", "ThumbnailUrl", "AltText", "SortOrder", "IsMain", "Width", "Height", "FileSize",
+                "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+            ) VALUES
+            (51, 51, 'https://picsum.photos/seed/marketplace-book-pending/400/600', 'https://picsum.photos/seed/marketplace-book-pending/200/300', 'Книга на модерації', 0, TRUE, 400, 600, NULL, NOW(), NOW(), FALSE, NULL),
+            (52, 52, 'https://picsum.photos/seed/marketplace-book-rejected/400/600', 'https://picsum.photos/seed/marketplace-book-rejected/200/300', 'Відхилена книга', 0, TRUE, 400, 600, NULL, NOW(), NOW(), FALSE, NULL);
         END IF;
-
-        INSERT INTO product_details (
-            "Id", "ProductId", "Slug", "AttributesRaw", "VariantsRaw", "SpecificationsRaw", "SeoRaw", "ContentBlocksRaw", "Tags", "Brands",
-            "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
-        ) VALUES
-        (1, 1, 'seed-phone-alpha', '{"seed":true}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
-         ARRAY['seed','phone']::text[], ARRAY['SeedBrand']::text[], NOW(), NOW(), FALSE, NULL),
-        (2, 2, 'seed-laptop-beta', '{"seed":true}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
-         ARRAY['seed','laptop']::text[], ARRAY['SeedBrand']::text[], NOW(), NOW(), FALSE, NULL),
-        (3, 3, 'seed-earbuds-gamma', '{"seed":true}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
-         ARRAY['audio']::text[], ARRAY['SeedBrand']::text[], NOW(), NOW(), FALSE, NULL),
-        (4, 4, 'seed-kettle-home', '{"seed":true}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
-         ARRAY['kitchen']::text[], ARRAY['HomeSeed']::text[], NOW(), NOW(), FALSE, NULL),
-        (5, 5, 'seed-watch-pending', '{"seed":true,"moderation":"pending"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
-         ARRAY['wearable']::text[], ARRAY['SeedBrand']::text[], NOW(), NOW(), FALSE, NULL),
-        (6, 6, 'seed-tablet-rejected', '{"seed":true,"moderation":"rejected"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
-         ARRAY['tablet']::text[], ARRAY['SeedBrand']::text[], NOW(), NOW(), FALSE, NULL);
-
-        INSERT INTO product_images (
-            "Id", "ProductId", "ImageUrl", "ThumbnailUrl", "AltText", "SortOrder", "IsMain", "Width", "Height", "FileSize",
-            "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
-        ) VALUES
-        (1, 1, 'https://placehold.co/600x400/png?text=Phone', 'https://placehold.co/200x200/png?text=Phone', 'Seed phone', 0, TRUE, 600, 400, NULL, NOW(), NOW(), FALSE, NULL),
-        (2, 2, 'https://placehold.co/600x400/png?text=Laptop', 'https://placehold.co/200x200/png?text=Laptop', 'Seed laptop', 0, TRUE, 600, 400, NULL, NOW(), NOW(), FALSE, NULL),
-        (3, 3, 'https://placehold.co/600x400/png?text=Earbuds', 'https://placehold.co/200x200/png?text=Earbuds', 'Seed earbuds', 0, TRUE, 600, 400, NULL, NOW(), NOW(), FALSE, NULL),
-        (4, 4, 'https://placehold.co/600x400/png?text=Kettle', 'https://placehold.co/200x200/png?text=Kettle', 'Seed kettle', 0, TRUE, 600, 400, NULL, NOW(), NOW(), FALSE, NULL),
-        (5, 5, 'https://placehold.co/600x400/png?text=Watch', 'https://placehold.co/200x200/png?text=Watch', 'Seed watch pending', 0, TRUE, 600, 400, NULL, NOW(), NOW(), FALSE, NULL),
-        (6, 6, 'https://placehold.co/600x400/png?text=Tablet', 'https://placehold.co/200x200/png?text=Tablet', 'Seed tablet rejected', 0, TRUE, 600, 400, NULL, NOW(), NOW(), FALSE, NULL);
 
         IF EXISTS (
             SELECT 1 FROM information_schema.columns
@@ -702,9 +838,9 @@ BEGIN
             "Id", "CompanyId", "Name", "Code", "Street", "City", "State", "PostalCode", "Country", "TimeZone", "Priority",
             "IsActive", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
         ) VALUES
-        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Kyiv Main', 'MAIN-KYIV', 'Skladna 1', 'Kyiv', 'Kyiv', '01001', 'UA', 'Europe/Kyiv', 10, TRUE, NOW(), NOW(), FALSE, NULL),
-        (2, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Lviv Secondary', 'SEC-LVIV', 'Logistychna 2', 'Lviv', 'Lviv', '79000', 'UA', 'Europe/Kyiv', 20, TRUE, NOW(), NOW(), FALSE, NULL),
-        (3, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Home WH Lviv', 'HOME-LVIV', 'Comfort 3', 'Lviv', 'Lviv', '79000', 'UA', 'Europe/Kyiv', 10, TRUE, NOW(), NOW(), FALSE, NULL);
+        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Kyiv Book Warehouse', 'BOOK-KYIV', 'Skladna 1', 'Kyiv', 'Kyiv', '01001', 'UA', 'Europe/Kyiv', 10, TRUE, NOW(), NOW(), FALSE, NULL),
+        (2, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Lviv Book Reserve', 'BOOK-LVIV', 'Logistychna 2', 'Lviv', 'Lviv', '79000', 'UA', 'Europe/Kyiv', 20, TRUE, NOW(), NOW(), FALSE, NULL),
+        (3, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Literature Plus Lviv', 'LIT-LVIV', 'Comfort 3', 'Lviv', 'Lviv', '79000', 'UA', 'Europe/Kyiv', 10, TRUE, NOW(), NOW(), FALSE, NULL);
 
         INSERT INTO warehouse_stocks (
             "Id", "CompanyId", "WarehouseId", "ProductId", "OnHand", "Reserved", "ReorderPoint", "Version", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
@@ -719,10 +855,10 @@ BEGIN
             "Id", "CompanyId", "WarehouseId", "ProductId", "Type", "Quantity", "OperationId", "Reference", "Reason", "ActorUserId",
             "OccurredAt", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
         ) VALUES
-        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 1, 0, 50, 'seed-tech-op-001', 'seed', NULL, '99999999-9999-9999-9999-999999999999', NOW(), NOW(), NOW(), FALSE, NULL),
-        (2, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 2, 0, 0, 'seed-tech-op-002', 'seed-receive-zero', NULL, '99999999-9999-9999-9999-999999999999', NOW(), NOW(), NOW(), FALSE, NULL),
-        (3, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 2, 3, 0, 200, 'seed-tech-op-003', 'seed', NULL, '99999999-9999-9999-9999-999999999999', NOW(), NOW(), NOW(), FALSE, NULL),
-        (4, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 3, 4, 0, 30, 'seed-home-op-001', 'seed', NULL, '33333333-3333-3333-3333-333333333333', NOW(), NOW(), NOW(), FALSE, NULL);
+        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 1, 0, 50, 'seed-book-op-001', 'seed', NULL, '99999999-9999-9999-9999-999999999999', NOW(), NOW(), NOW(), FALSE, NULL),
+        (2, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 2, 0, 0, 'seed-book-op-002', 'seed-receive-zero', NULL, '99999999-9999-9999-9999-999999999999', NOW(), NOW(), NOW(), FALSE, NULL),
+        (3, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 2, 3, 0, 200, 'seed-book-op-003', 'seed', NULL, '99999999-9999-9999-9999-999999999999', NOW(), NOW(), NOW(), FALSE, NULL),
+        (4, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 3, 4, 0, 30, 'seed-lit-op-001', 'seed', NULL, '33333333-3333-3333-3333-333333333333', NOW(), NOW(), NOW(), FALSE, NULL);
 
         INSERT INTO inventory_reservations (
             "Id", "CompanyId", "WarehouseId", "ProductId", "ReservationCode", "Quantity", "Status", "ExpiresAt", "Reference",
@@ -742,8 +878,8 @@ BEGIN
             "Id", "CompanyId", "LegalName", "LegalType", "Edrpou", "Ipn", "CertificateNumber", "IsVatPayer",
             "InitialCommissionPercent", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
         ) VALUES
-        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Tech Store LLC', 1, '12345678', '123456789', 'TS-CERT-001', TRUE, 7.5000, NOW(), NOW(), FALSE, NULL),
-        (2, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Home Comfort LLC', 1, '87654321', '987654321', 'HC-CERT-001', FALSE, 6.2500, NOW(), NOW(), FALSE, NULL);
+        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Книжковий світ LLC', 1, '12345678', '123456789', 'BOOK-CERT-001', TRUE, 7.5000, NOW(), NOW(), FALSE, NULL),
+        (2, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Література Плюс LLC', 1, '87654321', '987654321', 'LIT-CERT-001', FALSE, 6.2500, NOW(), NOW(), FALSE, NULL);
 
         IF EXISTS (
             SELECT 1 FROM information_schema.columns
@@ -751,7 +887,7 @@ BEGIN
         ) THEN
             UPDATE company_legal_profiles SET
                 "PayoutIban" = 'UA213223130000026007233566001',
-                "PayoutRecipientName" = 'Tech Store LLC'
+                "PayoutRecipientName" = 'Книжковий світ LLC'
              WHERE "CompanyId" = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
         END IF;
     END IF;
@@ -761,9 +897,9 @@ BEGIN
             "Id", "CompanyId", "ContractNumber", "Status", "EffectiveFrom", "EffectiveTo", "SignedAt", "Notes",
             "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
         ) VALUES
-        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'CTR-TECH-2026-001', 1, NOW() - INTERVAL '30 days', NULL, NOW() - INTERVAL '35 days', 'Seed contract for Tech Store',
+        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'CTR-BOOK-2026-001', 1, NOW() - INTERVAL '30 days', NULL, NOW() - INTERVAL '35 days', 'Seed contract for Книжковий світ',
          NOW(), NOW(), FALSE, NULL),
-        (2, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'CTR-HOME-2026-001', 1, NOW() - INTERVAL '20 days', NULL, NOW() - INTERVAL '22 days', 'Seed contract for Home Comfort',
+        (2, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'CTR-LIT-2026-001', 1, NOW() - INTERVAL '20 days', NULL, NOW() - INTERVAL '22 days', 'Seed contract for Література Плюс',
          NOW(), NOW(), FALSE, NULL);
     END IF;
 
@@ -788,10 +924,10 @@ BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'cart_items') THEN
         INSERT INTO cart_items ("Id", "CartId", "ProductId", "Quantity", "PriceAtMoment", "Discount", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt")
         VALUES
-        (1, 1, 1, 1, 12999.00, 0, NOW(), NOW(), FALSE, NULL),
-        (2, 1, 2, 1, 45999.00, 0, NOW(), NOW(), FALSE, NULL),
-        (3, 1, 3, 2, 1999.00, 0, NOW(), NOW(), FALSE, NULL),
-        (4, 2, 4, 1, 899.00, 0, NOW(), NOW(), FALSE, NULL);
+        (1, 1, 1, 1, 349.00, 0, NOW(), NOW(), FALSE, NULL),
+        (2, 1, 2, 1, 299.00, 0, NOW(), NOW(), FALSE, NULL),
+        (3, 1, 3, 2, 279.00, 0, NOW(), NOW(), FALSE, NULL),
+        (4, 2, 4, 1, 249.00, 0, NOW(), NOW(), FALSE, NULL);
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'cart_stock_watches') THEN
@@ -803,8 +939,8 @@ BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'favorites') THEN
         INSERT INTO favorites ("Id", "UserId", "ProductId", "AddedAt", "PriceAtAdd", "IsAvailable", "NotificationsRaw", "MetaRaw", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt")
         VALUES
-        (1, '33333333-3333-3333-3333-333333333333', 2, NOW(), 45999.00, FALSE, '{"priceDrop":true,"backInStock":true}', '{"seed":true}', NOW(), NOW(), FALSE, NULL),
-        (2, '55555555-5555-5555-5555-555555555555', 4, NOW(), 899.00, TRUE, '{"priceDrop":false,"backInStock":true}', '{"seed":true}', NOW(), NOW(), FALSE, NULL);
+        (1, '33333333-3333-3333-3333-333333333333', 2, NOW(), 299.00, FALSE, '{"priceDrop":true,"backInStock":true}', '{"seed":true}', NOW(), NOW(), FALSE, NULL),
+        (2, '55555555-5555-5555-5555-555555555555', 4, NOW(), 249.00, TRUE, '{"priceDrop":false,"backInStock":true}', '{"seed":true}', NOW(), NOW(), FALSE, NULL);
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'orders') THEN
@@ -813,14 +949,14 @@ BEGIN
             "ShippingMethodId", "PaymentMethod", "Notes", "TrackingNumber", "ShippedAt", "DeliveredAt", "CancelledAt", "RefundedAt",
             "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
         ) VALUES
-        (1, 'ORD-SEED-0001', '11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 2, 26098.00, 25998.00, 100.00, 0.00, 0.00,
-         1, 2, 'Admin test order — Processing', NULL, NULL, NULL, NULL, NULL, NOW() - INTERVAL '5 days', NOW(), FALSE, NULL),
-        (2, 'ORD-SEED-0002', '33333333-3333-3333-3333-333333333333', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 3, 14997.00, 14997.00, 0.00, 0.00, 0.00,
-         1, 2, 'Buyer order — Shipped (phone + earbuds)', 'NP-SEED-0002', NOW() - INTERVAL '1 day', NULL, NULL, NULL, NOW() - INTERVAL '3 days', NOW(), FALSE, NULL),
-        (3, 'ORD-SEED-0003', '33333333-3333-3333-3333-333333333333', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 4, 899.00, 799.00, 100.00, 0.00, 0.00,
-         1, 2, 'Buyer order from Home Comfort — Delivered', 'NP-SEED-0003', NOW() - INTERVAL '7 days', NOW() - INTERVAL '2 days', NULL, NULL, NOW() - INTERVAL '10 days', NOW(), FALSE, NULL),
-        (4, 'ORD-SEED-0004', '33333333-3333-3333-3333-333333333333', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 25998.00, 25998.00, 0.00, 0.00, 0.00,
-         1, 2, 'Buyer order — Paid, split fulfillment (2x phone)', NULL, NULL, NULL, NULL, NULL, NOW() - INTERVAL '6 hours', NOW(), FALSE, NULL);
+        (1, 'ORD-SEED-0001', '11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 2, 798.00, 698.00, 100.00, 0.00, 0.00,
+         1, 2, 'Admin test order — Processing (2x Кобзар)', NULL, NULL, NULL, NULL, NULL, NOW() - INTERVAL '5 days', NOW(), FALSE, NULL),
+        (2, 'ORD-SEED-0002', '33333333-3333-3333-3333-333333333333', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 3, 628.00, 628.00, 0.00, 0.00, 0.00,
+         1, 2, 'Buyer order — Shipped (Кобзар + Тіні забутих предків)', 'NP-SEED-0002', NOW() - INTERVAL '1 day', NULL, NULL, NULL, NOW() - INTERVAL '3 days', NOW(), FALSE, NULL),
+        (3, 'ORD-SEED-0003', '33333333-3333-3333-3333-333333333333', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 4, 349.00, 249.00, 100.00, 0.00, 0.00,
+         1, 2, 'Buyer order from Література Плюс — Delivered (Intermezzo)', 'NP-SEED-0003', NOW() - INTERVAL '7 days', NOW() - INTERVAL '2 days', NULL, NULL, NOW() - INTERVAL '10 days', NOW(), FALSE, NULL),
+        (4, 'ORD-SEED-0004', '33333333-3333-3333-3333-333333333333', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 698.00, 698.00, 0.00, 0.00, 0.00,
+         1, 2, 'Buyer order — Paid, split fulfillment (2x Кобзар)', NULL, NULL, NULL, NULL, NULL, NOW() - INTERVAL '6 hours', NOW(), FALSE, NULL);
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'order_items') THEN
@@ -828,15 +964,15 @@ BEGIN
             "Id", "OrderId", "ProductId", "ProductName", "ProductImage", "Quantity", "PriceAtMoment", "Discount", "TotalPrice", "CompanyId",
             "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
         ) VALUES
-        (1, 1, 1, 'Seed Phone Alpha', 'https://placehold.co/200x200/png?text=Phone', 2, 12999.00, 0.00, 25998.00, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        (1, 1, 1, 'Кобзар', 'https://picsum.photos/seed/marketplace-book-1/200/300', 2, 349.00, 0.00, 698.00, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
          NOW(), NOW(), FALSE, NULL),
-        (2, 2, 1, 'Seed Phone Alpha', 'https://placehold.co/200x200/png?text=Phone', 1, 12999.00, 0.00, 12999.00, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        (2, 2, 1, 'Кобзар', 'https://picsum.photos/seed/marketplace-book-1/200/300', 1, 349.00, 0.00, 349.00, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
          NOW(), NOW(), FALSE, NULL),
-        (3, 2, 3, 'Seed Earbuds Gamma', 'https://placehold.co/200x200/png?text=Earbuds', 1, 1999.00, 0.00, 1999.00, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        (3, 2, 3, 'Тіні забутих предків', 'https://picsum.photos/seed/marketplace-book-3/200/300', 1, 279.00, 0.00, 279.00, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
          NOW(), NOW(), FALSE, NULL),
-        (4, 3, 4, 'Seed Kettle Home', 'https://placehold.co/200x200/png?text=Kettle', 1, 799.00, 0.00, 799.00, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+        (4, 3, 4, 'Intermezzo', 'https://picsum.photos/seed/marketplace-book-4/200/300', 1, 249.00, 0.00, 249.00, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
          NOW(), NOW(), FALSE, NULL),
-        (5, 4, 1, 'Seed Phone Alpha', 'https://placehold.co/200x200/png?text=Phone', 2, 12999.00, 0.00, 25998.00, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        (5, 4, 1, 'Кобзар', 'https://picsum.photos/seed/marketplace-book-1/200/300', 2, 349.00, 0.00, 698.00, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
          NOW(), NOW(), FALSE, NULL);
     END IF;
 
@@ -877,17 +1013,17 @@ BEGIN
             "Id", "OrderId", "PaymentMethod", "Amount", "Currency", "TransactionId", "Status", "ProviderResponseRaw", "ProcessedAt",
             "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
         ) VALUES
-        (1, 1, 2, 26098.00, 'UAH', 'liqpay-seed-transaction-001', 1, '{"provider":"liqpay","seed":true,"status":"success"}', NOW() - INTERVAL '5 days', NOW(), NOW(), FALSE, NULL),
-        (2, 2, 2, 14997.00, 'UAH', 'liqpay-seed-transaction-002', 1, '{"provider":"liqpay","seed":true,"status":"success"}', NOW() - INTERVAL '3 days', NOW(), NOW(), FALSE, NULL),
-        (3, 3, 2, 899.00, 'UAH', 'liqpay-seed-transaction-003', 1, '{"provider":"liqpay","seed":true,"status":"success"}', NOW() - INTERVAL '10 days', NOW(), NOW(), FALSE, NULL),
-        (4, 4, 2, 25998.00, 'UAH', 'liqpay-seed-transaction-004', 1, '{"provider":"liqpay","seed":true,"status":"success"}', NOW() - INTERVAL '6 hours', NOW(), NOW(), FALSE, NULL);
+        (1, 1, 2, 798.00, 'UAH', 'liqpay-seed-transaction-001', 1, '{"provider":"liqpay","seed":true,"status":"success"}', NOW() - INTERVAL '5 days', NOW(), NOW(), FALSE, NULL),
+        (2, 2, 2, 628.00, 'UAH', 'liqpay-seed-transaction-002', 1, '{"provider":"liqpay","seed":true,"status":"success"}', NOW() - INTERVAL '3 days', NOW(), NOW(), FALSE, NULL),
+        (3, 3, 2, 349.00, 'UAH', 'liqpay-seed-transaction-003', 1, '{"provider":"liqpay","seed":true,"status":"success"}', NOW() - INTERVAL '10 days', NOW(), NOW(), FALSE, NULL),
+        (4, 4, 2, 698.00, 'UAH', 'liqpay-seed-transaction-004', 1, '{"provider":"liqpay","seed":true,"status":"success"}', NOW() - INTERVAL '6 hours', NOW(), NOW(), FALSE, NULL);
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'refunds') THEN
         INSERT INTO refunds (
             "Id", "PaymentId", "OrderId", "Amount", "Reason", "Status", "ProcessedByUserId", "ProcessedAt", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
         ) VALUES
-        (1, 1, 1, 500.00, 'Seed partial refund', 1, '11111111-1111-1111-1111-111111111111', NOW(), NOW(), NOW(), FALSE, NULL);
+        (1, 1, 1, 50.00, 'Seed partial refund', 1, '11111111-1111-1111-1111-111111111111', NOW(), NOW(), NOW(), FALSE, NULL);
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'order_fulfillment_allocations') THEN
@@ -936,9 +1072,9 @@ BEGIN
             "CommissionPercent", "PlatformFee", "SellerMerchandiseNet", "ShippingAmount", "SellerPayoutEligible",
             "PostedAtUtc", "CreatedAt", "UpdatedAt"
         ) VALUES
-        (1, 2, 2, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'UAH', 14997.00, 0.00, 14997.00, 7.5000, 1124.78, 13872.22, 0.00, 13872.22,
+        (1, 2, 2, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'UAH', 628.00, 0.00, 628.00, 7.5000, 47.10, 580.90, 0.00, 580.90,
          NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days', NOW()),
-        (2, 3, 3, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'UAH', 799.00, 0.00, 799.00, 6.2500, 49.94, 749.06, 100.00, 849.06,
+        (2, 3, 3, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'UAH', 249.00, 0.00, 249.00, 6.2500, 15.56, 233.44, 100.00, 333.44,
          NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days', NOW());
     END IF;
 
@@ -947,9 +1083,9 @@ BEGIN
             "Id", "CompanyId", "PeriodStartUtc", "PeriodEndUtc", "Status", "TotalAmount", "Currency",
             "ClosedAtUtc", "PaidAtUtc", "CreatedAt", "UpdatedAt"
         ) VALUES
-        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NOW() - INTERVAL '14 days', NOW() - INTERVAL '7 days', 2, 13872.22, 'UAH',
+        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', NOW() - INTERVAL '14 days', NOW() - INTERVAL '7 days', 2, 580.90, 'UAH',
          NOW() - INTERVAL '7 days', NULL, NOW() - INTERVAL '14 days', NOW()),
-        (2, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', NOW() - INTERVAL '21 days', NOW() - INTERVAL '14 days', 4, 849.06, 'UAH',
+        (2, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', NOW() - INTERVAL '21 days', NOW() - INTERVAL '14 days', 4, 333.44, 'UAH',
          NOW() - INTERVAL '14 days', NOW() - INTERVAL '13 days', NOW() - INTERVAL '21 days', NOW()),
         (3, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', NOW() - INTERVAL '7 days', NOW() - INTERVAL '1 day', 5, 0.00, 'UAH',
          NOW() - INTERVAL '1 day', NULL, NOW() - INTERVAL '7 days', NOW());
@@ -960,8 +1096,8 @@ BEGIN
             "Id", "CompanyId", "SettlementBatchId", "Status", "Amount", "Currency", "ProviderReference",
             "Iban", "RecipientName", "InitiatedAtUtc", "CompletedAtUtc", "FailureReason", "CreatedAt", "UpdatedAt"
         ) VALUES
-        (1, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 2, 3, 849.06, 'UAH', 'MANUAL-SEED-001',
-         NULL, 'Home Comfort LLC', NOW() - INTERVAL '14 days', NOW() - INTERVAL '13 days', NULL, NOW() - INTERVAL '14 days', NOW());
+        (1, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 2, 3, 333.44, 'UAH', 'MANUAL-SEED-001',
+         NULL, 'Література Плюс LLC', NOW() - INTERVAL '14 days', NOW() - INTERVAL '13 days', NULL, NOW() - INTERVAL '14 days', NOW());
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'seller_ledger_entries') THEN
@@ -969,15 +1105,15 @@ BEGIN
             "Id", "CompanyId", "OrderId", "OrderFinancialsId", "SettlementBatchId", "SellerPayoutId",
             "EntryType", "Status", "Amount", "Currency", "Description", "AvailableAtUtc", "SettledAtUtc", "CreatedAt", "UpdatedAt"
         ) VALUES
-        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 2, 1, 1, NULL, 1, 2, 13872.22, 'UAH', 'Sale for order ORD-SEED-0002',
+        (1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 2, 1, 1, NULL, 1, 2, 580.90, 'UAH', 'Sale for order ORD-SEED-0002',
          NOW() - INTERVAL '1 day', NULL, NOW() - INTERVAL '3 days', NOW()),
-        (2, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 2, 1, 1, NULL, 2, 2, 1124.78, 'UAH', 'Platform fee for order ORD-SEED-0002',
+        (2, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 2, 1, 1, NULL, 2, 2, 47.10, 'UAH', 'Platform fee for order ORD-SEED-0002',
          NOW() - INTERVAL '1 day', NULL, NOW() - INTERVAL '3 days', NOW()),
-        (3, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 3, 2, 2, 1, 1, 3, 849.06, 'UAH', 'Sale for order ORD-SEED-0003',
+        (3, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 3, 2, 2, 1, 1, 3, 333.44, 'UAH', 'Sale for order ORD-SEED-0003',
          NOW() - INTERVAL '2 days', NOW() - INTERVAL '13 days', NOW() - INTERVAL '10 days', NOW()),
-        (4, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 3, 2, 2, 1, 2, 3, 49.94, 'UAH', 'Platform fee for order ORD-SEED-0003',
+        (4, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 3, 2, 2, 1, 2, 3, 15.56, 'UAH', 'Platform fee for order ORD-SEED-0003',
          NOW() - INTERVAL '2 days', NOW() - INTERVAL '13 days', NOW() - INTERVAL '10 days', NOW()),
-        (5, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, NULL, NULL, NULL, 3, 2, -500.00, 'UAH', 'Seed partial refund',
+        (5, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, NULL, NULL, NULL, 3, 2, -50.00, 'UAH', 'Seed partial refund',
          NOW(), NULL, NOW(), NOW());
     END IF;
 
@@ -987,7 +1123,7 @@ BEGIN
             "UserUsageLimit", "ExpiresAtUtc", "StartsAtUtc", "ApplicableCategoriesRaw", "ApplicableProductsRaw",
             "ApplicableCompaniesRaw", "IsActive", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
         ) VALUES
-        (1, 'SEED10', 'Seed 10% off Tech Store', 10.00, 0, NULL, 100, 0, 1,
+        (1, 'SEED10', 'Seed 10% off Книжковий світ', 10.00, 0, NULL, 100, 0, 1,
          NOW() + INTERVAL '365 days', NOW() - INTERVAL '30 days', NULL, NULL,
          '["aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"]'::jsonb, TRUE, NOW(), NOW(), FALSE, NULL);
     END IF;
@@ -998,7 +1134,7 @@ BEGIN
             "ApprovedByUserId", "RejectedReason", "ReceivedAtUtc", "RefundId", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
         ) VALUES
         (1, 3, '33333333-3333-3333-3333-333333333333', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 0, 2,
-         'Received wrong kettle model', NULL, NULL, NULL, NULL, NOW() - INTERVAL '1 day', NOW(), FALSE, NULL);
+         'Received wrong book edition', NULL, NULL, NULL, NULL, NOW() - INTERVAL '1 day', NOW(), FALSE, NULL);
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'return_line_items') THEN
@@ -1012,7 +1148,7 @@ BEGIN
             "LastMessageCreatedAt", "IsActive", "Meta", "ParticipantsSnapshot", "RawPayload", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
         ) VALUES
         ('c1000001-0000-4000-8000-000000000001', 2, 0, '33333333-3333-3333-3333-333333333333', 2, NULL,
-         'When will the earbuds shipment arrive?', '33333333-3333-3333-3333-333333333333', NOW() - INTERVAL '20 hours',
+         'When will the second book shipment arrive?', '33333333-3333-3333-3333-333333333333', NOW() - INTERVAL '20 hours',
          TRUE, '{"seed":true}', NULL, NULL, NOW() - INTERVAL '1 day', NOW(), FALSE, NULL);
     END IF;
 
@@ -1033,7 +1169,7 @@ BEGIN
          'Hi, I see two tracking numbers for my order ORD-SEED-0002.', '[]', 0, NULL, '{}', NULL, NULL,
          NOW() - INTERVAL '22 hours', NOW(), FALSE, NULL),
         (2, 'c1000001-0000-4000-8000-000000000001', '33333333-3333-3333-3333-333333333333',
-         'When will the earbuds shipment arrive?', '[]', 0, NULL, '{}', NULL, NULL,
+         'When will the second book shipment arrive?', '[]', 0, NULL, '{}', NULL, NULL,
          NOW() - INTERVAL '20 hours', NOW(), FALSE, NULL);
     END IF;
 
@@ -1048,10 +1184,10 @@ BEGIN
             "Id", "ProductId", "UserId", "UserName", "UserAvatar", "Rating", "Title", "Comment", "ImagesRaw", "ProsRaw", "ConsRaw",
             "IsVerifiedPurchase", "OrderId", "HelpfulRaw", "Status", "ModeratedByUserId", "ModeratedAt", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
         ) VALUES
-        (1, 1, '11111111-1111-1111-1111-111111111111', 'Admin User', NULL, 5, 'Great demo phone', 'Works well in tests',
-         '[]'::jsonb, '["battery"]'::jsonb, '[]'::jsonb, TRUE, 1, '{"up":3,"down":0}'::jsonb, 1, '44444444-4444-4444-4444-444444444444', NOW(), NOW(), NOW(), FALSE, NULL),
-        (2, 4, '55555555-5555-5555-5555-555555555555', 'Plain User', NULL, 4, 'Good kettle', 'Heats quickly',
-         '[]'::jsonb, '["fast"]'::jsonb, '["short-cable"]'::jsonb, FALSE, NULL, '{"up":1,"down":0}'::jsonb, 1, '44444444-4444-4444-4444-444444444444', NOW(), NOW(), NOW(), FALSE, NULL);
+        (1, 1, '11111111-1111-1111-1111-111111111111', 'Admin User', NULL, 5, 'Чудове видання', 'Класика української літератури',
+         '[]'::jsonb, '["мова","якість друку"]'::jsonb, '[]'::jsonb, TRUE, 1, '{"up":3,"down":0}'::jsonb, 1, '44444444-4444-4444-4444-444444444444', NOW(), NOW(), NOW(), FALSE, NULL),
+        (2, 4, '55555555-5555-5555-5555-555555555555', 'Plain User', NULL, 4, 'Гарна книга', 'Швидка доставка',
+         '[]'::jsonb, '["цікавий сюжет"]'::jsonb, '["мала обкладинка"]'::jsonb, FALSE, NULL, '{"up":1,"down":0}'::jsonb, 1, '44444444-4444-4444-4444-444444444444', NOW(), NOW(), NOW(), FALSE, NULL);
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'company_reviews') THEN
@@ -1070,7 +1206,7 @@ BEGIN
             "Id", "ProductReviewId", "CompanyReviewId", "CompanyId", "AuthorUserId", "Body", "IsEdited",
             "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
         ) VALUES
-        (1, 1, NULL, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'Thanks for your feedback on the phone!', FALSE,
+        (1, 1, NULL, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'Дякуємо за відгук про книгу!', FALSE,
          NOW(), NOW(), FALSE, NULL),
         (2, NULL, 1, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'We appreciate your review and will keep improving.', FALSE,
          NOW(), NOW(), FALSE, NULL);
@@ -1088,34 +1224,34 @@ BEGIN
          '{"templateKey":"UserOrderStatus","orderId":2}'::jsonb,
          'b1000001-0000-4000-8000-000000000001', NOW() - INTERVAL '1 day', NOW(), FALSE, NULL),
         (2, '33333333-3333-3333-3333-333333333333', 0, 'Товар знову в наявності',
-         'Seed Laptop Beta знову доступний для замовлення.',
-         '{"templateKey":"CartProductBackInStock","jobCorrelationId":"b1000002-0000-4000-8000-000000000002","productId":2,"slug":"seed-laptop-beta"}'::jsonb,
-         '/catalog/products/seed-laptop-beta', TRUE, NOW() - INTERVAL '12 hours', NOW() + INTERVAL '90 days',
+         'Лісова пісня знову доступна для замовлення.',
+         '{"templateKey":"CartProductBackInStock","jobCorrelationId":"b1000002-0000-4000-8000-000000000002","productId":2,"slug":"seed-book-002"}'::jsonb,
+         '/catalog/products/seed-book-002', TRUE, NOW() - INTERVAL '12 hours', NOW() + INTERVAL '90 days',
          '{"templateKey":"CartProductBackInStock","productId":2}'::jsonb,
          'b1000002-0000-4000-8000-000000000002', NOW() - INTERVAL '2 days', NOW(), FALSE, NULL),
         (3, '11111111-1111-1111-1111-111111111111', 0, 'Нове замовлення',
-         'Надійшло замовлення ORD-SEED-0001 у Tech Store.',
+         'Надійшло замовлення ORD-SEED-0001 у Книжковий світ.',
          '{"templateKey":"AdminNewOrder","jobCorrelationId":"a1000001-0000-4000-8000-000000000001","orderId":1}'::jsonb,
          '/admin/orders/1', FALSE, NULL, NOW() + INTERVAL '90 days',
          '{"templateKey":"AdminNewOrder","orderId":1}'::jsonb,
          'a1000001-0000-4000-8000-000000000001', NOW() - INTERVAL '5 days', NOW(), FALSE, NULL),
         (4, '44444444-4444-4444-4444-444444444444', 3, 'Товар на модерації',
-         'Seed Smartwatch Pending очікує перевірки.',
-         '{"templateKey":"AdminProductPendingReview","jobCorrelationId":"a1000002-0000-4000-8000-000000000002","productId":5}'::jsonb,
+         'Книга на модерації очікує перевірки.',
+         '{"templateKey":"AdminProductPendingReview","jobCorrelationId":"a1000002-0000-4000-8000-000000000002","productId":51}'::jsonb,
          '/admin/products/pending', FALSE, NULL, NOW() + INTERVAL '90 days',
-         '{"templateKey":"AdminProductPendingReview","productId":5}'::jsonb,
+         '{"templateKey":"AdminProductPendingReview","productId":51}'::jsonb,
          'a1000002-0000-4000-8000-000000000002', NOW() - INTERVAL '6 hours', NOW(), FALSE, NULL),
         (5, '22222222-2222-2222-2222-222222222222', 3, 'Товар схвалено',
-         'Ваш товар Seed Smartwatch Pending опубліковано.',
-         '{"templateKey":"UserProductApproved","jobCorrelationId":"a1000003-0000-4000-8000-000000000003","productId":5}'::jsonb,
-         '/companies/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/products/5', TRUE, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '90 days',
-         '{"templateKey":"UserProductApproved","productId":5}'::jsonb,
+         'Вашу книгу на модерації опубліковано.',
+         '{"templateKey":"UserProductApproved","jobCorrelationId":"a1000003-0000-4000-8000-000000000003","productId":51}'::jsonb,
+         '/companies/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/products/51', TRUE, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '90 days',
+         '{"templateKey":"UserProductApproved","productId":51}'::jsonb,
          'a1000003-0000-4000-8000-000000000003', NOW() - INTERVAL '3 hours', NOW(), FALSE, NULL),
         (6, '77777777-7777-7777-7777-777777777777', 3, 'Товар відхилено',
-         'Seed Tablet Rejected не пройшов модерацію.',
-         '{"templateKey":"UserProductRejected","jobCorrelationId":"a1000004-0000-4000-8000-000000000004","productId":6,"reason":"Photos do not match product description."}'::jsonb,
+         'Відхилена книга не пройшла модерацію.',
+         '{"templateKey":"UserProductRejected","jobCorrelationId":"a1000004-0000-4000-8000-000000000004","productId":52,"reason":"Обкладинка не відповідає опису книги."}'::jsonb,
          NULL, FALSE, NULL, NOW() + INTERVAL '90 days',
-         '{"templateKey":"UserProductRejected","productId":6}'::jsonb,
+         '{"templateKey":"UserProductRejected","productId":52}'::jsonb,
          'a1000004-0000-4000-8000-000000000004', NOW() - INTERVAL '1 day', NOW(), FALSE, NULL),
         (7, '22222222-2222-2222-2222-222222222222', 0, 'Нове замовлення у вашій компанії',
          'Покупець оформив ORD-SEED-0002.',
