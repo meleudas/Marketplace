@@ -1,15 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { getCatalogProducts } from "@/features/storefront/api/catalog.api";
-import type { CatalogProductListItemDto } from "@/features/storefront/model/catalog.types";
+import { useEffect, useMemo, useState } from "react";
+import { getCatalogCategories, getCatalogProducts } from "@/features/storefront/api/catalog.api";
+import {
+  CATALOG_PRODUCT_SORT_OPTIONS,
+  getCatalogProductSortLabel,
+  sortCatalogProducts,
+  type CatalogProductSort,
+} from "@/features/storefront/lib/catalog-product-sort";
+import type { CatalogCategoryDto, CatalogProductListItemDto } from "@/features/storefront/model/catalog.types";
 import { StateBlock } from "@/features/storefront/ui/StateBlock";
-import { Grid, PageLayout, ProductCard, Typography } from "@/shared/ui";
+import {
+  ArrowsSortIcon,
+  Button,
+  Checkbox,
+  CloseIcon,
+  FilterIcon,
+  PageLayout,
+  Pagination,
+  ProductCard,
+  Radio,
+  RadioGroup,
+} from "@/shared/ui";
+import iconStyles from "@/shared/ui/icons/Icon.module.css";
 import type { ProductCardData } from "@/shared/ui/ProductCard";
 import styles from "./HomeScreen.module.css";
 
-const HOME_PRODUCTS_LIMIT = 6;
+const PAGE_SIZE = 8;
 
 const mapProductToCard = (product: CatalogProductListItemDto): ProductCardData => ({
   id: String(product.id),
@@ -21,7 +39,15 @@ const mapProductToCard = (product: CatalogProductListItemDto): ProductCardData =
 export function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<CatalogCategoryDto[]>([]);
   const [products, setProducts] = useState<CatalogProductListItemDto[]>([]);
+
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [inStockOnly, setInStockOnly] = useState(false);
+  const [selectedCategorySlug, setSelectedCategorySlug] = useState<string | null>(null);
+  const [selectedSort, setSelectedSort] = useState<CatalogProductSort | null>(null);
+  const [sortModalOpen, setSortModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const load = async () => {
@@ -29,8 +55,13 @@ export function HomeScreen() {
         setLoading(true);
         setError(null);
 
-        const productsData = await getCatalogProducts();
-        setProducts(productsData.slice(0, HOME_PRODUCTS_LIMIT));
+        const [categoriesData, productsData] = await Promise.all([
+          getCatalogCategories(),
+          getCatalogProducts(),
+        ]);
+
+        setCategories(categoriesData.filter((category) => category.isActive));
+        setProducts(productsData);
       } catch {
         setError("Не вдалося завантажити товари");
       } finally {
@@ -41,35 +72,162 @@ export function HomeScreen() {
     void load();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategorySlug, inStockOnly, selectedSort]);
+
+  const filteredProducts = useMemo(() => {
+    let result = [...products];
+
+    if (selectedCategorySlug) {
+      const selectedCategory = categories.find((category) => category.slug === selectedCategorySlug);
+      if (selectedCategory) {
+        result = result.filter((product) => product.categoryId === selectedCategory.id);
+      }
+    }
+
+    if (inStockOnly) {
+      result = result.filter(
+        (product) => product.availabilityStatus !== "out_of_stock" && product.availableQty > 0,
+      );
+    }
+
+    if (selectedSort) {
+      result = sortCatalogProducts(result, selectedSort);
+    }
+
+    return result;
+  }, [categories, inStockOnly, products, selectedCategorySlug, selectedSort]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
+  const sortButtonLabel = selectedSort ? getCatalogProductSortLabel(selectedSort) : "Сортувати";
+
+  const handleSortSelect = (sort: CatalogProductSort) => {
+    setSelectedSort(sort);
+    setSortModalOpen(false);
+  };
+
   return (
     <PageLayout headerProps={{ homeHref: "/home", userHref: "/me" }} footerProps={{ homeHref: "/home" }}>
-      <header className={styles.section}>
-        <Typography variant="h1">BOOK TOP</Typography>
-        <Typography variant="body1" className={styles.muted}>
-          Книжковий маркетплейс — обирайте улюблені видання від перевірених продавців.
-        </Typography>
-      </header>
+      {categories.length > 0 ? (
+        <div className={styles.categories} role="tablist" aria-label="Категорії">
+          {categories.map((category) => {
+            const isActive = selectedCategorySlug === category.slug;
 
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <Typography variant="h2" className={styles.sectionTitle}>
-            Популярні товари
-          </Typography>
-          <Link href="/products" className={styles.sectionLink}>
-            Усі товари
-          </Link>
+            return (
+              <button
+                key={category.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={`${styles.categoryChip} ${isActive ? styles.categoryChipActive : ""}`.trim()}
+                onClick={() =>
+                  setSelectedCategorySlug((current) => (current === category.slug ? null : category.slug))
+                }
+              >
+                {category.name}
+              </button>
+            );
+          })}
         </div>
+      ) : null}
 
-        {loading ? <StateBlock message="Завантаження..." /> : null}
-        {error ? <StateBlock message={error} isError /> : null}
+      <div className={styles.toolbar}>
+        <Button
+          type="button"
+          variant="dark"
+          size="lg"
+          fullWidth
+          leadingIcon={<FilterIcon className={iconStyles.icon} />}
+          aria-expanded={filtersOpen}
+          onClick={() => setFiltersOpen((open) => !open)}
+        >
+          Фільтри
+        </Button>
 
-        {!loading && !error && products.length === 0 ? (
-          <StateBlock message="Товарів поки немає" />
-        ) : null}
+        <div className={styles.sortAnchor}>
+          <Button
+            type="button"
+            variant="dark"
+            size="lg"
+            fullWidth
+            leadingIcon={<ArrowsSortIcon className={iconStyles.icon} />}
+            aria-haspopup="dialog"
+            aria-expanded={sortModalOpen}
+            onClick={() => setSortModalOpen((open) => !open)}
+          >
+            {sortButtonLabel}
+          </Button>
 
-        {!loading && !error && products.length > 0 ? (
-          <Grid layout="auto" minColumnWidth="10rem" gap="md">
-            {products.map((product) => (
+          {sortModalOpen ? (
+            <div
+              className={styles.sortPopover}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="sort-modal-title"
+            >
+              <header className={styles.modalHeader}>
+                <h2 id="sort-modal-title" className={styles.modalTitle}>
+                  Сортувати
+                </h2>
+                <button
+                  type="button"
+                  className={styles.modalClose}
+                  aria-label="Закрити"
+                  onClick={() => setSortModalOpen(false)}
+                >
+                  <CloseIcon className={iconStyles.icon} />
+                </button>
+              </header>
+
+              <RadioGroup
+                name="product-sort"
+                value={selectedSort ?? ""}
+                onValueChange={(value) => handleSortSelect(value as CatalogProductSort)}
+                className={styles.sortOptions}
+              >
+                {CATALOG_PRODUCT_SORT_OPTIONS.map((option) => (
+                  <Radio key={option.value} value={option.value} label={option.label} />
+                ))}
+              </RadioGroup>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {filtersOpen ? (
+        <section className={styles.filterPanel} aria-label="Фільтри">
+          <Checkbox
+            label="Тільки в наявності"
+            checked={inStockOnly}
+            onCheckedChange={setInStockOnly}
+          />
+        </section>
+      ) : null}
+
+      {loading ? <StateBlock message="Завантаження..." /> : null}
+      {error ? <StateBlock message={error} isError /> : null}
+
+      {!loading && !error && filteredProducts.length === 0 ? (
+        <StateBlock message="Товарів за обраними фільтрами не знайдено" />
+      ) : null}
+
+      {!loading && !error && paginatedProducts.length > 0 ? (
+        <>
+          <div className={styles.productGrid}>
+            {paginatedProducts.map((product) => (
               <Link
                 key={product.id}
                 href={`/products/${product.slug}`}
@@ -78,9 +236,28 @@ export function HomeScreen() {
                 <ProductCard product={mapProductToCard(product)} />
               </Link>
             ))}
-          </Grid>
-        ) : null}
-      </section>
+          </div>
+
+          {totalPages > 1 ? (
+            <div className={styles.paginationWrap}>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          ) : null}
+        </>
+      ) : null}
+
+      {sortModalOpen ? (
+        <button
+          type="button"
+          className={styles.sortBackdrop}
+          aria-label="Закрити сортування"
+          onClick={() => setSortModalOpen(false)}
+        />
+      ) : null}
     </PageLayout>
   );
 }
