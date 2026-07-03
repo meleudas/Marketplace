@@ -1,5 +1,5 @@
-import { HomeScreen } from "@/features/storefront/screens/HomeScreen";
+import { HomeScreen } from "@/features/home/screens/HomeScreen";
 
-export default function HomePage() {
+export default function Page() {
   return <HomeScreen />;
 }

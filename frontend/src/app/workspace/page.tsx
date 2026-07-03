@@ -3,4 +3,3 @@ import { WorkspaceOverviewScreen } from "@/features/workspace/screens/WorkspaceO
 export default function Page() {
   return <WorkspaceOverviewScreen />;
 }
-

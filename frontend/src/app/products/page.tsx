@@ -1,6 +1,5 @@
-import { ProductsScreen } from "@/features/storefront/screens/ProductsScreen";
+import { ProductsScreen } from "@/features/products/screens/ProductsScreen";
 
 export default function Page() {
   return <ProductsScreen />;
 }
-

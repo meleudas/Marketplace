@@ -1,4 +1,4 @@
-import { WorkspaceProductsScreen } from "@/features/workspace/screens/WorkspaceProductsScreen";
+import { WorkspaceProductsScreen } from "@/features/workspace/products/screens/WorkspaceProductsScreen";
 
 export default function Page() {
   return <WorkspaceProductsScreen />;

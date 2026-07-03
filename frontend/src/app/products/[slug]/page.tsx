@@ -1,4 +1,4 @@
-import { ProductDetailsScreen } from "@/features/storefront/screens/ProductDetailsScreen";
+import { ProductDetailsScreen } from "@/features/products/[slug]/screens/ProductDetailsScreen";
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;

@@ -9,7 +9,7 @@ import {
   type MemberRoleFormValues,
 } from "@/features/workspace/model/member-role-form.schema";
 import type { CompanyWorkspaceRole } from "@/features/workspace/model/workspace.types";
-import styles from "@/features/workspace/screens/WorkspaceScreen.module.css";
+import styles from "@/features/workspace/ui/WorkspaceScreen.module.css";
 
 interface MemberRoleFormProps {
   submitLabel: string;

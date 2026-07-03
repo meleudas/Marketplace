@@ -1,4 +1,4 @@
-import { CategoriesEditScreen } from "@/features/admin/screens/CategoriesEditScreen";
+import { CategoriesEditScreen } from "@/features/admin/categories/[id]/edit/screens/CategoriesEditScreen";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -9,4 +9,3 @@ export default async function Page({ params }: PageProps) {
 
   return <CategoriesEditScreen id={Number(id)} />;
 }
-

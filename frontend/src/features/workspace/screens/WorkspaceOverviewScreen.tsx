@@ -7,7 +7,7 @@ import { getMyCompanyMembership } from "@/features/workspace/api/workspace.api";
 import { WORKSPACE_COMPANY_ID } from "@/features/workspace/config/workspace.constants";
 import type { CompanyMembershipDto } from "@/features/workspace/model/workspace.types";
 import { WorkspaceMembershipError } from "@/features/workspace/model/workspace.types";
-import styles from "./WorkspaceScreen.module.css";
+import styles from "@/features/workspace/ui/WorkspaceScreen.module.css";
 
 const formatValue = (value: string | null | undefined): string => value ?? "-";
 

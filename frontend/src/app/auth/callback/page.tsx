@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { GoogleAuthCallbackScreen } from "@/features/auth/screens/GoogleAuthCallbackScreen";
+import { GoogleAuthCallbackScreen } from "@/features/auth/callback/screens/GoogleAuthCallbackScreen";
 
 export default function Page() {
   return (
@@ -8,5 +8,3 @@ export default function Page() {
     </Suspense>
   );
 }
-
-

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { productFormSchema, type ProductFormValues } from "@/features/workspace/model/product-form.schema";
 import type { CompanyProductDto, UpsertProductRequest, WorkspaceCategoryDto } from "@/features/workspace/model/workspace.types";
-import styles from "@/features/workspace/screens/WorkspaceScreen.module.css";
+import styles from "@/features/workspace/ui/WorkspaceScreen.module.css";
 
 interface ProductFormProps {
   categories: WorkspaceCategoryDto[];

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { warehouseFormSchema, type WarehouseFormValues } from "@/features/workspace/model/warehouse-form.schema";
 import type { CreateWarehouseRequest, WarehouseDto } from "@/features/workspace/model/workspace.types";
-import styles from "@/features/workspace/screens/WorkspaceScreen.module.css";
+import styles from "@/features/workspace/ui/WorkspaceScreen.module.css";
 
 interface WarehouseFormProps {
   initialWarehouse?: WarehouseDto | null;

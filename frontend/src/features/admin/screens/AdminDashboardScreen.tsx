@@ -1,5 +1,5 @@
 import Link from "next/link";
-import styles from "@/features/admin/screens/AdminScreens.module.css";
+import styles from "@/features/admin/ui/AdminScreens.module.css";
 
 export function AdminDashboardScreen() {
   return (
@@ -28,4 +28,3 @@ export function AdminDashboardScreen() {
     </section>
   );
 }
-

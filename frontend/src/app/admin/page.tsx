@@ -3,4 +3,3 @@ import { AdminDashboardScreen } from "@/features/admin/screens/AdminDashboardScr
 export default function Page() {
   return <AdminDashboardScreen />;
 }
-

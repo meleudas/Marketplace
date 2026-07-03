@@ -1,6 +1,5 @@
-import { MeScreen } from "@/features/profile/screens/MeScreen";
+import { MeScreen } from "@/features/me/screens/MeScreen";
 
 export default function Page() {
   return <MeScreen />;
 }
-

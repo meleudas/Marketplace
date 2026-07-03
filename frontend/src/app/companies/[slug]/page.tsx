@@ -1,4 +1,4 @@
-import { CompanyDetailsScreen } from "@/features/storefront/screens/CompanyDetailsScreen";
+import { CompanyDetailsScreen } from "@/features/companies/[slug]/screens/CompanyDetailsScreen";
 
 interface CompanyPageProps {
   params: Promise<{ slug: string }>;

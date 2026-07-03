@@ -1,6 +1,5 @@
-import { CompaniesListScreen } from "@/features/admin/screens/CompaniesListScreen";
+import { CompaniesListScreen } from "@/features/admin/companies/screens/CompaniesListScreen";
 
 export default function Page() {
   return <CompaniesListScreen />;
 }
-
