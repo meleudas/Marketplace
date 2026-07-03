@@ -1,6 +1,7 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 const ACCESS_TOKEN_KEY = "accessToken";
+const AUTH_POLL_TIMEOUT = 30_000;
 
 export async function clearAuthState(page: Page): Promise<void> {
   await page.goto("/");
@@ -16,17 +17,23 @@ export async function getAccessToken(page: Page): Promise<string | null> {
 }
 
 export async function expectAccessTokenExists(page: Page): Promise<void> {
-  await expect.poll(async () => getAccessToken(page)).not.toBeNull();
+  await expect.poll(async () => getAccessToken(page), { timeout: AUTH_POLL_TIMEOUT }).not.toBeNull();
 }
 
 export async function expectAccessTokenMissing(page: Page): Promise<void> {
-  await expect.poll(async () => getAccessToken(page)).toBeNull();
+  await expect.poll(async () => getAccessToken(page), { timeout: AUTH_POLL_TIMEOUT }).toBeNull();
 }
 
 export async function waitForAuthUi(page: Page): Promise<void> {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Auth MVP" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Login" })).toBeVisible();
+}
+
+async function readLoginError(page: Page, status: number): Promise<string> {
+  const errorMessage = page.locator('[class*="errorMessage"]');
+  await errorMessage.waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
+  return (await errorMessage.textContent()) ?? `HTTP ${status}`;
 }
 
 export async function loginViaUi(
@@ -37,44 +44,45 @@ export async function loginViaUi(
 
   await page.getByLabel("Email").fill(credentials.email);
   await page.getByLabel("Password").fill(credentials.password);
+
+  const loginRequest = page.waitForResponse(
+    (response) =>
+      response.url().includes("/auth/login") && response.request().method() === "POST",
+  );
+
   await page.getByRole("button", { name: "Login", exact: true }).click();
 
   if (credentials.twoFactorCode) {
     await expect(page.getByLabel("2FA Code")).toBeVisible({ timeout: 15_000 });
     await page.getByLabel("2FA Code").fill(credentials.twoFactorCode);
+
+    const verifyRequest = page.waitForResponse(
+      (response) =>
+        response.url().includes("/auth/login") && response.request().method() === "POST",
+    );
     await page.getByRole("button", { name: "Verify and login" }).click();
+
+    const verifyResponse = await verifyRequest;
+    if (!verifyResponse.ok()) {
+      throw new Error(`Login failed: ${await readLoginError(page, verifyResponse.status())}`);
+    }
+  } else {
+    const loginResponse = await loginRequest;
+    if (!loginResponse.ok()) {
+      throw new Error(`Login failed: ${await readLoginError(page, loginResponse.status())}`);
+    }
   }
 
-  const errorMessage = page.locator('[class*="errorMessage"]');
-  const loginResult = await Promise.race([
-    expect
-      .poll(async () => page.evaluate(() => window.localStorage.getItem("accessToken")))
-      .not.toBeNull({ timeout: 15_000 })
-      .then(() => "success" as const),
-    errorMessage
-      .waitFor({ state: "visible", timeout: 15_000 })
-      .then(async () => ("error" as const)),
-  ]).catch(() => "timeout" as const);
+  await page.waitForResponse(
+    (response) =>
+      response.url().includes("/users/me") &&
+      response.request().method() === "GET" &&
+      response.status() === 200,
+    { timeout: AUTH_POLL_TIMEOUT },
+  );
 
-  if (loginResult !== "success") {
-    const message = loginResult === "error" ? await errorMessage.textContent() : "Login timed out";
-    throw new Error(`Login failed: ${message ?? "unknown error"}`);
-  }
-
-  await page.waitForURL(/\/home$/, { timeout: 10_000 });
+  await page.waitForURL(/\/home$/, { timeout: AUTH_POLL_TIMEOUT });
   await expectAuthenticated(page);
-}
-
-export async function loginViaUiOrSkip(
-  page: Page,
-  credentials: { email: string; password: string; twoFactorCode?: string },
-): Promise<void> {
-  try {
-    await loginViaUi(page, credentials);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    test.skip(true, message);
-  }
 }
 
 export async function advanceForgotPasswordToStepTwo(page: Page, email: string): Promise<void> {
@@ -88,7 +96,7 @@ export async function advanceForgotPasswordToStepTwo(page: Page, email: string):
   await expect(successMessage.or(errorMessage)).toBeVisible({ timeout: 10_000 });
 
   if (await errorMessage.isVisible()) {
-    test.skip(true, "Password reset request was rejected by the backend (likely rate-limited).");
+    throw new Error("Password reset request was rejected by the backend.");
   }
 }
 

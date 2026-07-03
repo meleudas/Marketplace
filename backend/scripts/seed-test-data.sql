@@ -3,6 +3,9 @@
 --
 -- Known test password for ALL seeded users:
 --   Admin123!
+-- E2E helpers:
+--   unverified@marketplace.test  (EmailConfirmed=false)
+--   twofa@marketplace.test       (TwoFactorEnabled=true)
 -- ASP.NET Identity hash (PasswordHasher v3 / Identity):
 --   AQAAAAIAAYagAAAAECifUtBVLtNXahAxIRvpSE9DViQu9iH/f+mFrgdFrX99M/obrHlbrg1yXAS9PqjeFw==
 --
@@ -294,6 +297,48 @@ INSERT INTO "AspNetUsers" (
     FALSE,
     FALSE,
     'logistics'
+),
+(
+    'b0000001-0000-4000-8000-000000000001',
+    0,
+    'seed-unverified-concurrency',
+    'unverified@marketplace.test',
+    FALSE,
+    FALSE,
+    FALSE,
+    NULL,
+    'UNVERIFIED@MARKETPLACE.TEST',
+    'UNVERIFIED',
+    'AQAAAAIAAYagAAAAECifUtBVLtNXahAxIRvpSE9DViQu9iH/f+mFrgdFrX99M/obrHlbrg1yXAS9PqjeFw==',
+    '+380000000010',
+    FALSE,
+    'seed-unverified-security',
+    NULL,
+    NULL,
+    FALSE,
+    FALSE,
+    'unverified'
+),
+(
+    'b0000002-0000-4000-8000-000000000002',
+    0,
+    'seed-twofa-concurrency',
+    'twofa@marketplace.test',
+    TRUE,
+    FALSE,
+    FALSE,
+    NULL,
+    'TWOFA@MARKETPLACE.TEST',
+    'TWOFA',
+    'AQAAAAIAAYagAAAAECifUtBVLtNXahAxIRvpSE9DViQu9iH/f+mFrgdFrX99M/obrHlbrg1yXAS9PqjeFw==',
+    '+380000000011',
+    FALSE,
+    'seed-twofa-security',
+    NULL,
+    NULL,
+    FALSE,
+    TRUE,
+    'twofa'
 );
 
 -- 3.0) App notification preferences + Telegram (columns from AddAppNotificationUserPreferences)
@@ -338,7 +383,9 @@ VALUES
 ('66666666-6666-6666-6666-666666666666', 'aaaaaaaa-0000-0000-0000-000000000002'),
 ('77777777-7777-7777-7777-777777777777', 'aaaaaaaa-0000-0000-0000-000000000002'),
 ('88888888-8888-8888-8888-888888888888', 'aaaaaaaa-0000-0000-0000-000000000003'),
-('99999999-9999-9999-9999-999999999999', 'aaaaaaaa-0000-0000-0000-000000000003');
+('99999999-9999-9999-9999-999999999999', 'aaaaaaaa-0000-0000-0000-000000000003'),
+('b0000001-0000-4000-8000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000003'),
+('b0000002-0000-4000-8000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000003');
 
 -- 4) marketplace_users (Role: Buyer=1, Seller=2, Moderator=3, Admin=4)
 INSERT INTO marketplace_users (
@@ -364,7 +411,9 @@ INSERT INTO marketplace_users (
 ('66666666-6666-6666-6666-666666666666', 'Company', 'Manager', 2, NULL, NULL, TRUE, NULL, NOW(), NOW(), NOW(), FALSE, NULL),
 ('77777777-7777-7777-7777-777777777777', 'Company', 'Seller', 2, NULL, NULL, TRUE, NULL, NOW(), NOW(), NOW(), FALSE, NULL),
 ('88888888-8888-8888-8888-888888888888', 'Support', 'Agent', 1, NULL, NULL, TRUE, NULL, NOW(), NOW(), NOW(), FALSE, NULL),
-('99999999-9999-9999-9999-999999999999', 'Logistics', 'Lead', 1, NULL, NULL, TRUE, NULL, NOW(), NOW(), NOW(), FALSE, NULL);
+('99999999-9999-9999-9999-999999999999', 'Logistics', 'Lead', 1, NULL, NULL, TRUE, NULL, NOW(), NOW(), NOW(), FALSE, NULL),
+('b0000001-0000-4000-8000-000000000001', 'Unverified', 'User', 1, NULL, NULL, FALSE, NULL, NOW(), NOW(), NOW(), FALSE, NULL),
+('b0000002-0000-4000-8000-000000000002', 'TwoFactor', 'User', 1, NULL, NULL, TRUE, NULL, NOW(), NOW(), NOW(), FALSE, NULL);
 
 -- 4.1) Refresh tokens
 INSERT INTO refresh_tokens ("Id", "UserId", "TokenHash", "ExpiresAt", "CreatedAt", "RevokedAt", "ReplacedByTokenHash")

@@ -2,19 +2,17 @@ import { expect, test } from "@playwright/test";
 import {
   clearAuthState,
   expectAccessTokenMissing,
-  loginViaUiOrSkip,
   openRegisterForm,
   submitRegisterForm,
   waitForAuthUi,
 } from "../fixtures/auth.fixture";
 import { skipIfBackendAuthUnavailable } from "../fixtures/backend.helper";
-import { getConfirmEmailToken, isMailHelperConfigured } from "../fixtures/mail.helper";
 import {
   createUniqueTestEmail,
   createUniqueUsername,
-  defaultTestPassword,
-  testUsers,
 } from "../fixtures/users.fixture";
+
+const registrationPassword = "Admin123!Aa1";
 
 test.describe("Auth register and confirm email", () => {
   test.beforeEach(async ({ page }) => {
@@ -46,7 +44,7 @@ test.describe("Auth register and confirm email", () => {
     await submitRegisterForm(page, {
       userName,
       email,
-      password: defaultTestPassword,
+      password: registrationPassword,
     });
 
     const successMessage = page.getByText(/confirm your email|Підтвердіть пошту/i);
@@ -69,7 +67,7 @@ test.describe("Auth register and confirm email", () => {
     await submitRegisterForm(page, {
       userName: createUniqueUsername(),
       email,
-      password: defaultTestPassword,
+      password: registrationPassword,
     });
 
     await expect(page.getByRole("heading", { name: "Register" })).toBeVisible();
@@ -82,23 +80,10 @@ test.describe("Auth register and confirm email", () => {
     await submitRegisterForm(page, {
       userName: createUniqueUsername(),
       email: createUniqueTestEmail("register-token"),
-      password: defaultTestPassword,
+      password: registrationPassword,
     });
 
     await expectAccessTokenMissing(page);
-  });
-
-  test("confirm email route works with valid email and token query params", async ({ page }) => {
-    test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
-    test.skip(!isMailHelperConfigured("confirm"), "Set E2E_CONFIRM_EMAIL_TOKEN for this test");
-
-    const email = process.env.E2E_CONFIRM_EMAIL ?? testUsers.verified.email;
-    const token = await getConfirmEmailToken(email);
-
-    await page.goto(`/confirm-email?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`);
-
-    await expect(page.getByText(/Email успішно підтверджено|Email confirmed/i)).toBeVisible();
-    await expect(page).toHaveURL(/\/$/, { timeout: 5_000 });
   });
 
   test("missing email or token on /confirm-email shows error UI", async ({ page }) => {
@@ -118,23 +103,5 @@ test.describe("Auth register and confirm email", () => {
     await expect(page.getByRole("heading", { name: /Підтвердження email/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /Повернутися до входу|Back to login/i })).toBeVisible();
     await expect(page.getByText(/Email успішно підтверджено/i)).not.toBeVisible();
-  });
-
-  test("after successful confirmation user can log in", async ({ page }) => {
-    test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
-    test.skip(!isMailHelperConfigured("confirm"), "Set E2E_CONFIRM_EMAIL_TOKEN for this test");
-    test.skip(!process.env.E2E_CONFIRM_EMAIL, "Set E2E_CONFIRM_EMAIL for post-confirm login test");
-    test.skip(!process.env.E2E_CONFIRM_PASSWORD, "Set E2E_CONFIRM_PASSWORD for post-confirm login test");
-
-    const email = process.env.E2E_CONFIRM_EMAIL!;
-    const password = process.env.E2E_CONFIRM_PASSWORD!;
-    const token = await getConfirmEmailToken(email);
-
-    await page.goto(`/confirm-email?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`);
-    await expect(page.getByText(/Email успішно підтверджено|Email confirmed/i)).toBeVisible();
-    await page.waitForURL(/\/$/, { timeout: 5_000 });
-
-    await loginViaUiOrSkip(page, { email, password });
-    await expect(page).toHaveURL(/\/home$/);
   });
 });

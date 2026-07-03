@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { clearAuthState, loginViaUiOrSkip } from "../fixtures/auth.fixture";
+import { clearAuthState, loginViaUi } from "../fixtures/auth.fixture";
 import { getAdminTestCredentials, getVerifiedTestCredentials } from "../fixtures/api.helper";
 import { skipIfBackendAuthUnavailable } from "../fixtures/backend.helper";
 
@@ -45,7 +45,7 @@ test.describe("Auth protected routes - authenticated", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
     await page.goto("/me");
     await expect(page.getByRole("heading", { name: "My profile" })).toBeVisible();
     await expect(page.getByText("You need to sign in first")).not.toBeVisible();
@@ -55,7 +55,7 @@ test.describe("Auth protected routes - authenticated", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
     await page.goto("/settings");
     await expect(page.getByRole("heading", { name: "Security Settings" })).toBeVisible();
   });
@@ -64,7 +64,7 @@ test.describe("Auth protected routes - authenticated", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
     await page.goto("/workspace");
     await expect(page.getByText("You need to sign in to access workspace.")).not.toBeVisible();
     await expect(page.getByRole("link", { name: "Overview" })).toBeVisible();
@@ -74,7 +74,7 @@ test.describe("Auth protected routes - authenticated", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
     await page.goto("/admin");
     await expect(page.getByText("Only admin users can open this section.")).toBeVisible();
   });
@@ -90,9 +90,9 @@ test.describe("Auth protected routes - authenticated", () => {
       return;
     }
 
-    await loginViaUiOrSkip(page, adminCredentials);
+    await loginViaUi(page, adminCredentials);
     await page.goto("/admin");
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Companies" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Companies", exact: true })).toBeVisible();
   });
 });

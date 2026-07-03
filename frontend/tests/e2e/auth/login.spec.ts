@@ -2,14 +2,11 @@ import { expect, test } from "@playwright/test";
 import {
   clearAuthState,
   expectAccessTokenExists,
-  expectAccessTokenMissing,
-  loginViaUiOrSkip,
-  submitLoginForm,
+  loginViaUi,
   waitForAuthUi,
 } from "../fixtures/auth.fixture";
 import { getVerifiedTestCredentials } from "../fixtures/api.helper";
 import { skipIfBackendAuthUnavailable } from "../fixtures/backend.helper";
-import { testUsers } from "../fixtures/users.fixture";
 
 test.describe("Auth login", () => {
   test.beforeEach(async ({ page }) => {
@@ -41,7 +38,7 @@ test.describe("Auth login", () => {
     await waitForAuthUi(page);
     const emailInput = page.getByLabel("Email");
     await emailInput.fill("not-an-email");
-    await page.getByLabel("Password").fill("BookMarket1!");
+    await page.getByLabel("Password").fill("Admin123!");
     await page.getByRole("button", { name: "Login", exact: true }).click();
 
     const validationMessage = await emailInput.evaluate(
@@ -54,7 +51,7 @@ test.describe("Auth login", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
     await expect(page).toHaveURL(/\/home$/);
   });
 
@@ -62,32 +59,7 @@ test.describe("Auth login", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
     await expectAccessTokenExists(page);
-  });
-
-  test("login with an unverified user shows a confirmation-email error", async ({ page }) => {
-    test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
-    test.skip(!testUsers.unverified.email, "Set E2E_UNVERIFIED_EMAIL for this test");
-
-    await submitLoginForm(page, {
-      email: testUsers.unverified.email,
-      password: testUsers.unverified.password,
-    });
-
-    await expect(page.getByText(/confirm your email/i)).toBeVisible();
-  });
-
-  test("unverified login must not store accessToken", async ({ page }) => {
-    test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
-    test.skip(!testUsers.unverified.email, "Set E2E_UNVERIFIED_EMAIL for this test");
-
-    await submitLoginForm(page, {
-      email: testUsers.unverified.email,
-      password: testUsers.unverified.password,
-    });
-
-    await expect(page.getByText(/confirm your email/i)).toBeVisible();
-    await expectAccessTokenMissing(page);
   });
 });

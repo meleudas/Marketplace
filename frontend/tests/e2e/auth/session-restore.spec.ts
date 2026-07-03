@@ -3,7 +3,7 @@ import {
   clearAuthState,
   expectAccessTokenExists,
   getAuthorizationHeader,
-  loginViaUiOrSkip,
+  loginViaUi,
 } from "../fixtures/auth.fixture";
 import { getVerifiedTestCredentials } from "../fixtures/api.helper";
 import { skipIfBackendAuthUnavailable } from "../fixtures/backend.helper";
@@ -17,7 +17,7 @@ test.describe("Auth session restore", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
     await expectAccessTokenExists(page);
   });
 
@@ -25,7 +25,7 @@ test.describe("Auth session restore", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
     await page.reload();
     await expect(page).toHaveURL(/\/home$/);
     await expectAccessTokenExists(page);
@@ -35,7 +35,7 @@ test.describe("Auth session restore", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
     await page.goto("/me");
 
     await expect(page.getByRole("heading", { name: "My profile" })).toBeVisible();
@@ -48,7 +48,7 @@ test.describe("Auth session restore", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
     await page.goto("/");
     await expect(page).toHaveURL(/\/home$/);
   });
@@ -57,7 +57,7 @@ test.describe("Auth session restore", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
 
     const meResponsePromise = page.waitForResponse(
       (response) =>

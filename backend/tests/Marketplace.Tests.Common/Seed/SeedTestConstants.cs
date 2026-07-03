@@ -11,6 +11,11 @@ public static class SeedTestConstants
     public const string AdminEmail = "admin@marketplace.test";
     public const string SellerEmail = "seller@marketplace.test";
     public const string BuyerEmail = "buyer@marketplace.test";
+    public const string UnverifiedEmail = "unverified@marketplace.test";
+    public const string TwoFactorEmail = "twofa@marketplace.test";
+
+    public static readonly Guid UnverifiedUserId = Guid.Parse("b0000001-0000-4000-8000-000000000001");
+    public static readonly Guid TwoFactorUserId = Guid.Parse("b0000002-0000-4000-8000-000000000002");
 
     public static readonly Guid TechStoreCompanyId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     public static readonly Guid HomeComfortCompanyId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");

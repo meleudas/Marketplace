@@ -4,7 +4,7 @@ import {
   expectAccessTokenExists,
   expectAccessTokenMissing,
   expectGuest,
-  loginViaUiOrSkip,
+  loginViaUi,
   logoutViaUi,
 } from "../fixtures/auth.fixture";
 import { getVerifiedTestCredentials } from "../fixtures/api.helper";
@@ -19,7 +19,7 @@ test.describe("Auth logout", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
     await page.goto("/me");
 
     await expect(page.getByRole("heading", { name: "My profile" })).toBeVisible();
@@ -30,7 +30,7 @@ test.describe("Auth logout", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
     await logoutViaUi(page);
 
     await expect(page.getByRole("heading", { name: "Auth MVP" })).toBeVisible();
@@ -40,7 +40,7 @@ test.describe("Auth logout", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
     await logoutViaUi(page);
     await expectAccessTokenMissing(page);
   });
@@ -49,7 +49,7 @@ test.describe("Auth logout", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
     await page.goto("/me");
     await page.getByRole("button", { name: "Logout" }).click();
     await expect(page).toHaveURL(/\/$/);
@@ -59,7 +59,7 @@ test.describe("Auth logout", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
     await logoutViaUi(page);
 
     await page.goto("/me");
@@ -71,7 +71,7 @@ test.describe("Auth logout", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
     await logoutViaUi(page);
 
     await page.goto("/settings");
@@ -82,7 +82,7 @@ test.describe("Auth logout", () => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
 
     await page.route("**/auth/logout", async (route) => {
       await route.fulfill({ status: 500, body: "Internal Server Error" });
@@ -102,7 +102,7 @@ test.describe("Auth logout API endpoint", () => {
 
     await clearAuthState(page);
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUiOrSkip(page, credentials);
+    await loginViaUi(page, credentials);
 
     const logoutRequestPromise = page.waitForRequest(
       (request) =>
