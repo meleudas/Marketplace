@@ -7,21 +7,34 @@ interface PaginationProps {
   onPageChange?: (page: number) => void;
 }
 
-/** Presentational pagination. Builds a simple page range with ellipsis. */
+/** Builds a page range with ellipsis, always keeping current and adjacent pages visible. */
 function buildPages(current: number, total: number): (number | "...")[] {
-  if (total <= 5) {
-    return Array.from({ length: total }, (_, i) => i + 1);
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, index) => index + 1);
   }
 
-  if (current <= 3) {
-    return [1, 2, 3, "...", total];
+  const pages: (number | "...")[] = [];
+  const siblingCount = 1;
+  const rangeStart = Math.max(2, current - siblingCount);
+  const rangeEnd = Math.min(total - 1, current + siblingCount);
+
+  pages.push(1);
+
+  if (rangeStart > 2) {
+    pages.push("...");
   }
 
-  if (current >= total - 2) {
-    return [1, "...", total - 2, total - 1, total];
+  for (let page = rangeStart; page <= rangeEnd; page += 1) {
+    pages.push(page);
   }
 
-  return [1, "...", current, "...", total];
+  if (rangeEnd < total - 1) {
+    pages.push("...");
+  }
+
+  pages.push(total);
+
+  return pages;
 }
 
 function isPageNumber(page: number | "..."): page is number {
@@ -57,7 +70,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
           <button
             key={page}
             type="button"
-            className={`${styles.page} ${page === currentPage ? styles.active : ""}`}
+            className={`${styles.page} ${page === currentPage ? styles.active : ""}`.trim()}
             aria-current={page === currentPage ? "page" : undefined}
             onMouseDown={preventFocusScroll}
             onClick={() => onPageChange?.(page)}
