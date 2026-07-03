@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   getCatalogCategories,
   getCatalogProductBySlug,
   getCatalogProducts,
+  searchCatalogProducts,
 } from "@/features/storefront/api/catalog.api";
 import {
   CATALOG_PRODUCT_SORT_OPTIONS,
@@ -44,6 +45,39 @@ const mapProductToCard = (
   inStock: product.availabilityStatus !== "out_of_stock" && product.availableQty > 0,
 });
 
+const filterProductsLocally = (
+  items: CatalogProductListItemDto[],
+  options: {
+    query: string;
+    categoryId?: number;
+    inStockOnly: boolean;
+    sort: CatalogProductSort | null;
+  },
+): CatalogProductListItemDto[] => {
+  const query = options.query.toLowerCase();
+  let result = [...items];
+
+  if (options.categoryId) {
+    result = result.filter((product) => product.categoryId === options.categoryId);
+  }
+
+  if (options.inStockOnly) {
+    result = result.filter(
+      (product) => product.availabilityStatus !== "out_of_stock" && product.availableQty > 0,
+    );
+  }
+
+  if (query) {
+    result = result.filter((product) =>
+      [product.name, product.description, product.slug].some((value) =>
+        value.toLowerCase().includes(query),
+      ),
+    );
+  }
+
+  return options.sort ? sortCatalogProducts(result, options.sort) : result;
+};
+
 export function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,25 +90,21 @@ export function HomeScreen() {
   const [selectedCategorySlug, setSelectedCategorySlug] = useState<string | null>(null);
   const [selectedSort, setSelectedSort] = useState<CatalogProductSort | null>(null);
   const [sortModalOpen, setSortModalOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const pendingScrollY = useRef<number | null>(null);
+  const productImagesRef = useRef<Record<string, string | null>>({});
 
   useEffect(() => {
     const load = async () => {
       try {
-        setLoading(true);
         setError(null);
-
-        const [categoriesData, productsData] = await Promise.all([
-          getCatalogCategories(),
-          getCatalogProducts(),
-        ]);
+        const categoriesData = await getCatalogCategories();
 
         setCategories(categoriesData.filter((category) => category.isActive));
-        setProducts(productsData);
       } catch {
-        setError("Не вдалося завантажити товари");
-      } finally {
-        setLoading(false);
+        setError("Не вдалося завантажити категорії");
       }
     };
 
@@ -83,30 +113,78 @@ export function HomeScreen() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategorySlug, inStockOnly, selectedSort]);
+  }, [selectedCategorySlug, inStockOnly, selectedSort, searchQuery]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setSearchQuery(searchInput.trim());
+    }, 350);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchInput]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const selectedCategory = selectedCategorySlug
+          ? categories.find((category) => category.slug === selectedCategorySlug)
+          : null;
+        const shouldUseSearchEndpoint = Boolean(
+          searchQuery || selectedCategory || inStockOnly || selectedSort,
+        );
+
+        let nextProducts = await getCatalogProducts();
+
+        if (shouldUseSearchEndpoint) {
+          const searchResult = await searchCatalogProducts({
+            query: searchQuery || undefined,
+            categoryIds: selectedCategory ? [selectedCategory.id] : undefined,
+            availabilityStatus: inStockOnly ? "in_stock" : undefined,
+            sort: selectedSort ?? undefined,
+            page: 1,
+            pageSize: 200,
+          });
+
+          nextProducts =
+            searchResult.items.length > 0
+              ? searchResult.items
+              : filterProductsLocally(nextProducts, {
+                  query: searchQuery,
+                  categoryId: selectedCategory?.id,
+                  inStockOnly,
+                  sort: selectedSort,
+                });
+        }
+
+        if (!cancelled) {
+          setProducts(nextProducts);
+        }
+      } catch {
+        if (!cancelled) {
+          setError("Не вдалося завантажити товари");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [categories, inStockOnly, searchQuery, selectedCategorySlug, selectedSort]);
 
   const filteredProducts = useMemo(() => {
-    let result = [...products];
-
-    if (selectedCategorySlug) {
-      const selectedCategory = categories.find((category) => category.slug === selectedCategorySlug);
-      if (selectedCategory) {
-        result = result.filter((product) => product.categoryId === selectedCategory.id);
-      }
-    }
-
-    if (inStockOnly) {
-      result = result.filter(
-        (product) => product.availabilityStatus !== "out_of_stock" && product.availableQty > 0,
-      );
-    }
-
-    if (selectedSort) {
-      result = sortCatalogProducts(result, selectedSort);
-    }
-
-    return result;
-  }, [categories, inStockOnly, products, selectedCategorySlug, selectedSort]);
+    return selectedSort && !searchQuery ? sortCatalogProducts(products, selectedSort) : products;
+  }, [products, searchQuery, selectedSort]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
 
@@ -121,10 +199,21 @@ export function HomeScreen() {
     currentPage * PAGE_SIZE,
   );
 
+  productImagesRef.current = productImages;
+
+  useLayoutEffect(() => {
+    if (pendingScrollY.current === null) {
+      return;
+    }
+
+    window.scrollTo(0, pendingScrollY.current);
+    pendingScrollY.current = null;
+  }, [currentPage, paginatedProducts]);
+
   useEffect(() => {
-    const slugsToLoad = paginatedProducts
+    const slugsToLoad = products
       .map((product) => product.slug)
-      .filter((slug) => !(slug in productImages));
+      .filter((slug) => !(slug in productImagesRef.current));
 
     if (slugsToLoad.length === 0) {
       return;
@@ -163,9 +252,18 @@ export function HomeScreen() {
     return () => {
       cancelled = true;
     };
-  }, [paginatedProducts, productImages]);
+  }, [products]);
 
   const sortButtonLabel = selectedSort ? getCatalogProductSortLabel(selectedSort) : "Сортувати";
+
+  const handlePageChange = (page: number) => {
+    if (page === currentPage) {
+      return;
+    }
+
+    pendingScrollY.current = window.scrollY;
+    setCurrentPage(page);
+  };
 
   const handleSortSelect = (sort: CatalogProductSort) => {
     setSelectedSort(sort);
@@ -173,7 +271,16 @@ export function HomeScreen() {
   };
 
   return (
-    <PageLayout headerProps={{ homeHref: "/home", userHref: "/me" }} footerProps={{ homeHref: "/home" }}>
+    <PageLayout
+      headerProps={{
+        homeHref: "/home",
+        userHref: "/me",
+        searchValue: searchInput,
+        searchPlaceholder: "Пошук книг",
+        onSearchChange: setSearchInput,
+      }}
+      footerProps={{ homeHref: "/home" }}
+    >
       {categories.length > 0 ? (
         <div className={styles.categories} role="tablist" aria-label="Категорії">
           {categories.map((category) => {
@@ -296,7 +403,7 @@ export function HomeScreen() {
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
-                onPageChange={setCurrentPage}
+                onPageChange={handlePageChange}
               />
             </div>
           ) : null}

@@ -1,11 +1,4 @@
-/**
- * Mail/token helpers for auth flows that depend on out-of-band email delivery.
- *
- * TODO: Integrate one of the following when available in the test environment:
- * - Mailhog / mail capture API (E2E_MAIL_CAPTURE_URL)
- * - Docker log scraping for LoggingEmailSender output
- * - Test-only backend endpoint that returns the latest token for a given email
- */
+
 
 export class MailHelperNotConfiguredError extends Error {
   constructor(method: string, email: string) {

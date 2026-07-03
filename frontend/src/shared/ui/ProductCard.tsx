@@ -26,12 +26,11 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   return (
     <article className={styles.card}>
       <div className={styles.media}>
+        <div className={styles.imagePlaceholder} aria-hidden="true" />
         {product.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img className={styles.image} src={product.imageUrl} alt={product.title} />
-        ) : (
-          <div className={styles.imagePlaceholder} aria-hidden="true" />
-        )}
+        ) : null}
       </div>
 
       <div className={styles.body}>

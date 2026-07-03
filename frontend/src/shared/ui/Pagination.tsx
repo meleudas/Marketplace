@@ -1,3 +1,4 @@
+import type { MouseEvent } from "react";
 import styles from "./Pagination.module.css";
 
 interface PaginationProps {
@@ -27,6 +28,10 @@ function isPageNumber(page: number | "..."): page is number {
   return page !== "...";
 }
 
+const preventFocusScroll = (event: MouseEvent<HTMLButtonElement>) => {
+  event.preventDefault();
+};
+
 export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
   const pages = buildPages(currentPage, totalPages);
 
@@ -36,6 +41,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         type="button"
         className={styles.arrow}
         disabled={currentPage <= 1}
+        onMouseDown={preventFocusScroll}
         onClick={() => onPageChange?.(currentPage - 1)}
         aria-label="Попередня сторінка"
       >
@@ -53,6 +59,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
             type="button"
             className={`${styles.page} ${page === currentPage ? styles.active : ""}`}
             aria-current={page === currentPage ? "page" : undefined}
+            onMouseDown={preventFocusScroll}
             onClick={() => onPageChange?.(page)}
           >
             {page}
@@ -64,6 +71,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         type="button"
         className={styles.arrow}
         disabled={currentPage >= totalPages}
+        onMouseDown={preventFocusScroll}
         onClick={() => onPageChange?.(currentPage + 1)}
         aria-label="Наступна сторінка"
       >

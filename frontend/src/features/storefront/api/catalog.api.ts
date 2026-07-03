@@ -5,6 +5,7 @@ import type {
   CatalogProductDetailDto,
   CatalogProductListItemDto,
   ProductAvailabilityDto,
+  ProductSearchResultDto,
 } from "@/features/storefront/model/catalog.types";
 
 const extractList = <T>(payload: unknown): T[] => {
@@ -49,6 +50,47 @@ export const getCatalogCategories = async (): Promise<CatalogCategoryDto[]> => {
 export const getCatalogProducts = async (): Promise<CatalogProductListItemDto[]> => {
   const response = await apiClient.get<unknown>("/catalog/products");
   return extractList<CatalogProductListItemDto>(response.data);
+};
+
+export interface SearchCatalogProductsParams {
+  query?: string;
+  name?: string;
+  categoryIds?: number[];
+  companyId?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  availabilityStatus?: string;
+  sort?: string;
+  page?: number;
+  pageSize?: number;
+  searchAfter?: string;
+}
+
+export const searchCatalogProducts = async (
+  params: SearchCatalogProductsParams,
+): Promise<ProductSearchResultDto> => {
+  const searchParams = new URLSearchParams();
+
+  if (params.query) searchParams.set("query", params.query);
+  if (params.name) searchParams.set("name", params.name);
+  if (params.companyId) searchParams.set("companyId", params.companyId);
+  if (typeof params.minPrice === "number") searchParams.set("minPrice", String(params.minPrice));
+  if (typeof params.maxPrice === "number") searchParams.set("maxPrice", String(params.maxPrice));
+  if (params.availabilityStatus) searchParams.set("availabilityStatus", params.availabilityStatus);
+  if (params.sort) searchParams.set("sort", params.sort);
+  if (typeof params.page === "number") searchParams.set("page", String(params.page));
+  if (typeof params.pageSize === "number") searchParams.set("pageSize", String(params.pageSize));
+  if (params.searchAfter) searchParams.set("searchAfter", params.searchAfter);
+
+  for (const categoryId of params.categoryIds ?? []) {
+    searchParams.append("categoryIds", String(categoryId));
+  }
+
+  const response = await apiClient.get<ProductSearchResultDto>(
+    `/catalog/products/search?${searchParams.toString()}`,
+  );
+
+  return response.data;
 };
 
 export const getCatalogProductBySlug = async (slug: string): Promise<CatalogProductDetailDto> => {

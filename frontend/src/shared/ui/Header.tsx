@@ -9,7 +9,9 @@ interface HeaderProps {
   homeHref?: string;
   userHref?: string;
   cartHref?: string;
+  searchValue?: string;
   searchPlaceholder?: string;
+  onSearchChange?: (value: string) => void;
   onMenuClick?: () => void;
 }
 
@@ -17,7 +19,9 @@ export function Header({
   homeHref = "/",
   userHref = "/auth",
   cartHref = "#",
+  searchValue,
   searchPlaceholder = "Пошук",
+  onSearchChange,
   onMenuClick,
 }: HeaderProps) {
   return (
@@ -50,10 +54,12 @@ export function Header({
         <TextField
           kind="search"
           className={styles.search}
+          value={searchValue}
           placeholder={searchPlaceholder}
           aria-label="Пошук"
           leadingIcon={<SearchIcon className={iconStyles.icon} />}
           trailingIcon={<MicrophoneIcon className={iconStyles.icon} />}
+          onChange={(event) => onSearchChange?.(event.target.value)}
         />
       </Container>
     </header>

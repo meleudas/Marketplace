@@ -66,6 +66,14 @@ export interface CatalogProductListItemDto {
   updatedAt: string;
 }
 
+export interface ProductSearchResultDto {
+  items: CatalogProductListItemDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+  nextSearchAfter?: string | null;
+}
+
 export interface CatalogProductImageDto {
   imageUrl: string;
   thumbnailUrl: string;
