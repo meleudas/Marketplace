@@ -1,0 +1,36 @@
+.section {
+  display: grid;
+  gap: var(--space-16);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+}
+
+.sectionTitle {
+  margin: 0;
+}
+
+.sectionLink {
+  color: var(--color-primary-blue);
+  font-size: var(--text-body2-size);
+  line-height: var(--text-body2-line);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.sectionLink:hover {
+  text-decoration: underline;
+}
+
+.muted {
+  color: var(--color-neutral-600);
+}
+
+.cardLink {
+  text-decoration: none;
+  color: inherit;
+}

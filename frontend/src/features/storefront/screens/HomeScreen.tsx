@@ -2,31 +2,26 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useAuth } from "@/features/auth/model/auth.store";
-import { getCatalogCategories, getCatalogProducts } from "@/features/storefront/api/catalog.api";
-import type { CatalogCategoryDto, CatalogProductListItemDto } from "@/features/storefront/model/catalog.types";
-import { CategoryList } from "@/features/storefront/ui/CategoryList";
-import { ProductCard } from "@/features/storefront/ui/ProductCard";
+import { getCatalogProducts } from "@/features/storefront/api/catalog.api";
+import type { CatalogProductListItemDto } from "@/features/storefront/model/catalog.types";
 import { StateBlock } from "@/features/storefront/ui/StateBlock";
-import { StorefrontLayout } from "@/features/storefront/ui/StorefrontLayout";
-import styles from "./StorefrontScreen.module.css";
+import { Grid, PageLayout, ProductCard, Typography } from "@/shared/ui";
+import type { ProductCardData } from "@/shared/ui/ProductCard";
+import styles from "./HomeScreen.module.css";
 
 const HOME_PRODUCTS_LIMIT = 6;
+
+const mapProductToCard = (product: CatalogProductListItemDto): ProductCardData => ({
+  id: String(product.id),
+  title: product.name,
+  price: product.price,
+  inStock: product.availabilityStatus !== "out_of_stock" && product.availableQty > 0,
+});
 
 export function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [categories, setCategories] = useState<CatalogCategoryDto[]>([]);
   const [products, setProducts] = useState<CatalogProductListItemDto[]>([]);
-
-  const user = useAuth((state) => state.user);
-  const isAuthenticated = useAuth((state) => state.isAuthenticated);
-  const initialized = useAuth((state) => state.initialized);
-  const canOpenWorkspace =
-    initialized &&
-    isAuthenticated &&
-    Boolean(user) &&
-    (user?.role === "seller" || user?.role === "moderator" || user?.role === "admin");
 
   useEffect(() => {
     const load = async () => {
@@ -34,15 +29,10 @@ export function HomeScreen() {
         setLoading(true);
         setError(null);
 
-        const [categoriesData, productsData] = await Promise.all([
-          getCatalogCategories(),
-          getCatalogProducts(),
-        ]);
-
-        setCategories(categoriesData);
+        const productsData = await getCatalogProducts();
         setProducts(productsData.slice(0, HOME_PRODUCTS_LIMIT));
       } catch {
-        setError("Failed to load data");
+        setError("Не вдалося завантажити товари");
       } finally {
         setLoading(false);
       }
@@ -52,55 +42,45 @@ export function HomeScreen() {
   }, []);
 
   return (
-    <StorefrontLayout title="Marketplace Storefront">
-      <section className={styles.hero}>
-        <h2 className={styles.heroTitle}>Marketplace</h2>
-        <p className={styles.heroText}>
-          Minimal public storefront connected to real catalog API endpoints.
-        </p>
+    <PageLayout headerProps={{ homeHref: "/home", userHref: "/me" }} footerProps={{ homeHref: "/home" }}>
+      <header className={styles.section}>
+        <Typography variant="h1">BOOK TOP</Typography>
+        <Typography variant="body1" className={styles.muted}>
+          Книжковий маркетплейс — обирайте улюблені видання від перевірених продавців.
+        </Typography>
+      </header>
 
-        <div className={styles.actions}>
-          <Link href="/products" className={styles.actionLink}>
-            View all products
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <Typography variant="h2" className={styles.sectionTitle}>
+            Популярні товари
+          </Typography>
+          <Link href="/products" className={styles.sectionLink}>
+            Усі товари
           </Link>
-          <Link href="/companies" className={styles.actionLink}>
-            View companies
-          </Link>
-          <Link href="/me" className={styles.actionLink}>
-            My profile
-          </Link>
-          <Link href="/settings" className={styles.actionLink}>
-            Settings
-          </Link>
-          {canOpenWorkspace ? (
-            <Link href="/workspace" className={styles.actionLink}>
-              Company workspace
-            </Link>
-          ) : null}
         </div>
+
+        {loading ? <StateBlock message="Завантаження..." /> : null}
+        {error ? <StateBlock message={error} isError /> : null}
+
+        {!loading && !error && products.length === 0 ? (
+          <StateBlock message="Товарів поки немає" />
+        ) : null}
+
+        {!loading && !error && products.length > 0 ? (
+          <Grid layout="auto" minColumnWidth="10rem" gap="md">
+            {products.map((product) => (
+              <Link
+                key={product.id}
+                href={`/products/${product.slug}`}
+                className={styles.cardLink}
+              >
+                <ProductCard product={mapProductToCard(product)} />
+              </Link>
+            ))}
+          </Grid>
+        ) : null}
       </section>
-
-      {loading ? <StateBlock message="Loading..." /> : null}
-      {error ? <StateBlock message={error} isError /> : null}
-
-      {!loading && !error ? (
-        <>
-          <CategoryList categories={categories} />
-
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>Products</h2>
-            {products.length === 0 ? (
-              <StateBlock message="No products found" />
-            ) : (
-              <div className={styles.grid}>
-                {products.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            )}
-          </section>
-        </>
-      ) : null}
-    </StorefrontLayout>
+    </PageLayout>
   );
 }
