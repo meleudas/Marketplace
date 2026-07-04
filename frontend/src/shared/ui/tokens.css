@@ -276,6 +276,13 @@
   --footer-cat-width: 120px;
   --footer-cat-height: 162px;
 
+  /* Page layout — ambient glow ellipses (Figma: 252×252, #535DDF 42%, blur 220) */
+  --page-glow-size: 252px;
+  --page-glow-blur: 220px;
+  --page-glow-color: rgb(83 93 223 / 0.42);
+  --page-glow-offset-x: 94px;
+  --page-glow-step: 480px;
+
   /* Product card — mobile UI kit */
   --product-card-width: 194px;
   --product-card-bg: var(--color-neutral-800);

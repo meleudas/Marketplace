@@ -1,10 +1,45 @@
 .page {
-  display: flex;
-  flex-direction: column;
+  position: relative;
   min-height: 100vh;
+  overflow-x: clip;
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-primary);
+}
+
+.pageBackground {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.pageGlow {
+  position: absolute;
+  width: var(--page-glow-size);
+  height: var(--page-glow-size);
+  border-radius: 50%;
+  background: var(--color-primary-blue);
+  opacity: 0.42;
+  filter: blur(var(--page-glow-blur));
+  transform: translateY(-50%);
+}
+
+.pageGlowLeft {
+  left: calc(var(--page-glow-offset-x) * -1);
+}
+
+.pageGlowRight {
+  right: calc(var(--page-glow-offset-x) * -1);
+}
+
+.pageContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .main {

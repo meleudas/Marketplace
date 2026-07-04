@@ -287,18 +287,20 @@ export function HomeScreen() {
             const isActive = selectedCategorySlug === category.slug;
 
             return (
-              <button
+              <Button
                 key={category.id}
                 type="button"
                 role="tab"
+                variant="dark"
+                size="sm"
                 aria-selected={isActive}
-                className={`${styles.categoryChip} ${isActive ? styles.categoryChipActive : ""}`.trim()}
+                className={`${styles.categoryButton} ${isActive ? styles.categoryButtonActive : ""}`.trim()}
                 onClick={() =>
                   setSelectedCategorySlug((current) => (current === category.slug ? null : category.slug))
                 }
               >
                 {category.name}
-              </button>
+              </Button>
             );
           })}
         </div>

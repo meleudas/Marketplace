@@ -3,7 +3,7 @@
   flex-direction: column;
   width: var(--product-card-width);
   max-width: 100%;
-  background: var(--product-card-bg);
+  background: transparent;
   border-radius: var(--product-card-radius);
   overflow: hidden;
 }
@@ -39,6 +39,10 @@
   display: grid;
   gap: var(--product-card-gap);
   padding: var(--product-card-padding);
+  background: transparent;
+  border: 1px solid var(--color-primary-light-blue);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
 }
 
 .author {
