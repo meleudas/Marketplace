@@ -307,6 +307,7 @@ public static class DependencyInjection
         services.AddScoped<ProductSearchIndexManager>();
         services.AddScoped<IProductSearchService, ElasticsearchProductSearchService>();
         services.AddScoped<IProductSearchIndexer, ElasticsearchProductSearchService>();
+        services.AddScoped<SearchIndexBootstrapSync>();
         services.AddScoped<IProductSimilarityService, ElasticsearchProductSimilarityService>();
         services.AddScoped<IPersonalizedRecommendationService, MlNetPersonalizedRecommendationService>();
         services.AddSingleton<IRecommendationModelRegistry, ObjectStorageRecommendationModelRegistry>();
@@ -482,5 +483,8 @@ public static class DependencyInjection
 
         foreach (var seeder in seeders)
             await seeder.SeedAsync(db, sp, ct);
+
+        var searchSync = sp.GetRequiredService<SearchIndexBootstrapSync>();
+        await searchSync.SyncAfterDatabaseSeedAsync(ct);
     }
 }
