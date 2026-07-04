@@ -10,11 +10,11 @@ namespace Marketplace.Tests;
 public class EmailProviderSelectionTests
 {
     [Fact]
-    public void AddInfrastructure_Uses_LoggingEmailSender_When_SendGrid_Not_Configured()
+    public void AddInfrastructure_Uses_LoggingEmailSender_When_No_Provider_Configured()
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        var config = BuildConfiguration(includeSendGrid: false);
+        var config = BuildConfiguration();
 
         services.AddInfrastructure(config);
         using var provider = services.BuildServiceProvider();
@@ -42,11 +42,43 @@ public class EmailProviderSelectionTests
     }
 
     [Fact]
+    public void AddInfrastructure_Uses_AwsSesEmailSender_When_Ses_Configured()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        var config = BuildConfiguration(includeSes: true);
+
+        services.AddInfrastructure(config);
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        var emailPort = scope.ServiceProvider.GetRequiredService<IEmailPort>();
+
+        Assert.IsType<AwsSesEmailSender>(emailPort);
+    }
+
+    [Fact]
+    public void AddInfrastructure_Prefers_AwsSes_When_Ses_And_SendGrid_Configured()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        var config = BuildConfiguration(includeSendGrid: true, includeSes: true);
+
+        services.AddInfrastructure(config);
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        var emailPort = scope.ServiceProvider.GetRequiredService<IEmailPort>();
+
+        Assert.IsType<AwsSesEmailSender>(emailPort);
+    }
+
+    [Fact]
     public void AddInfrastructure_Uses_LoggingTelegramSender_When_Telegram_Not_Configured()
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        var config = BuildConfiguration(includeSendGrid: false, includeTelegram: false);
+        var config = BuildConfiguration(includeTelegram: false);
 
         services.AddInfrastructure(config);
         using var provider = services.BuildServiceProvider();
@@ -62,7 +94,7 @@ public class EmailProviderSelectionTests
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        var config = BuildConfiguration(includeSendGrid: false, includeTelegram: true);
+        var config = BuildConfiguration(includeTelegram: true);
 
         services.AddInfrastructure(config);
         using var provider = services.BuildServiceProvider();
@@ -73,7 +105,10 @@ public class EmailProviderSelectionTests
         Assert.IsType<TelegramBotSender>(telegramPort);
     }
 
-    private static IConfiguration BuildConfiguration(bool includeSendGrid, bool includeTelegram = false)
+    private static IConfiguration BuildConfiguration(
+        bool includeSendGrid = false,
+        bool includeSes = false,
+        bool includeTelegram = false)
     {
         var values = new Dictionary<string, string?>
         {
@@ -92,6 +127,14 @@ public class EmailProviderSelectionTests
             values["SendGrid:FromName"] = "Marketplace";
         }
 
+        if (includeSes)
+        {
+            values["AwsSes:Enabled"] = "true";
+            values["AwsSes:Region"] = "eu-central-1";
+            values["AwsSes:FromEmail"] = "noreply@example.com";
+            values["AwsSes:FromName"] = "Marketplace";
+        }
+
         if (includeTelegram)
         {
             values["Telegram:BotToken"] = "mock-bot-token";
@@ -104,4 +147,3 @@ public class EmailProviderSelectionTests
             .Build();
     }
 }
-
