@@ -1,12 +1,26 @@
-.categories {
+.categoryRows {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.categories,
+.subcategories {
   display: flex;
   gap: var(--space-8);
   overflow-x: auto;
-  padding-bottom: var(--space-4);
   scrollbar-width: none;
 }
 
-.categories::-webkit-scrollbar {
+.categories {
+  padding-bottom: var(--space-4);
+}
+
+.subcategories {
+  padding-bottom: var(--space-4);
+}
+
+.categories::-webkit-scrollbar,
+.subcategories::-webkit-scrollbar {
   display: none;
 }
 

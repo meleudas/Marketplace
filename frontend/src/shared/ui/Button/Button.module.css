@@ -134,13 +134,16 @@
 
 .dark {
   background: var(--color-bg);
-  border-color: var(--color-button-dark-border);
+  border: 0;
   color: var(--color-button-text);
 }
 
 .dark:hover:not(:disabled) {
-  background: var(--color-button-dark-hover-bg);
-  border-color: var(--color-primary-light-blue);
+  background: var(--color-neutral-800);
+}
+
+.dark:active:not(:disabled) {
+  background: var(--ui-color-surface-muted);
 }
 
 .dark .leadingIcon svg {
@@ -158,19 +161,60 @@
   min-width: 0;
 }
 
-.dark.selectable:not(.selected):is(:hover, :focus, :active) {
+.dark.selectable:not(.selected),
+.dark.selectable:not(.selected):is(:focus, :active) {
   background: var(--color-bg);
-  border-color: var(--color-button-dark-border);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .dark.selectable:not(.selected):hover:not(:disabled) {
-    border-color: var(--color-primary-light-blue);
+    background: var(--color-neutral-800);
   }
+}
+
+.dark.selectable:not(.selected):active:not(:disabled) {
+  background: var(--color-neutral-800);
 }
 
 .dark.selectable.selected,
 .dark.selectable.selected:is(:hover, :focus, :active) {
-  background: var(--color-button-dark-hover-bg);
-  border-color: var(--color-primary-light-blue);
+  background: var(--color-neutral-800);
+}
+
+.dark.selectable.selected:active:not(:disabled) {
+  background: var(--ui-color-surface-muted);
+}
+
+.filter {
+  background: transparent;
+  border-color: var(--color-button-secondary-bg);
+  color: var(--color-button-text);
+}
+
+.filter.selectable:not(.selected):is(:focus, :active) {
+  background: transparent;
+  border-color: var(--color-button-secondary-bg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .filter.selectable:not(.selected):hover:not(:disabled) {
+    background: var(--color-button-secondary-bg);
+    border-color: var(--color-button-secondary-bg);
+  }
+
+  .filter.selectable:not(.selected):hover:active:not(:disabled) {
+    background: var(--color-button-secondary-hover);
+    border-color: var(--color-button-secondary-hover);
+  }
+}
+
+.filter.selectable.selected,
+.filter.selectable.selected:is(:hover, :focus) {
+  background: var(--color-button-secondary-bg);
+  border-color: var(--color-button-secondary-bg);
+}
+
+.filter.selectable.selected:active:not(:disabled) {
+  background: var(--color-button-secondary-active);
+  border-color: var(--color-button-secondary-active);
 }

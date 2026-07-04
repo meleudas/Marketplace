@@ -2,19 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getCatalogCategories, getCatalogProducts } from "@/features/storefront/api/catalog.api";
+import {
+  getCategoryFilterIds,
+  productMatchesCategoryFilter,
+} from "@/features/storefront/lib/catalog-category-filter";
 import type { CatalogCategoryDto, CatalogProductListItemDto } from "@/features/storefront/model/catalog.types";
 import { CategoryList } from "@/features/storefront/ui/CategoryList";
 import { ProductCard } from "@/features/storefront/ui/ProductCard";
 import { StateBlock } from "@/features/storefront/ui/StateBlock";
 import { StorefrontLayout } from "@/features/storefront/ui/StorefrontLayout";
 import styles from "@/features/storefront/ui/StorefrontScreen.module.css";
-
-const productMatchesCategory = (
-  product: CatalogProductListItemDto,
-  category: CatalogCategoryDto,
-): boolean => {
-  return product.categoryId === category.id;
-};
 
 export function ProductsScreen() {
   const [loading, setLoading] = useState(true);
@@ -56,10 +53,11 @@ export function ProductsScreen() {
       return products;
     }
 
-    const matches = products.filter((product) => productMatchesCategory(product, selectedCategory));
+    const categoryFilterIds = getCategoryFilterIds(categories, selectedCategory);
 
-    // If API does not expose category linkage in product items, keep products visible.
-    return matches.length > 0 ? matches : products;
+    return products.filter((product) =>
+      productMatchesCategoryFilter(product.categoryId, categoryFilterIds),
+    );
   }, [categories, products, selectedCategorySlug]);
 
   return (
