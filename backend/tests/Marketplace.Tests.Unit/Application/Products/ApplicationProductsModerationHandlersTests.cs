@@ -385,6 +385,11 @@ public sealed class ApplicationProductsModerationHandlersTests
         public Task<IReadOnlyList<ProductImage>> ListByProductIdAsync(ProductId productId, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<ProductImage>>([]);
 
+        public Task<IReadOnlyDictionary<long, IReadOnlyList<string>>> ListImageUrlsByProductIdsAsync(
+            IReadOnlyCollection<long> productIds,
+            CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyDictionary<long, IReadOnlyList<string>>>(new Dictionary<long, IReadOnlyList<string>>());
+
         public Task ReplaceForProductAsync(ProductId productId, IReadOnlyList<ProductImage> images, CancellationToken ct = default)
             => Task.CompletedTask;
     }

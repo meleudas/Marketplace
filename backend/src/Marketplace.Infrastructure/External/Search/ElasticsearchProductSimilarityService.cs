@@ -129,5 +129,6 @@ public sealed class ElasticsearchProductSimilarityService : IProductSimilaritySe
             x.AvailableQty,
             x.AvailabilityStatus,
             x.CreatedAt,
-            x.UpdatedAt);
+            x.UpdatedAt,
+            []);
 }

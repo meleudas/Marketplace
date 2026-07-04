@@ -16,4 +16,5 @@ public sealed record ProductListItemDto(
     int AvailableQty,
     string AvailabilityStatus,
     DateTime CreatedAt,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    IReadOnlyList<string> ImageUrls);
