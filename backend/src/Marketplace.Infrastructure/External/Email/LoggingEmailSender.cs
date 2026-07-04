@@ -27,29 +27,30 @@ public sealed class LoggingEmailSender : IEmailPort, IEmailSender, IEmailHealthP
 
     public Task SendConfirmationEmailAsync(string to, string token, CancellationToken ct = default)
     {
-        var link = EmailConfirmationLinkBuilder.Build(_frontend.BaseUrl, to, token);
+        var message = TransactionalEmailContentBuilder.BuildConfirmation(_frontend.BaseUrl, to, token);
         _logger.LogInformation(
-            "Confirmation email to {To}, link {Link}",
-            to,
-            link);
-        return Task.CompletedTask;
+            "Confirmation email to {To}, link embedded in body",
+            to);
+        return SendAsync(to, message.Subject, message.Body, ct);
     }
 
     public Task SendPasswordResetEmailAsync(string to, string token, CancellationToken ct = default)
     {
+        var message = TransactionalEmailContentBuilder.BuildPasswordReset(token);
         _logger.LogInformation("Password reset email to {To}, token length {Len}", to, token.Length);
-        return Task.CompletedTask;
+        return SendAsync(to, message.Subject, message.Body, ct);
     }
 
     public Task SendTwoFactorCodeEmailAsync(string to, string code, CancellationToken ct = default)
     {
+        var message = TransactionalEmailContentBuilder.BuildTwoFactorCode(code);
         _logger.LogInformation("2FA email to {To}, code length {Len}", to, code.Length);
-        return Task.CompletedTask;
+        return SendAsync(to, message.Subject, message.Body, ct);
     }
 
     public Task<EmailHealthStatus> CheckAsync(CancellationToken ct = default)
         => Task.FromResult(new EmailHealthStatus(
             IsHealthy: true,
             Provider: "LoggingEmailSender",
-            Message: "SendGrid is not configured. Using logging email sender."));
+            Message: "No external email provider configured. Using logging email sender."));
 }
