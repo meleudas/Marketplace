@@ -7,14 +7,16 @@ export const CATALOG_PRODUCT_SORT_OPTIONS: ReadonlyArray<{
   value: CatalogProductSort;
   label: string;
 }> = [
-  { value: "relevance", label: "За замовчуванням" },
-  { value: "newest", label: "Спочатку нові" },
-  { value: "price_asc", label: "Спочатку дешевші" },
-  { value: "price_desc", label: "Спочатку дорожчі" },
+  { value: "relevance", label: "За популярністю" },
+  { value: "newest", label: "За новизною" },
+  { value: "price_asc", label: "Від найдешевших" },
+  { value: "price_desc", label: "Від найдорожчих" },
 ] as const;
 
+export const DEFAULT_CATALOG_PRODUCT_SORT: CatalogProductSort = "relevance";
+
 export const getCatalogProductSortLabel = (sort: CatalogProductSort): string =>
-  CATALOG_PRODUCT_SORT_OPTIONS.find((option) => option.value === sort)?.label ?? "Сортувати";
+  CATALOG_PRODUCT_SORT_OPTIONS.find((option) => option.value === sort)?.label ?? "За популярністю";
 
 /** Mirrors backend fallback sorting in SearchCatalogProductsQueryHandler. */
 export const sortCatalogProducts = (

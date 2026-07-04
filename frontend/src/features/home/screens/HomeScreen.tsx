@@ -9,7 +9,15 @@ import {
   searchCatalogProducts,
 } from "@/features/storefront/api/catalog.api";
 import {
+  getCategoryFilterIds,
+  getChildCategories,
+  getRootCategories,
+  productMatchesCategoryFilter,
+  resolveCategorySelection,
+} from "@/features/storefront/lib/catalog-category-filter";
+import {
   CATALOG_PRODUCT_SORT_OPTIONS,
+  DEFAULT_CATALOG_PRODUCT_SORT,
   getCatalogProductSortLabel,
   sortCatalogProducts,
   type CatalogProductSort,
@@ -19,14 +27,12 @@ import { StateBlock } from "@/features/storefront/ui/StateBlock";
 import {
   ArrowsSortIcon,
   Button,
+  CatalogMenu,
   Checkbox,
-  CloseIcon,
   FilterIcon,
   PageLayout,
   Pagination,
   ProductCard,
-  Radio,
-  RadioGroup,
 } from "@/shared/ui";
 import iconStyles from "@/shared/ui/icons/Icon.module.css";
 import type { ProductCardData } from "@/shared/ui/ProductCard";
@@ -49,7 +55,7 @@ const filterProductsLocally = (
   items: CatalogProductListItemDto[],
   options: {
     query: string;
-    categoryId?: number;
+    categoryFilterIds?: number[];
     inStockOnly: boolean;
     sort: CatalogProductSort | null;
   },
@@ -57,8 +63,10 @@ const filterProductsLocally = (
   const query = options.query.toLowerCase();
   let result = [...items];
 
-  if (options.categoryId) {
-    result = result.filter((product) => product.categoryId === options.categoryId);
+  if (options.categoryFilterIds && options.categoryFilterIds.length > 0) {
+    result = result.filter((product) =>
+      productMatchesCategoryFilter(product.categoryId, options.categoryFilterIds!),
+    );
   }
 
   if (options.inStockOnly) {
@@ -87,9 +95,11 @@ export function HomeScreen() {
 
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [inStockOnly, setInStockOnly] = useState(false);
-  const [selectedCategorySlug, setSelectedCategorySlug] = useState<string | null>(null);
-  const [selectedSort, setSelectedSort] = useState<CatalogProductSort | null>(null);
+  const [selectedRootSlug, setSelectedRootSlug] = useState<string | null>(null);
+  const [selectedSubcategorySlug, setSelectedSubcategorySlug] = useState<string | null>(null);
+  const [selectedSort, setSelectedSort] = useState<CatalogProductSort>(DEFAULT_CATALOG_PRODUCT_SORT);
   const [sortModalOpen, setSortModalOpen] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -113,7 +123,7 @@ export function HomeScreen() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategorySlug, inStockOnly, selectedSort, searchQuery]);
+  }, [selectedRootSlug, selectedSubcategorySlug, inStockOnly, selectedSort, searchQuery]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -131,11 +141,16 @@ export function HomeScreen() {
         setLoading(true);
         setError(null);
 
-        const selectedCategory = selectedCategorySlug
-          ? categories.find((category) => category.slug === selectedCategorySlug)
-          : null;
+        const selectedCategory = selectedSubcategorySlug
+          ? categories.find((category) => category.slug === selectedSubcategorySlug)
+          : selectedRootSlug
+            ? categories.find((category) => category.slug === selectedRootSlug)
+            : null;
+        const categoryFilterIds = selectedCategory
+          ? getCategoryFilterIds(categories, selectedCategory)
+          : undefined;
         const shouldUseSearchEndpoint = Boolean(
-          searchQuery || selectedCategory || inStockOnly || selectedSort,
+          searchQuery || selectedCategory || inStockOnly || selectedSort !== DEFAULT_CATALOG_PRODUCT_SORT,
         );
 
         let nextProducts = await getCatalogProducts();
@@ -143,9 +158,9 @@ export function HomeScreen() {
         if (shouldUseSearchEndpoint) {
           const searchResult = await searchCatalogProducts({
             query: searchQuery || undefined,
-            categoryIds: selectedCategory ? [selectedCategory.id] : undefined,
+            categoryIds: categoryFilterIds,
             availabilityStatus: inStockOnly ? "in_stock" : undefined,
-            sort: selectedSort ?? undefined,
+            sort: selectedSort !== DEFAULT_CATALOG_PRODUCT_SORT ? selectedSort : undefined,
             page: 1,
             pageSize: 200,
           });
@@ -155,7 +170,7 @@ export function HomeScreen() {
               ? searchResult.items
               : filterProductsLocally(nextProducts, {
                   query: searchQuery,
-                  categoryId: selectedCategory?.id,
+                  categoryFilterIds,
                   inStockOnly,
                   sort: selectedSort,
                 });
@@ -180,11 +195,26 @@ export function HomeScreen() {
     return () => {
       cancelled = true;
     };
-  }, [categories, inStockOnly, searchQuery, selectedCategorySlug, selectedSort]);
+  }, [categories, inStockOnly, searchQuery, selectedRootSlug, selectedSubcategorySlug, selectedSort]);
+
+  const rootCategories = useMemo(() => getRootCategories(categories), [categories]);
+
+  const selectedRootCategory = useMemo(
+    () => rootCategories.find((category) => category.slug === selectedRootSlug) ?? null,
+    [rootCategories, selectedRootSlug],
+  );
+
+  const visibleSubcategories = useMemo(() => {
+    if (!selectedRootCategory) {
+      return [];
+    }
+
+    return getChildCategories(categories, selectedRootCategory.id);
+  }, [categories, selectedRootCategory]);
 
   const filteredProducts = useMemo(() => {
-    return selectedSort && !searchQuery ? sortCatalogProducts(products, selectedSort) : products;
-  }, [products, searchQuery, selectedSort]);
+    return sortCatalogProducts(products, selectedSort);
+  }, [products, selectedSort]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
 
@@ -254,7 +284,20 @@ export function HomeScreen() {
     };
   }, [products]);
 
-  const sortButtonLabel = selectedSort ? getCatalogProductSortLabel(selectedSort) : "Сортувати";
+  useEffect(() => {
+    if (!sortModalOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [sortModalOpen]);
+
+  const sortButtonLabel = getCatalogProductSortLabel(selectedSort);
 
   const handlePageChange = (page: number) => {
     if (page === currentPage) {
@@ -270,6 +313,33 @@ export function HomeScreen() {
     setSortModalOpen(false);
   };
 
+  const handleRootCategoryClick = (slug: string) => {
+    setSelectedRootSlug((current) => {
+      if (current === slug) {
+        setSelectedSubcategorySlug(null);
+        return null;
+      }
+
+      setSelectedSubcategorySlug(null);
+      return slug;
+    });
+  };
+
+  const handleSubcategoryClick = (slug: string) => {
+    setSelectedSubcategorySlug((current) => (current === slug ? null : slug));
+  };
+
+  const handleCatalogCategorySelect = (slug: string) => {
+    const selection = resolveCategorySelection(categories, slug);
+    setSelectedRootSlug(selection.rootSlug);
+    setSelectedSubcategorySlug(selection.subcategorySlug);
+  };
+
+  const handleShowAllCategories = () => {
+    setSelectedRootSlug(null);
+    setSelectedSubcategorySlug(null);
+  };
+
   return (
     <PageLayout
       headerProps={{
@@ -278,32 +348,57 @@ export function HomeScreen() {
         searchValue: searchInput,
         searchPlaceholder: "Пошук книг",
         onSearchChange: setSearchInput,
+        onMenuClick: () => setCatalogOpen(true),
       }}
       footerProps={{ homeHref: "/home" }}
     >
-      {categories.length > 0 ? (
-        <div className={styles.categories} role="tablist" aria-label="Категорії">
-          {categories.map((category) => {
-            const isActive = selectedCategorySlug === category.slug;
+      {rootCategories.length > 0 ? (
+        <div className={styles.categoryRows}>
+          <div className={styles.categories} role="tablist" aria-label="Основні категорії">
+            {rootCategories.map((category) => {
+              const isActive = selectedRootSlug === category.slug;
 
-            return (
-              <Button
-                key={category.id}
-                type="button"
-                role="tab"
-                variant="dark"
-                size="sm"
-                selectable
-                selected={isActive}
-                aria-selected={isActive}
-                onClick={() =>
-                  setSelectedCategorySlug((current) => (current === category.slug ? null : category.slug))
-                }
-              >
-                {category.name}
-              </Button>
-            );
-          })}
+              return (
+                <Button
+                  key={category.id}
+                  type="button"
+                  role="tab"
+                  variant="dark"
+                  size="sm"
+                  selectable
+                  selected={isActive}
+                  aria-selected={isActive}
+                  onClick={() => handleRootCategoryClick(category.slug)}
+                >
+                  {category.name}
+                </Button>
+              );
+            })}
+          </div>
+
+          {visibleSubcategories.length > 0 ? (
+            <div className={styles.subcategories} role="tablist" aria-label="Підкатегорії">
+              {visibleSubcategories.map((category) => {
+                const isActive = selectedSubcategorySlug === category.slug;
+
+                return (
+                  <Button
+                    key={category.id}
+                    type="button"
+                    role="tab"
+                    variant="dark"
+                    size="sm"
+                    selectable
+                    selected={isActive}
+                    aria-selected={isActive}
+                    onClick={() => handleSubcategoryClick(category.slug)}
+                  >
+                    {category.name}
+                  </Button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -320,54 +415,18 @@ export function HomeScreen() {
           Фільтри
         </Button>
 
-        <div className={styles.sortAnchor}>
-          <Button
-            type="button"
-            variant="dark"
-            size="lg"
-            fullWidth
-            leadingIcon={<ArrowsSortIcon className={iconStyles.icon} />}
-            aria-haspopup="dialog"
-            aria-expanded={sortModalOpen}
-            onClick={() => setSortModalOpen((open) => !open)}
-          >
-            {sortButtonLabel}
-          </Button>
-
-          {sortModalOpen ? (
-            <div
-              className={styles.sortPopover}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="sort-modal-title"
-            >
-              <header className={styles.modalHeader}>
-                <h2 id="sort-modal-title" className={styles.modalTitle}>
-                  Сортувати
-                </h2>
-                <button
-                  type="button"
-                  className={styles.modalClose}
-                  aria-label="Закрити"
-                  onClick={() => setSortModalOpen(false)}
-                >
-                  <CloseIcon className={iconStyles.icon} />
-                </button>
-              </header>
-
-              <RadioGroup
-                name="product-sort"
-                value={selectedSort ?? ""}
-                onValueChange={(value) => handleSortSelect(value as CatalogProductSort)}
-                className={styles.sortOptions}
-              >
-                {CATALOG_PRODUCT_SORT_OPTIONS.map((option) => (
-                  <Radio key={option.value} value={option.value} label={option.label} />
-                ))}
-              </RadioGroup>
-            </div>
-          ) : null}
-        </div>
+        <Button
+          type="button"
+          variant="dark"
+          size="lg"
+          fullWidth
+          leadingIcon={<ArrowsSortIcon className={iconStyles.icon} />}
+          aria-haspopup="dialog"
+          aria-expanded={sortModalOpen}
+          onClick={() => setSortModalOpen((open) => !open)}
+        >
+          {sortButtonLabel}
+        </Button>
       </div>
 
       {filtersOpen ? (
@@ -414,13 +473,48 @@ export function HomeScreen() {
       ) : null}
 
       {sortModalOpen ? (
-        <button
-          type="button"
-          className={styles.sortBackdrop}
-          aria-label="Закрити сортування"
-          onClick={() => setSortModalOpen(false)}
-        />
+        <>
+          <button
+            type="button"
+            className={styles.sortBackdrop}
+            aria-label="Закрити сортування"
+            onClick={() => setSortModalOpen(false)}
+          />
+          <div className={styles.sortSheet} role="dialog" aria-modal="true" aria-label="Сортування">
+            <div className={styles.sortSheetOptions}>
+              {CATALOG_PRODUCT_SORT_OPTIONS.map((option) => {
+                const isActive = selectedSort === option.value;
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={isActive ? styles.sortOptionActive : styles.sortOption}
+                    aria-pressed={isActive}
+                    onClick={() => handleSortSelect(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
       ) : null}
+
+      <CatalogMenu
+        open={catalogOpen}
+        categories={categories.map((category) => ({
+          id: category.id,
+          name: category.name,
+          slug: category.slug,
+          parentId: category.parentId,
+          sortOrder: category.sortOrder,
+        }))}
+        onClose={() => setCatalogOpen(false)}
+        onCategorySelect={handleCatalogCategorySelect}
+        onShowAll={handleShowAllCategories}
+      />
     </PageLayout>
   );
 }

@@ -54,3 +54,6 @@ export { Pagination } from "./Pagination";
 export { Header } from "./Header";
 export { Footer } from "./Footer";
 export { PageLayout } from "./PageLayout";
+export { PageBackground } from "./PageBackground";
+export { CatalogMenu } from "./CatalogMenu";
+export type { CatalogFormatFilter, CatalogMenuCategory } from "./CatalogMenu";
