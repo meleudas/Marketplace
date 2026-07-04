@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes, MouseEvent, ReactNode } from "react";
 import styles from "./Button.module.css";
 
-export type ButtonVariant = "primary" | "secondary" | "gradient" | "dark";
+export type ButtonVariant = "primary" | "secondary" | "gradient" | "dark" | "filter";
 
 export type ButtonSize = "sm" | "lg" | "icon";
 
@@ -47,7 +47,7 @@ export function Button({
     .join(" ");
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
-    if (selectable && selected) {
+    if (selectable && selected && variant === "dark") {
       const target = event.currentTarget;
       target.blur();
       requestAnimationFrame(() => target.blur());

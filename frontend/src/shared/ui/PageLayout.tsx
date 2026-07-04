@@ -2,6 +2,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { Container } from "./Container";
 import { Footer } from "./Footer";
 import { Header } from "./Header";
+import { PageBackground } from "./PageBackground";
 import styles from "./PageLayout.module.css";
 
 interface PageLayoutProps {
@@ -16,7 +17,7 @@ export function PageLayout({ children, className, headerProps, footerProps }: Pa
 
   return (
     <div className={styles.page}>
-      <div className={styles.pageBackground} aria-hidden="true" />
+      <PageBackground />
 
       <div className={styles.pageContent}>
         <Header {...headerProps} />
