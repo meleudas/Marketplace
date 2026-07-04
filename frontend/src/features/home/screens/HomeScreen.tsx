@@ -17,6 +17,7 @@ import {
 } from "@/features/storefront/lib/catalog-category-filter";
 import {
   CATALOG_PRODUCT_SORT_OPTIONS,
+  DEFAULT_CATALOG_PRODUCT_SORT,
   getCatalogProductSortLabel,
   sortCatalogProducts,
   type CatalogProductSort,
@@ -28,13 +29,10 @@ import {
   Button,
   CatalogMenu,
   Checkbox,
-  CloseIcon,
   FilterIcon,
   PageLayout,
   Pagination,
   ProductCard,
-  Radio,
-  RadioGroup,
 } from "@/shared/ui";
 import iconStyles from "@/shared/ui/icons/Icon.module.css";
 import type { ProductCardData } from "@/shared/ui/ProductCard";
@@ -99,7 +97,7 @@ export function HomeScreen() {
   const [inStockOnly, setInStockOnly] = useState(false);
   const [selectedRootSlug, setSelectedRootSlug] = useState<string | null>(null);
   const [selectedSubcategorySlug, setSelectedSubcategorySlug] = useState<string | null>(null);
-  const [selectedSort, setSelectedSort] = useState<CatalogProductSort | null>(null);
+  const [selectedSort, setSelectedSort] = useState<CatalogProductSort>(DEFAULT_CATALOG_PRODUCT_SORT);
   const [sortModalOpen, setSortModalOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
@@ -152,7 +150,7 @@ export function HomeScreen() {
           ? getCategoryFilterIds(categories, selectedCategory)
           : undefined;
         const shouldUseSearchEndpoint = Boolean(
-          searchQuery || selectedCategory || inStockOnly || selectedSort,
+          searchQuery || selectedCategory || inStockOnly || selectedSort !== DEFAULT_CATALOG_PRODUCT_SORT,
         );
 
         let nextProducts = await getCatalogProducts();
@@ -162,7 +160,7 @@ export function HomeScreen() {
             query: searchQuery || undefined,
             categoryIds: categoryFilterIds,
             availabilityStatus: inStockOnly ? "in_stock" : undefined,
-            sort: selectedSort ?? undefined,
+            sort: selectedSort !== DEFAULT_CATALOG_PRODUCT_SORT ? selectedSort : undefined,
             page: 1,
             pageSize: 200,
           });
@@ -215,8 +213,8 @@ export function HomeScreen() {
   }, [categories, selectedRootCategory]);
 
   const filteredProducts = useMemo(() => {
-    return selectedSort && !searchQuery ? sortCatalogProducts(products, selectedSort) : products;
-  }, [products, searchQuery, selectedSort]);
+    return sortCatalogProducts(products, selectedSort);
+  }, [products, selectedSort]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
 
@@ -286,7 +284,20 @@ export function HomeScreen() {
     };
   }, [products]);
 
-  const sortButtonLabel = selectedSort ? getCatalogProductSortLabel(selectedSort) : "Сортувати";
+  useEffect(() => {
+    if (!sortModalOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [sortModalOpen]);
+
+  const sortButtonLabel = getCatalogProductSortLabel(selectedSort);
 
   const handlePageChange = (page: number) => {
     if (page === currentPage) {
@@ -404,54 +415,18 @@ export function HomeScreen() {
           Фільтри
         </Button>
 
-        <div className={styles.sortAnchor}>
-          <Button
-            type="button"
-            variant="dark"
-            size="lg"
-            fullWidth
-            leadingIcon={<ArrowsSortIcon className={iconStyles.icon} />}
-            aria-haspopup="dialog"
-            aria-expanded={sortModalOpen}
-            onClick={() => setSortModalOpen((open) => !open)}
-          >
-            {sortButtonLabel}
-          </Button>
-
-          {sortModalOpen ? (
-            <div
-              className={styles.sortPopover}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="sort-modal-title"
-            >
-              <header className={styles.modalHeader}>
-                <h2 id="sort-modal-title" className={styles.modalTitle}>
-                  Сортувати
-                </h2>
-                <button
-                  type="button"
-                  className={styles.modalClose}
-                  aria-label="Закрити"
-                  onClick={() => setSortModalOpen(false)}
-                >
-                  <CloseIcon className={iconStyles.icon} />
-                </button>
-              </header>
-
-              <RadioGroup
-                name="product-sort"
-                value={selectedSort ?? ""}
-                onValueChange={(value) => handleSortSelect(value as CatalogProductSort)}
-                className={styles.sortOptions}
-              >
-                {CATALOG_PRODUCT_SORT_OPTIONS.map((option) => (
-                  <Radio key={option.value} value={option.value} label={option.label} />
-                ))}
-              </RadioGroup>
-            </div>
-          ) : null}
-        </div>
+        <Button
+          type="button"
+          variant="dark"
+          size="lg"
+          fullWidth
+          leadingIcon={<ArrowsSortIcon className={iconStyles.icon} />}
+          aria-haspopup="dialog"
+          aria-expanded={sortModalOpen}
+          onClick={() => setSortModalOpen((open) => !open)}
+        >
+          {sortButtonLabel}
+        </Button>
       </div>
 
       {filtersOpen ? (
@@ -498,12 +473,33 @@ export function HomeScreen() {
       ) : null}
 
       {sortModalOpen ? (
-        <button
-          type="button"
-          className={styles.sortBackdrop}
-          aria-label="Закрити сортування"
-          onClick={() => setSortModalOpen(false)}
-        />
+        <>
+          <button
+            type="button"
+            className={styles.sortBackdrop}
+            aria-label="Закрити сортування"
+            onClick={() => setSortModalOpen(false)}
+          />
+          <div className={styles.sortSheet} role="dialog" aria-modal="true" aria-label="Сортування">
+            <div className={styles.sortSheetOptions}>
+              {CATALOG_PRODUCT_SORT_OPTIONS.map((option) => {
+                const isActive = selectedSort === option.value;
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={isActive ? styles.sortOptionActive : styles.sortOption}
+                    aria-pressed={isActive}
+                    onClick={() => handleSortSelect(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
       ) : null}
 
       <CatalogMenu
