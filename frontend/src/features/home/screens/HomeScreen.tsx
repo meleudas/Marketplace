@@ -293,8 +293,9 @@ export function HomeScreen() {
                 role="tab"
                 variant="dark"
                 size="sm"
+                selectable
+                selected={isActive}
                 aria-selected={isActive}
-                className={`${styles.categoryButton} ${isActive ? styles.categoryButtonActive : ""}`.trim()}
                 onClick={() =>
                   setSelectedCategorySlug((current) => (current === category.slug ? null : category.slug))
                 }

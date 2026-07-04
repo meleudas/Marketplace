@@ -11,27 +11,28 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  overflow: visible;
+  overflow: hidden;
   pointer-events: none;
-}
 
-.pageGlow {
-  position: absolute;
-  width: var(--page-glow-size);
-  height: var(--page-glow-size);
-  border-radius: 50%;
-  background: var(--color-primary-blue);
-  opacity: 0.42;
-  filter: blur(var(--page-glow-blur));
-  transform: translateY(-50%);
-}
+  --page-glow-spread: calc(var(--page-glow-size) / 2 + var(--page-glow-blur));
 
-.pageGlowLeft {
-  left: calc(var(--page-glow-offset-x) * -1);
-}
-
-.pageGlowRight {
-  right: calc(var(--page-glow-offset-x) * -1);
+  background-image:
+    radial-gradient(
+      circle var(--page-glow-spread) at calc(var(--page-glow-offset-x) * -1) calc(var(--page-glow-size) / 2),
+      var(--page-glow-color) 0%,
+      rgb(83 93 223 / 0.2) 36%,
+      rgb(83 93 223 / 0.06) 56%,
+      transparent 72%
+    ),
+    radial-gradient(
+      circle var(--page-glow-spread) at calc(100% + var(--page-glow-offset-x)) calc(var(--page-glow-step) + var(--page-glow-size) / 2),
+      var(--page-glow-color) 0%,
+      rgb(83 93 223 / 0.2) 36%,
+      rgb(83 93 223 / 0.06) 56%,
+      transparent 72%
+    );
+  background-size: 100% calc(var(--page-glow-step) * 2);
+  background-repeat: repeat-y;
 }
 
 .pageContent {

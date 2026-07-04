@@ -147,3 +147,30 @@
   width: var(--space-24);
   height: var(--space-24);
 }
+
+.selectable {
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.selectable.sm {
+  width: auto;
+  min-width: 0;
+}
+
+.dark.selectable:not(.selected):is(:hover, :focus, :active) {
+  background: var(--color-bg);
+  border-color: var(--color-button-dark-border);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dark.selectable:not(.selected):hover:not(:disabled) {
+    border-color: var(--color-primary-light-blue);
+  }
+}
+
+.dark.selectable.selected,
+.dark.selectable.selected:is(:hover, :focus, :active) {
+  background: var(--color-button-dark-hover-bg);
+  border-color: var(--color-primary-light-blue);
+}
