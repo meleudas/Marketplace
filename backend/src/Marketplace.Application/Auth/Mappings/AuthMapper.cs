@@ -7,12 +7,20 @@ namespace Marketplace.Application.Auth.Mappings;
 
 public static class AuthMapper
 {
-    public static UserDto ToUserDto(User user, IReadOnlyList<UserCompanyMembershipDto>? companyMemberships = null) =>
+    public static UserDto ToUserDto(
+        User user,
+        IReadOnlyList<UserCompanyMembershipDto>? companyMemberships = null,
+        string? email = null,
+        string? phoneNumber = null,
+        string? patronymic = null) =>
         new(
             user.Id.Value,
             user.FirstName,
             user.LastName,
+            patronymic,
             user.Role.ToString().ToLowerInvariant(),
+            email,
+            phoneNumber,
             user.Birthday,
             user.Avatar,
             user.IsVerified,

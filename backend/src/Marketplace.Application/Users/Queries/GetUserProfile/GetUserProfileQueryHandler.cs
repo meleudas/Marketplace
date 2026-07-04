@@ -2,6 +2,7 @@ using Marketplace.Application.Auth.DTOs;
 using Marketplace.Application.Auth.Mappings;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Common.Options;
+using Marketplace.Application.Notifications.Ports;
 using Marketplace.Application.Users.Cache;
 using Marketplace.Domain.Companies.Repositories;
 using Marketplace.Domain.Shared.Kernel;
@@ -17,6 +18,7 @@ public class GetUserProfileQueryHandler : IRequestHandler<GetUserProfileQuery, R
     private readonly IUserRepository _userRepository;
     private readonly ICompanyMemberRepository _companyMemberRepository;
     private readonly ICompanyRepository _companyRepository;
+    private readonly IAppNotificationUserContactReader _contactReader;
     private readonly IAppCachePort _cache;
     private readonly CacheTtlOptions _ttl;
 
@@ -24,12 +26,14 @@ public class GetUserProfileQueryHandler : IRequestHandler<GetUserProfileQuery, R
         IUserRepository userRepository,
         ICompanyMemberRepository companyMemberRepository,
         ICompanyRepository companyRepository,
+        IAppNotificationUserContactReader contactReader,
         IAppCachePort cache,
         IOptions<CacheTtlOptions> ttl)
     {
         _userRepository = userRepository;
         _companyMemberRepository = companyMemberRepository;
         _companyRepository = companyRepository;
+        _contactReader = contactReader;
         _cache = cache;
         _ttl = ttl.Value;
     }
@@ -65,7 +69,12 @@ public class GetUserProfileQueryHandler : IRequestHandler<GetUserProfileQuery, R
                     m.IsOwner));
             }
 
-            var dto = AuthMapper.ToUserDto(user, companyRows);
+            var contact = await _contactReader.GetAsync(request.IdentityUserId, ct);
+            var dto = AuthMapper.ToUserDto(
+                user,
+                companyRows,
+                contact?.Email,
+                contact?.PhoneNumber);
             await _cache.SetAsync(cacheKey, dto, _ttl.UsersProfile, ct);
             return Result<UserDto>.Success(dto);
         }
