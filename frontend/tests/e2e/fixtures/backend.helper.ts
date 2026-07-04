@@ -14,15 +14,15 @@ export async function isBackendAvailable(apiBaseUrl = getApiBaseUrl()): Promise<
   }
 }
 
-export function isBackendAvailableFromEnv(): boolean {
+function isBackendAvailableFromEnv(): boolean {
   return process.env.E2E_BACKEND_AVAILABLE === "true";
 }
 
-export function skipIfBackendUnavailable(): boolean {
+function skipIfBackendUnavailable(): boolean {
   return !isBackendAvailableFromEnv();
 }
 
-export function skipIfAuthRateLimited(): boolean {
+function skipIfAuthRateLimited(): boolean {
   return process.env.E2E_AUTH_RATE_LIMITED === "true";
 }
 
