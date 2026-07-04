@@ -108,18 +108,55 @@ public sealed class ProductionConfigurationValidatorTests
 
   [Fact]
   [Trait("Suite", "Security")]
-  public void CollectErrors_Fails_When_Email_Enabled_Without_SendGrid()
+  public void CollectErrors_Fails_When_Email_Enabled_Without_Provider()
   {
     var values = new Dictionary<string, string?>(ValidProductionConfig, StringComparer.OrdinalIgnoreCase)
     {
       ["AppNotifications:EmailEnabled"] = "true",
-      ["SendGrid:ApiKey"] = ""
+      ["SendGrid:ApiKey"] = "",
+      ["AwsSes:Enabled"] = "false"
     };
     var config = BuildConfig(values);
 
     var errors = ProductionConfigurationValidator.CollectErrors(config);
 
-    Assert.Contains(errors, e => e.Contains("SendGrid:ApiKey", StringComparison.Ordinal));
+    Assert.Contains(errors, e => e.Contains("AwsSes", StringComparison.Ordinal) || e.Contains("SendGrid", StringComparison.Ordinal));
+  }
+
+  [Fact]
+  [Trait("Suite", "Security")]
+  public void CollectErrors_Passes_When_Email_Enabled_With_Ses_Configured()
+  {
+    var values = new Dictionary<string, string?>(ValidProductionConfig, StringComparer.OrdinalIgnoreCase)
+    {
+      ["AppNotifications:EmailEnabled"] = "true",
+      ["AwsSes:Enabled"] = "true",
+      ["AwsSes:Region"] = "eu-central-1",
+      ["AwsSes:FromEmail"] = "noreply@example.com"
+    };
+    var config = BuildConfig(values);
+
+    var errors = ProductionConfigurationValidator.CollectErrors(config);
+
+    Assert.DoesNotContain(errors, e => e.Contains("SendGrid:ApiKey", StringComparison.Ordinal));
+    Assert.DoesNotContain(errors, e => e.Contains("AwsSes", StringComparison.Ordinal));
+  }
+
+  [Fact]
+  [Trait("Suite", "Security")]
+  public void CollectErrors_Passes_When_Email_Enabled_With_SendGrid_Only()
+  {
+    var values = new Dictionary<string, string?>(ValidProductionConfig, StringComparer.OrdinalIgnoreCase)
+    {
+      ["AppNotifications:EmailEnabled"] = "true",
+      ["SendGrid:ApiKey"] = "SG.prod-key-example",
+      ["SendGrid:FromEmail"] = "noreply@example.com"
+    };
+    var config = BuildConfig(values);
+
+    var errors = ProductionConfigurationValidator.CollectErrors(config);
+
+    Assert.DoesNotContain(errors, e => e.Contains("SendGrid:ApiKey is required", StringComparison.Ordinal));
   }
 
   private static IConfiguration BuildConfig(Dictionary<string, string?> values) =>

@@ -16,7 +16,8 @@
 | JWT signing key | `JWT__SECRETKEY` | Так (≥32 байт) | Кожні 90 днів або при компрометації |
 | LiqPay public/private | `LIQPAY__PUBLICKEY`, `LIQPAY__PRIVATEKEY` | Так | За політикою LiqPay |
 | Google OAuth | `GOOGLEAUTH__CLIENTID`, `GOOGLEAUTH__CLIENTSECRET` | Якщо OAuth увімкнено | При ротації OAuth client |
-| SendGrid | `SENDGRID__APIKEY` | Якщо `APPNOTIFICATIONS__EMAILENABLED=true` | За політикою SendGrid |
+| AWS SES | `AWSSES__ENABLED`, `AWSSES__REGION`, `AWSSES__FROMEMAIL` | Якщо `APPNOTIFICATIONS__EMAILENABLED=true` і SES — основний провайдер | IAM role на ECS/EC2 (без secret key) |
+| SendGrid | `SENDGRID__APIKEY` | Fallback email, якщо SES вимкнено | За політикою SendGrid |
 | Web Push VAPID | `WEBPUSH__PUBLICKEY`, `WEBPUSH__PRIVATEKEY` | Якщо `WEBPUSH__ENABLED=true` | Рідко; invalidate subscriptions |
 | MinIO/S3 | `STORAGE__ACCESSKEY`, `STORAGE__SECRETKEY` | Якщо `STORAGE__ENABLED=true` | Кожні 90 днів |
 | Nova Poshta | `NOVAPOSHTA__APIKEY` | Якщо `SHIPPING__NOVAPOSHTAENABLED=true` | За політикою NP |
@@ -58,6 +59,7 @@ dotnet run --project backend/src/Marketplace.API -- --validate-config-only
 
 ## Пов'язані документи
 
+- [17-aws-ses-setup.md](17-aws-ses-setup.md)
 - [13-production-deploy-runbook.md](13-production-deploy-runbook.md)
 - [10-staging-production-rollout.md](10-staging-production-rollout.md)
 - [reports/production-readiness/security-readiness.md](../../reports/production-readiness/security-readiness.md)
