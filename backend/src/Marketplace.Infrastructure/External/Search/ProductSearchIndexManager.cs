@@ -43,7 +43,10 @@ public sealed class ProductSearchIndexManager
                     .Date(d => d.CreatedAt)
                     .Date(d => d.UpdatedAt)
                     .Keyword(k => k.Tags)
-                    .Keyword(k => k.Brands))), ct);
+                    .Keyword(k => k.Brands)
+                    .Keyword(k => k.Author)
+                    .Keyword(k => k.Format)
+                    .Keyword(k => k.Genres))), ct);
 
         if (!response.IsValidResponse)
             throw new InvalidOperationException(response.ElasticsearchServerError?.Error?.Reason ?? "Failed to create products index");

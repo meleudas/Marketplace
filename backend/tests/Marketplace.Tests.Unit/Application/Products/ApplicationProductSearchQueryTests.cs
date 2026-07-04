@@ -20,11 +20,19 @@ public class ApplicationProductSearchQueryTests
     {
         var service = new StubSearchService(Result<ProductSearchResultDto>.Success(
             new ProductSearchResultDto(
-                [new ProductListItemDto(1, Guid.NewGuid(), "A", "a", "d", 10, null, 1, "active", false, 0, 0, 0, "out_of_stock", DateTime.UtcNow, DateTime.UtcNow)],
+                [new ProductListItemDto(1, Guid.NewGuid(), "A", "a", "d", 10, null, 1, "active", false, 0, 0, 0, "out_of_stock", DateTime.UtcNow, DateTime.UtcNow, [])],
                 1, 1, 20)));
-        var handler = new SearchCatalogProductsQueryHandler(service, new InMemoryProductRepository(), new InMemoryWarehouseStockRepository(), NullLogger<SearchCatalogProductsQueryHandler>.Instance);
+        var handler = new SearchCatalogProductsQueryHandler(
+            service,
+            new InMemoryProductRepository(),
+            new InMemoryProductDetailRepository(),
+            new InMemoryProductImageRepository(),
+            new InMemoryWarehouseStockRepository(),
+            NullLogger<SearchCatalogProductsQueryHandler>.Instance);
 
-        var result = await handler.Handle(new SearchCatalogProductsQuery("a", null, null, null, null, null, null, null, 1, 20, null), CancellationToken.None);
+        var result = await handler.Handle(
+            new SearchCatalogProductsQuery("a", null, null, null, null, null, null, null, null, null, null, null, 1, 20, null),
+            CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value!.Items);
@@ -63,11 +71,13 @@ public class ApplicationProductSearchQueryTests
         var handler = new SearchCatalogProductsQueryHandler(
             new StubSearchService(Result<ProductSearchResultDto>.Failure("Elasticsearch down")),
             products,
+            new InMemoryProductDetailRepository(),
+            new InMemoryProductImageRepository(),
             stocks,
             NullLogger<SearchCatalogProductsQueryHandler>.Instance);
 
         var result = await handler.Handle(
-            new SearchCatalogProductsQuery("key", null, null, null, 50, 200, null, "price_asc", 1, 20, null),
+            new SearchCatalogProductsQuery("key", null, null, null, 50, 200, null, null, null, null, null, "price_asc", 1, 20, null),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -108,16 +118,119 @@ public class ApplicationProductSearchQueryTests
         var handler = new SearchCatalogProductsQueryHandler(
             new ThrowingSearchService(),
             products,
+            new InMemoryProductDetailRepository(),
+            new InMemoryProductImageRepository(),
             stocks,
             NullLogger<SearchCatalogProductsQueryHandler>.Instance);
 
         var result = await handler.Handle(
-            new SearchCatalogProductsQuery("mouse", null, [6], companyId, 10, 200, "low_stock", null, 1, 20, null),
+            new SearchCatalogProductsQuery("mouse", null, [6], companyId, 10, 200, "low_stock", null, null, null, null, null, 1, 20, null),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value!.Items);
         Assert.Equal("mouse", result.Value.Items[0].Slug);
+    }
+
+    [Fact]
+    public async Task Db_Fallback_Filters_By_Book_Facets()
+    {
+        var products = new InMemoryProductRepository();
+        var companyId = Guid.NewGuid();
+        products.Seed(Product.Reconstitute(
+            ProductId.From(20),
+            CompanyId.From(companyId),
+            "The Hobbit",
+            "the-hobbit",
+            "Fantasy book",
+            new Money(25),
+            null,
+            5,
+            0,
+            CategoryId.From(1),
+            ProductStatus.Active,
+            null,
+            0,
+            0,
+            0,
+            false,
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+        products.Seed(Product.Reconstitute(
+            ProductId.From(21),
+            CompanyId.From(companyId),
+            "Clean Code",
+            "clean-code",
+            "Programming book",
+            new Money(40),
+            null,
+            5,
+            0,
+            CategoryId.From(1),
+            ProductStatus.Active,
+            null,
+            0,
+            0,
+            0,
+            false,
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+
+        var details = new InMemoryProductDetailRepository();
+        details.Seed(ProductDetail.Reconstitute(
+            ProductDetailId.From(1),
+            ProductId.From(20),
+            "the-hobbit",
+            new JsonBlob("""{"author":"Tolkien","format":"hardcover","genre":"fantasy"}"""),
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            [],
+            [],
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+        details.Seed(ProductDetail.Reconstitute(
+            ProductDetailId.From(2),
+            ProductId.From(21),
+            "clean-code",
+            new JsonBlob("""{"author":"Martin","format":"paperback","genre":"tech"}"""),
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            [],
+            [],
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+
+        var stocks = new InMemoryWarehouseStockRepository();
+        stocks.Seed(WarehouseStock.Create(WarehouseStockId.From(1), CompanyId.From(companyId), WarehouseId.From(1), ProductId.From(20), 3, 0, 0));
+        stocks.Seed(WarehouseStock.Create(WarehouseStockId.From(2), CompanyId.From(companyId), WarehouseId.From(1), ProductId.From(21), 3, 0, 0));
+
+        var handler = new SearchCatalogProductsQueryHandler(
+            new StubSearchService(Result<ProductSearchResultDto>.Failure("Elasticsearch down")),
+            products,
+            details,
+            new InMemoryProductImageRepository(),
+            stocks,
+            NullLogger<SearchCatalogProductsQueryHandler>.Instance);
+
+        var result = await handler.Handle(
+            new SearchCatalogProductsQuery(null, null, null, null, null, null, null, "Tolkien", "hardcover", "fantasy", null, null, 1, 20, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!.Items);
+        Assert.Equal("the-hobbit", result.Value.Items[0].Slug);
     }
 
     private sealed class StubSearchService : IProductSearchService
@@ -127,23 +240,16 @@ public class ApplicationProductSearchQueryTests
         public StubSearchService(Result<ProductSearchResultDto> result) => _result = result;
 
         public Task<Result<ProductSearchResultDto>> SearchCatalogProductsAsync(
-            string? name,
-            IReadOnlyList<long>? categoryIds,
-            Guid? companyId,
-            decimal? minPrice,
-            decimal? maxPrice,
-            string? availabilityStatus,
-            string? sort,
-            int page,
-            int pageSize,
-            string? searchAfter,
+            CatalogProductSearchFilters filters,
             CancellationToken ct = default)
             => Task.FromResult(_result);
     }
 
     private sealed class ThrowingSearchService : IProductSearchService
     {
-        public Task<Result<ProductSearchResultDto>> SearchCatalogProductsAsync(string? name, IReadOnlyList<long>? categoryIds, Guid? companyId, decimal? minPrice, decimal? maxPrice, string? availabilityStatus, string? sort, int page, int pageSize, string? searchAfter, CancellationToken ct = default)
+        public Task<Result<ProductSearchResultDto>> SearchCatalogProductsAsync(
+            CatalogProductSearchFilters filters,
+            CancellationToken ct = default)
             => throw new InvalidOperationException("Elasticsearch unavailable");
     }
 
@@ -188,6 +294,48 @@ public class ApplicationProductSearchQueryTests
             Seed(product);
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class InMemoryProductDetailRepository : IProductDetailRepository
+    {
+        private readonly Dictionary<long, ProductDetail> _items = new();
+
+        public void Seed(ProductDetail detail) => _items[detail.ProductId.Value] = detail;
+
+        public Task<ProductDetail?> GetByProductIdAsync(ProductId productId, CancellationToken ct = default)
+            => Task.FromResult(_items.GetValueOrDefault(productId.Value));
+
+        public Task UpsertAsync(ProductDetail detail, CancellationToken ct = default)
+        {
+            Seed(detail);
+            return Task.CompletedTask;
+        }
+
+        public Task AddAsync(ProductDetail detail, CancellationToken ct = default)
+        {
+            Seed(detail);
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(ProductDetail detail, CancellationToken ct = default)
+        {
+            Seed(detail);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class InMemoryProductImageRepository : IProductImageRepository
+    {
+        public Task<IReadOnlyList<ProductImage>> ListByProductIdAsync(ProductId productId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<ProductImage>>([]);
+
+        public Task<IReadOnlyDictionary<long, IReadOnlyList<string>>> ListImageUrlsByProductIdsAsync(
+            IReadOnlyCollection<long> productIds,
+            CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyDictionary<long, IReadOnlyList<string>>>(new Dictionary<long, IReadOnlyList<string>>());
+
+        public Task ReplaceForProductAsync(ProductId productId, IReadOnlyList<ProductImage> images, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 
     private sealed class InMemoryWarehouseStockRepository : IWarehouseStockRepository

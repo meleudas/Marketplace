@@ -20,4 +20,7 @@ public sealed class ProductSearchDocument
     public DateTime UpdatedAt { get; set; }
     public IReadOnlyList<string> Tags { get; set; } = [];
     public IReadOnlyList<string> Brands { get; set; } = [];
+    public string? Author { get; set; }
+    public string? Format { get; set; }
+    public IReadOnlyList<string> Genres { get; set; } = [];
 }

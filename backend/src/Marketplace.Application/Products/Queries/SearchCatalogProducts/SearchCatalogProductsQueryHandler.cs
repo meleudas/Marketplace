@@ -1,3 +1,4 @@
+using Marketplace.Application.Products.Catalog;
 using Marketplace.Application.Products.DTOs;
 using Marketplace.Application.Products.Mappings;
 using Marketplace.Application.Products.Ports;
@@ -14,17 +15,23 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
 {
     private readonly IProductSearchService _searchService;
     private readonly IProductRepository _productRepository;
+    private readonly IProductDetailRepository _productDetailRepository;
+    private readonly IProductImageRepository _productImageRepository;
     private readonly IWarehouseStockRepository _stockRepository;
     private readonly ILogger<SearchCatalogProductsQueryHandler> _logger;
 
     public SearchCatalogProductsQueryHandler(
         IProductSearchService searchService,
         IProductRepository productRepository,
+        IProductDetailRepository productDetailRepository,
+        IProductImageRepository productImageRepository,
         IWarehouseStockRepository stockRepository,
         ILogger<SearchCatalogProductsQueryHandler> logger)
     {
         _searchService = searchService;
         _productRepository = productRepository;
+        _productDetailRepository = productDetailRepository;
+        _productImageRepository = productImageRepository;
         _stockRepository = stockRepository;
         _logger = logger;
     }
@@ -32,23 +39,27 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
     public async Task<Result<ProductSearchResultDto>> Handle(SearchCatalogProductsQuery request, CancellationToken ct)
     {
         var searchTerm = string.IsNullOrWhiteSpace(request.Name) ? request.Query : request.Name;
+        var filters = new CatalogProductSearchFilters(
+            searchTerm,
+            request.CategoryIds,
+            request.CompanyId,
+            request.MinPrice,
+            request.MaxPrice,
+            request.AvailabilityStatus,
+            request.Author,
+            request.Format,
+            request.Genre,
+            request.Tags,
+            request.Sort,
+            request.Page,
+            request.PageSize,
+            request.SearchAfter);
+
         try
         {
-            var esResult = await _searchService.SearchCatalogProductsAsync(
-                searchTerm,
-                request.CategoryIds,
-                request.CompanyId,
-                request.MinPrice,
-                request.MaxPrice,
-                request.AvailabilityStatus,
-                request.Sort,
-                request.Page,
-                request.PageSize,
-                request.SearchAfter,
-                ct);
-
+            var esResult = await _searchService.SearchCatalogProductsAsync(filters, ct);
             if (esResult.IsSuccess)
-                return esResult;
+                return Result<ProductSearchResultDto>.Success(await EnrichAsync(esResult.Value!, ct));
 
             _logger.LogInformation("Catalog search fallback to DB because Elasticsearch returned failure: {Error}", esResult.Error);
         }
@@ -60,6 +71,10 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
         try
         {
             var products = await _productRepository.ListActiveAsync(ct);
+            var hasFacetFilters = !string.IsNullOrWhiteSpace(request.Author)
+                || !string.IsNullOrWhiteSpace(request.Format)
+                || !string.IsNullOrWhiteSpace(request.Genre)
+                || request.Tags is { Count: > 0 };
 
             var rows = new List<(ProductListItemDto Dto, int Score)>(products.Count);
             foreach (var p in products)
@@ -81,6 +96,16 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
                     !string.Equals(dto.AvailabilityStatus, request.AvailabilityStatus.Trim(), StringComparison.OrdinalIgnoreCase))
                     continue;
 
+                if (hasFacetFilters)
+                {
+                    var detail = await _productDetailRepository.GetByProductIdAsync(p.Id, ct);
+                    var facets = ProductCatalogFacetReader.Read(
+                        detail?.Attributes ?? JsonBlob.Empty,
+                        detail?.Tags ?? []);
+                    if (!ProductCatalogFacetReader.Matches(facets, request.Author, request.Format, request.Genre, request.Tags))
+                        continue;
+                }
+
                 var score = Score(dto, searchTerm);
                 if (!string.IsNullOrWhiteSpace(searchTerm) && score == 0)
                     continue;
@@ -98,13 +123,20 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
                 .Select(x => x.Dto)
                 .ToList();
 
-            return Result<ProductSearchResultDto>.Success(new ProductSearchResultDto(items, total, page, pageSize));
+            return Result<ProductSearchResultDto>.Success(
+                await EnrichAsync(new ProductSearchResultDto(items, total, page, pageSize), ct));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Catalog DB fallback search failed");
             return Result<ProductSearchResultDto>.Failure($"Failed to search products: {ex.Message}");
         }
+    }
+
+    private async Task<ProductSearchResultDto> EnrichAsync(ProductSearchResultDto result, CancellationToken ct)
+    {
+        var items = await ProductListImageEnricher.WithImageUrlsAsync(result.Items, _productImageRepository, ct);
+        return result with { Items = items };
     }
 
     private static int Score(ProductListItemDto dto, string? query)
