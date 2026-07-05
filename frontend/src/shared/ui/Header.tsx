@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { searchCatalogProducts, type CatalogSearchProductDto } from "@/shared/api/catalog-search.api";
 import { Container } from "./Container";
 import { TextField } from "./TextField";
 import {
@@ -29,40 +30,37 @@ interface HeaderProps {
   homeHref?: string;
   userHref?: string;
   cartHref?: string;
-  searchValue?: string;
   searchPlaceholder?: string;
-  onSearchChange?: (value: string) => void;
+  onSearchQueryChange?: (value: string) => void;
   onMenuClick?: () => void;
-  searchPreviewItems?: SearchPreviewItem[];
-  searchLoading?: boolean;
 }
 
 export function Header({
   homeHref = "/",
   userHref = "/auth",
   cartHref = "#",
-  searchValue,
   searchPlaceholder = "Пошук",
-  onSearchChange,
+  onSearchQueryChange,
   onMenuClick,
-  searchPreviewItems = [],
-  searchLoading = false,
 }: HeaderProps) {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const hasSearchQuery = Boolean(searchValue?.trim());
+  const [searchValue, setSearchValue] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchPreviewItem[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const hasSearchQuery = Boolean(searchValue.trim());
 
   const handleOpenSearch = () => {
-    if (!onSearchChange) {
-      return;
-    }
-
     setIsSearchExpanded(true);
   };
 
   const handleCloseSearch = () => {
     setIsSearchExpanded(false);
-    onSearchChange?.("");
+    setSearchValue("");
+    setSearchResults([]);
+    onSearchQueryChange?.("");
   };
+
+  const previewItems = useMemo(() => searchResults.slice(0, 4), [searchResults]);
 
   useEffect(() => {
     if (!isSearchExpanded) {
@@ -80,6 +78,58 @@ export function Header({
       document.documentElement.style.overflow = previousHtmlOverflow;
     };
   }, [isSearchExpanded]);
+
+  useEffect(() => {
+    onSearchQueryChange?.(searchValue);
+  }, [onSearchQueryChange, searchValue]);
+
+  useEffect(() => {
+    const query = searchValue.trim();
+
+    if (!isSearchExpanded || query.length === 0) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(() => {
+      const load = async () => {
+        try {
+          setSearchLoading(true);
+          const result = await searchCatalogProducts({ query, limit: 4 });
+
+          if (cancelled) {
+            return;
+          }
+
+          setSearchResults(
+            result.items.map((item: CatalogSearchProductDto) => ({
+              id: String(item.id),
+              slug: item.slug,
+              title: item.name,
+              price: item.price,
+            })),
+          );
+        } catch {
+          if (!cancelled) {
+            setSearchResults([]);
+          }
+        } finally {
+          if (!cancelled) {
+            setSearchLoading(false);
+          }
+        }
+      };
+
+      void load();
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [isSearchExpanded, searchValue]);
 
   return (
     <header className={styles.header} data-search-open={isSearchExpanded ? "true" : "false"}>
@@ -117,7 +167,7 @@ export function Header({
           leadingIcon={<SearchIcon className={iconStyles.icon} />}
           trailingIcon={<MicrophoneIcon className={iconStyles.icon} />}
           onFocus={handleOpenSearch}
-          onChange={(event) => onSearchChange?.(event.target.value)}
+          onChange={(event) => setSearchValue(event.target.value)}
         />
 
         <div className={styles.searchSheet}>
@@ -143,7 +193,7 @@ export function Header({
               leadingIcon={<SearchIcon className={iconStyles.icon} />}
               trailingIcon={<MicrophoneIcon className={iconStyles.icon} />}
               autoFocus
-              onChange={(event) => onSearchChange?.(event.target.value)}
+              onChange={(event) => setSearchValue(event.target.value)}
             />
 
             {hasSearchQuery ? (
@@ -158,9 +208,9 @@ export function Header({
                     <span className={styles.spinner} aria-hidden="true" />
                     <span className={styles.loadingText}>Завантаження...</span>
                   </div>
-                ) : searchPreviewItems.length > 0 ? (
+                ) : previewItems.length > 0 ? (
                   <ul className={styles.previewList}>
-                    {searchPreviewItems.map((item) => (
+                    {previewItems.map((item) => (
                       <li key={item.id}>
                         <Link
                           href={`/products/${item.slug}`}

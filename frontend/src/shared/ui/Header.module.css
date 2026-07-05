@@ -132,7 +132,7 @@
 
 .searchTitle {
   margin: 0;
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-size: 20px;
   font-weight: 600;
   line-height: 1.1;
@@ -198,7 +198,7 @@
   font-size: 16px;
   line-height: 1.4;
   color: #c0c1c6;
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-style: italic;
 }
 
@@ -223,7 +223,7 @@
   font-size: 16px;
   line-height: 1.4;
   color: #c0c1c6;
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-style: italic;
 }
 
@@ -257,7 +257,7 @@
   text-overflow: ellipsis;
   font-size: 16px;
   color: #c0c1c6;
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-style: italic;
 }
 
@@ -265,7 +265,7 @@
   flex-shrink: 0;
   font-size: 16px;
   color: #c0c1c6;
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-style: italic;
 }
 
@@ -280,30 +280,24 @@
   filter: drop-shadow(0 12px 24px rgb(0 0 0 / 0.28));
 }
 
-@media (min-width: 768px) {
-  .searchSheet {
-    display: none;
-  }
+.header[data-search-open="true"] .topRow {
+  display: none;
+}
+
+.header[data-search-open="true"] .primarySearch {
+  display: none;
+}
+
+.header[data-search-open="true"] .searchSheet {
+  display: grid;
+  touch-action: auto;
+}
+
+.header[data-search-open="true"] .searchSheetInner {
+  touch-action: manipulation;
 }
 
 @media (max-width: 767px) {
-  .header[data-search-open="true"] .topRow {
-    display: none;
-  }
-
-  .header[data-search-open="true"] .primarySearch {
-    display: none;
-  }
-
-  .header[data-search-open="true"] .searchSheet {
-    display: grid;
-    touch-action: auto;
-  }
-
-  .header[data-search-open="true"] .searchSheetInner {
-    touch-action: manipulation;
-  }
-
   .header[data-search-open="true"] .search {
     width: 100%;
   }

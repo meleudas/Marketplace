@@ -34,6 +34,7 @@ import {
   PageLayout,
   Pagination,
   ProductCard,
+  ProductCardSkeleton,
 } from "@/shared/ui";
 import iconStyles from "@/shared/ui/icons/Icon.module.css";
 import type { ProductCardData } from "@/shared/ui/ProductCard";
@@ -238,20 +239,7 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     return sortCatalogProducts(products, selectedSort);
   }, [products, selectedSort]);
 
-  const searchPreviewItems = useMemo(
-    () =>
-      filteredProducts.slice(0, 4).map((product) => ({
-        id: String(product.id),
-        slug: product.slug,
-        title: product.name,
-        price: product.price,
-      })),
-    [filteredProducts],
-  );
-
-  const trimmedSearchInput = searchInput.trim();
-  const isSearchLoading =
-    trimmedSearchInput.length > 0 && (trimmedSearchInput !== searchQuery || loading);
+  const isInitialLoading = loading && products.length === 0;
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
 
@@ -381,16 +369,21 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
       headerProps={{
         homeHref: "/home",
         userHref: "/me",
-        searchValue: searchInput,
         searchPlaceholder: "Пошук книг",
-        onSearchChange: setSearchInput,
+        onSearchQueryChange: setSearchInput,
         onMenuClick: () => setCatalogOpen(true),
-        searchPreviewItems,
-        searchLoading: isSearchLoading,
       }}
       footerProps={{ homeHref: "/home" }}
     >
-      {rootCategories.length > 0 ? (
+      <h1 className={styles.pageTitle}>Каталог</h1>
+
+      {isInitialLoading ? (
+        <div className={styles.skeletonRow} aria-hidden="true">
+          {Array.from({ length: 4 }, (_, index) => (
+            <div key={index} className={styles.skeletonChip} />
+          ))}
+        </div>
+      ) : rootCategories.length > 0 ? (
         <div className={styles.categoryRows}>
           <div className={styles.categories} role="tablist" aria-label="Основні категорії">
             {rootCategories.map((category) => {
@@ -441,33 +434,42 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
       ) : null}
 
       <div className={styles.toolbar}>
-        <Button
-          type="button"
-          variant="dark"
-          size="lg"
-          fullWidth
-          leadingIcon={<FilterIcon className={iconStyles.icon} />}
-          aria-expanded={filtersOpen}
-          onClick={() => setFiltersOpen((open) => !open)}
-        >
-          Фільтри
-        </Button>
+        {isInitialLoading ? (
+          <div className={styles.skeletonToolbar} aria-hidden="true">
+            <div className={styles.skeletonButton} />
+            <div className={styles.skeletonButton} />
+          </div>
+        ) : (
+          <>
+            <Button
+              type="button"
+              variant="dark"
+              size="lg"
+              fullWidth
+              leadingIcon={<FilterIcon className={iconStyles.icon} />}
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen((open) => !open)}
+            >
+              Фільтри
+            </Button>
 
-        <Button
-          type="button"
-          variant="dark"
-          size="lg"
-          fullWidth
-          leadingIcon={<ArrowsSortIcon className={iconStyles.icon} />}
-          aria-haspopup="dialog"
-          aria-expanded={sortModalOpen}
-          onClick={() => setSortModalOpen((open) => !open)}
-        >
-          {sortButtonLabel}
-        </Button>
+            <Button
+              type="button"
+              variant="dark"
+              size="lg"
+              fullWidth
+              leadingIcon={<ArrowsSortIcon className={iconStyles.icon} />}
+              aria-haspopup="dialog"
+              aria-expanded={sortModalOpen}
+              onClick={() => setSortModalOpen((open) => !open)}
+            >
+              {sortButtonLabel}
+            </Button>
+          </>
+        )}
       </div>
 
-      {filtersOpen ? (
+      {filtersOpen && !isInitialLoading ? (
         <section className={styles.filterPanel} aria-label="Фільтри">
           <Checkbox
             label="Тільки в наявності"
@@ -477,10 +479,15 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
         </section>
       ) : null}
 
-      {loading ? <StateBlock message="Завантаження..." /> : null}
       {error ? <StateBlock message={error} isError /> : null}
 
-      {!loading && !error && filteredProducts.length === 0 ? (
+      {isInitialLoading ? (
+        <div className={styles.skeletonGrid} aria-hidden="true">
+          {Array.from({ length: 8 }, (_, index) => (
+            <ProductCardSkeleton key={index} />
+          ))}
+        </div>
+      ) : !loading && !error && filteredProducts.length === 0 ? (
         <StateBlock message="Товарів за обраними фільтрами не знайдено" />
       ) : null}
 

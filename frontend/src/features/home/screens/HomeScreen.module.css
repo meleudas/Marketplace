@@ -19,7 +19,7 @@
 
 .promoEyebrow {
   margin: 0;
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-size: clamp(20px, 5vw, 28px);
   font-weight: 700;
   line-height: 1.05;
@@ -28,7 +28,7 @@
 
 .promoQuote {
   margin: 0;
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-size: clamp(14px, 3.2vw, 18px);
   font-style: italic;
   font-weight: 400;
@@ -38,7 +38,7 @@
 
 .promoDate {
   margin: 0;
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-size: clamp(12px, 3vw, 16px);
   font-weight: 400;
   line-height: 1.25;
@@ -54,6 +54,14 @@
   justify-self: end;
   pointer-events: none;
   user-select: none;
+}
+
+.recommendationCard {
+  display: block;
+  flex: 0 0 auto;
+  width: clamp(160px, 42vw, 220px);
+  text-decoration: none;
+  color: inherit;
 }
 
 @media (max-width: 480px) {
