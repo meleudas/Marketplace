@@ -3,6 +3,15 @@
   gap: var(--space-8);
 }
 
+.pageTitle {
+  margin: 0;
+  font-family: var(--font-primary), sans-serif;
+  font-size: clamp(20px, 4vw, 28px);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--color-text);
+}
+
 .categories,
 .subcategories {
   display: flex;
@@ -127,7 +136,7 @@
   border: 0;
   cursor: pointer;
   text-align: left;
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-size: var(--typography-body1-font-size);
   font-weight: var(--typography-body1-font-weight);
   line-height: var(--typography-body1-line-height);
@@ -163,4 +172,60 @@
 .sortOptionActive:focus-visible {
   outline: 2px solid var(--button-focus-ring);
   outline-offset: 2px;
+}
+
+.skeletonRow {
+  display: flex;
+  gap: var(--space-8);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.skeletonRow::-webkit-scrollbar {
+  display: none;
+}
+
+.skeletonChip {
+  width: 92px;
+  height: 34px;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.skeletonChip::after,
+.skeletonButton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.18) 50%, transparent 100%);
+  animation: shimmer 1.2s infinite;
+}
+
+.skeletonToolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12);
+}
+
+.skeletonButton {
+  height: 48px;
+  border-radius: var(--radius-sm);
+  background: rgb(255 255 255 / 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.skeletonGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--product-card-width), var(--product-card-width)));
+  gap: var(--space-12);
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }

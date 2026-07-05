@@ -1,0 +1,40 @@
+.section {
+  display: grid;
+  gap: var(--space-8);
+  margin-top: var(--space-20);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-primary), sans-serif;
+  font-size: var(--typography-h3-font-size);
+  font-weight: var(--typography-h3-font-weight);
+  line-height: var(--typography-h3-line-height);
+  color: var(--color-text);
+}
+
+.scroller {
+  display: flex;
+  gap: var(--space-12);
+  overflow-x: auto;
+  padding-bottom: var(--space-4);
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.cardLink {
+  display: block;
+  flex: 0 0 auto;
+  width: clamp(160px, 42vw, 220px);
+  text-decoration: none;
+  color: inherit;
+  scroll-snap-align: start;
+}
+
+.skeletonCard {
+  width: 100%;
+}

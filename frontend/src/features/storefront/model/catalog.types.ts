@@ -74,6 +74,13 @@ export interface ProductSearchResultDto {
   nextSearchAfter?: string | null;
 }
 
+export interface PersonalizedRecommendationsResultDto {
+  userId: string;
+  modelVersion: string;
+  usedFallback: boolean;
+  items: CatalogProductListItemDto[];
+}
+
 export interface CatalogProductImageDto {
   imageUrl: string;
   thumbnailUrl: string;
