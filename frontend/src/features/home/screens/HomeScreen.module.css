@@ -1,166 +1,68 @@
-.categoryRows {
+.promoBanner {
+  width: 100%;
   display: grid;
-  gap: var(--space-8);
-}
-
-.categories,
-.subcategories {
-  display: flex;
-  gap: var(--space-8);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.categories {
-  padding-bottom: var(--space-4);
-}
-
-.subcategories {
-  padding-bottom: var(--space-4);
-}
-
-.categories::-webkit-scrollbar,
-.subcategories::-webkit-scrollbar {
-  display: none;
-}
-
-.toolbar {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-12);
-}
-
-.filterPanel {
-  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: var(--space-12);
   padding: var(--space-16);
-  border: 1px solid var(--color-button-dark-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-neutral-800);
+  border-radius: 8px;
+  background: linear-gradient(90deg, #535ddf 0%, #a3c2e0 100%);
+  box-shadow: 0 12px 24px rgb(0 0 0 / 0.16);
+  overflow: hidden;
 }
 
-.productGrid {
+.promoContent {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--product-card-width), var(--product-card-width)));
-  justify-content: start;
-  gap: var(--space-12);
-}
-
-.cardLink {
-  display: block;
-  width: var(--product-card-width);
-  max-width: 100%;
-  text-decoration: none;
-  color: inherit;
-}
-
-.cardLink article {
-  max-width: 100%;
-}
-
-@media (max-width: 480px) {
-  .productGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .cardLink,
-  .cardLink article {
-    width: 100%;
-  }
-}
-
-.paginationWrap {
-  display: flex;
-  justify-content: center;
-  max-width: 100%;
+  gap: var(--space-4);
   min-width: 0;
-  overflow-x: clip;
-  padding-block: var(--space-8);
 }
 
-.sortBackdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 120;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  cursor: default;
-}
-
-.sortSheet {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 130;
-  display: grid;
-  gap: var(--space-8);
-  padding: var(--space-12) var(--space-20) calc(var(--space-12) + env(safe-area-inset-bottom, 0px));
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  background: rgb(0 0 0 / 0.8);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  animation: sortSheetIn 220ms ease-out;
-}
-
-@keyframes sortSheetIn {
-  from {
-    opacity: 0;
-    transform: translateY(100%);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.sortSheetOptions {
-  display: grid;
-  gap: var(--space-8);
-}
-
-.sortOption,
-.sortOptionActive {
-  width: 100%;
-  border: 0;
-  cursor: pointer;
-  text-align: left;
+.promoEyebrow {
+  margin: 0;
   font-family: var(--font-primary);
-  font-size: var(--typography-body1-font-size);
-  font-weight: var(--typography-body1-font-weight);
-  line-height: var(--typography-body1-line-height);
-  color: var(--color-text);
+  font-size: clamp(20px, 5vw, 28px);
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--color-primary-pink);
 }
 
-.sortOption {
-  padding: var(--space-12) 0;
-  border-bottom: 1px solid rgb(255 255 255 / 0.12);
-  background: transparent;
-}
-
-.sortOption:last-child {
-  border-bottom: 0;
-}
-
-.sortOption:hover {
-  color: var(--color-primary-light-blue);
-}
-
-.sortOptionActive {
-  padding: var(--space-8) var(--space-8) var(--space-8) var(--space-12);
-  border-radius: var(--radius-sm);
-  background: linear-gradient(
-    90deg,
-    var(--color-primary-blue) 0%,
-    var(--color-primary-light-blue) 100%
-  );
+.promoQuote {
+  margin: 0;
+  font-family: var(--font-primary);
+  font-size: clamp(14px, 3.2vw, 18px);
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.25;
   color: var(--color-white);
 }
 
-.sortOption:focus-visible,
-.sortOptionActive:focus-visible {
-  outline: 2px solid var(--button-focus-ring);
-  outline-offset: 2px;
+.promoDate {
+  margin: 0;
+  font-family: var(--font-primary);
+  font-size: clamp(12px, 3vw, 16px);
+  font-weight: 400;
+  line-height: 1.25;
+  color: var(--color-white);
+}
+
+.promoCat {
+  display: block;
+  width: clamp(72px, 22vw, 85px);
+  height: auto;
+  flex-shrink: 0;
+  align-self: end;
+  justify-self: end;
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (max-width: 480px) {
+  .promoBanner {
+    padding: var(--space-12);
+    gap: var(--space-8);
+  }
+
+  .promoDate {
+    white-space: normal;
+  }
 }
