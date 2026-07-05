@@ -1,9 +1,29 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Container } from "./Container";
 import { TextField } from "./TextField";
-import { BookTopLogo, CartIcon, MenuIcon, MicrophoneIcon, SearchIcon, UserIcon } from "./icons";
+import {
+  BookTopLogo,
+  CartIcon,
+  ChevronRightIcon,
+  CloseIcon,
+  FooterCatIllustration,
+  MenuIcon,
+  MicrophoneIcon,
+  SearchIcon,
+  UserIcon,
+} from "./icons";
 import iconStyles from "./icons/Icon.module.css";
 import styles from "./Header.module.css";
+
+interface SearchPreviewItem {
+  id: string;
+  slug: string;
+  title: string;
+  price: number | string;
+}
 
 interface HeaderProps {
   homeHref?: string;
@@ -13,6 +33,8 @@ interface HeaderProps {
   searchPlaceholder?: string;
   onSearchChange?: (value: string) => void;
   onMenuClick?: () => void;
+  searchPreviewItems?: SearchPreviewItem[];
+  searchLoading?: boolean;
 }
 
 export function Header({
@@ -23,9 +45,44 @@ export function Header({
   searchPlaceholder = "Пошук",
   onSearchChange,
   onMenuClick,
+  searchPreviewItems = [],
+  searchLoading = false,
 }: HeaderProps) {
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const hasSearchQuery = Boolean(searchValue?.trim());
+
+  const handleOpenSearch = () => {
+    if (!onSearchChange) {
+      return;
+    }
+
+    setIsSearchExpanded(true);
+  };
+
+  const handleCloseSearch = () => {
+    setIsSearchExpanded(false);
+    onSearchChange?.("");
+  };
+
+  useEffect(() => {
+    if (!isSearchExpanded) {
+      return;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [isSearchExpanded]);
+
   return (
-    <header className={styles.header}>
+    <header className={styles.header} data-search-open={isSearchExpanded ? "true" : "false"}>
       <Container className={styles.inner}>
         <div className={styles.topRow}>
           <button
@@ -53,14 +110,83 @@ export function Header({
 
         <TextField
           kind="search"
-          className={styles.search}
+          className={`${styles.search} ${styles.primarySearch}`}
           value={searchValue}
           placeholder={searchPlaceholder}
           aria-label="Пошук"
           leadingIcon={<SearchIcon className={iconStyles.icon} />}
           trailingIcon={<MicrophoneIcon className={iconStyles.icon} />}
+          onFocus={handleOpenSearch}
           onChange={(event) => onSearchChange?.(event.target.value)}
         />
+
+        <div className={styles.searchSheet}>
+          <div className={styles.searchSheetInner}>
+            <div className={styles.searchSheetHeader}>
+              <h2 className={styles.searchTitle}>Пошук</h2>
+              <button
+                type="button"
+                className={styles.closeButton}
+                aria-label="Закрити пошук"
+                onClick={handleCloseSearch}
+              >
+                <CloseIcon className={iconStyles.icon} />
+              </button>
+            </div>
+
+            <TextField
+              kind="search"
+              className={`${styles.search} ${styles.sheetSearchField}`}
+              value={searchValue}
+              placeholder={searchPlaceholder}
+              aria-label="Пошук"
+              leadingIcon={<SearchIcon className={iconStyles.icon} />}
+              trailingIcon={<MicrophoneIcon className={iconStyles.icon} />}
+              autoFocus
+              onChange={(event) => onSearchChange?.(event.target.value)}
+            />
+
+            {hasSearchQuery ? (
+              <section className={styles.previewCard} aria-label="Підбірка для вас">
+                <div className={styles.previewHeader}>
+                  <span className={styles.previewTitle}>Для вас</span>
+                  <ChevronRightIcon className={iconStyles.icon} />
+                </div>
+
+                {searchLoading ? (
+                  <div className={styles.loadingState} role="status" aria-live="polite">
+                    <span className={styles.spinner} aria-hidden="true" />
+                    <span className={styles.loadingText}>Завантаження...</span>
+                  </div>
+                ) : searchPreviewItems.length > 0 ? (
+                  <ul className={styles.previewList}>
+                    {searchPreviewItems.map((item) => (
+                      <li key={item.id}>
+                        <Link
+                          href={`/products/${item.slug}`}
+                          className={styles.previewItem}
+                          onClick={handleCloseSearch}
+                        >
+                          <span className={styles.previewName}>{item.title}</span>
+                          <span className={styles.previewPrice}>
+                            {typeof item.price === "number"
+                              ? item.price.toLocaleString("uk-UA")
+                              : item.price}{" "}
+                            грн
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className={styles.emptyState}>Нічого не знайдено</p>
+                )}
+              </section>
+            ) : null}
+          </div>
+
+          <FooterCatIllustration className={styles.cat} />
+        </div>
       </Container>
     </header>
   );
