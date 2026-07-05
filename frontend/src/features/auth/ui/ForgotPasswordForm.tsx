@@ -9,6 +9,7 @@ import {
   type ForgotPasswordFormValues,
 } from "@/features/auth/model/auth.form-schemas";
 import { useAuth } from "@/features/auth/model/auth.store";
+import { Button, TextField } from "@/shared/ui";
 import styles from "./ForgotPasswordForm.module.css";
 
 const RESEND_COOLDOWN_SECONDS = 30;
@@ -89,7 +90,7 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
       return;
     }
 
-    setSuccess("Reset token sent again. Check your email.");
+    setSuccess("Код скидання надіслано ще раз. Перевірте пошту.");
     setResendSecondsLeft(RESEND_COOLDOWN_SECONDS);
   };
 
@@ -142,74 +143,75 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
-      <h2 className={styles.title}>Reset password</h2>
-      <p className={styles.description}>
-        {step === 1
-          ? "Enter your email and we will send you a reset token."
-          : "Enter the token from email and set your new password."}
-      </p>
-
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="forgot-email">
-          Email
-        </label>
-        <input
-          id="forgot-email"
-          type="email"
-          {...registerField("email")}
-          readOnly={step === 2}
-          className={styles.input}
-          placeholder="you@example.com"
-        />
-        {errors.email ? <p className={styles.fieldError}>{errors.email.message}</p> : null}
+      <div className={styles.header}>
+        <h2 className={styles.title}>Відновлення пароля</h2>
+        <p className={styles.description}>
+          {step === 1
+            ? "Введіть електронну пошту, і ми надішлемо код скидання."
+            : "Використайте код з листа, щоб задати новий пароль."}
+        </p>
       </div>
+
+      <TextField
+        id="forgot-email"
+        label="Ел. пошта"
+        kind="email"
+        placeholder="ваша@пошта.укр"
+        autoComplete="email"
+        readOnly={step === 2}
+        disabled={loading}
+        error={errors.email?.message}
+        {...registerField("email")}
+      />
 
       {step === 2 ? (
         <>
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="forgot-token">
-              Reset token
-            </label>
-            <input
-              id="forgot-token"
-              type="text"
-              {...registerField("token")}
-              className={styles.input}
-              placeholder="Paste token from email"
-            />
-            {errors.token ? <p className={styles.fieldError}>{errors.token.message}</p> : null}
-          </div>
+          <TextField
+            id="forgot-token"
+            label="Код скидання"
+            kind="text"
+            placeholder="Вставте код з листа"
+            autoComplete="one-time-code"
+            disabled={loading}
+            error={errors.token?.message}
+            {...registerField("token")}
+          />
 
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="forgot-new-password">
-              New password
-            </label>
-            <input
-              id="forgot-new-password"
-              type="password"
-              {...registerField("newPassword")}
-              className={styles.input}
-              placeholder="********"
-            />
-            {errors.newPassword ? (
-              <p className={styles.fieldError}>{errors.newPassword.message}</p>
-            ) : null}
-          </div>
+          <TextField
+            id="forgot-new-password"
+            label="Новий пароль"
+            kind="password"
+            placeholder="••••••••"
+            autoComplete="new-password"
+            disabled={loading}
+            error={errors.newPassword?.message}
+            {...registerField("newPassword")}
+          />
         </>
       ) : null}
 
-      {error ? <p className={styles.errorMessage}>{error}</p> : null}
-      {success ? <p className={styles.successMessage}>{success}</p> : null}
+      {error ? (
+        <div className={styles.errorMessage} role="alert">
+          {error}
+        </div>
+      ) : null}
+      {success ? <div className={styles.successMessage}>{success}</div> : null}
 
-      <button type="submit" disabled={loading} className={styles.submitButton}>
+      <Button
+        type="submit"
+        variant="gradient"
+        fullWidth
+        disabled={loading}
+        className={styles.submitButton}
+      >
         {step === 1
           ? loading
-            ? "Sending..."
-            : "Send reset token"
+            ? "Надсилаємо код..."
+            : "Надіслати код скидання"
           : loading
-            ? "Resetting..."
-            : "Reset password"}
-      </button>
+            ? "Оновлюємо пароль..."
+            : "Оновити пароль"}
+      </Button>
 
       <div className={styles.secondaryActions}>
         {step === 2 ? (
@@ -222,16 +224,16 @@ export function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFormProps)
               disabled={loading || resendSecondsLeft > 0}
               className={styles.linkButton}
             >
-              Did not receive the code? Send again
+              Не отримали код? Надіслати ще раз
             </button>
             {resendSecondsLeft > 0 ? (
-              <p className={styles.timerText}>Available in {resendSecondsLeft}s</p>
+              <p className={styles.timerText}>Доступно через {resendSecondsLeft} с</p>
             ) : null}
           </>
         ) : null}
 
         <button type="button" onClick={onSwitchToLogin} className={styles.linkButton}>
-          Back to login
+          Повернутися до входу
         </button>
       </div>
     </form>

@@ -6,6 +6,7 @@ import { useAuth } from "@/features/auth/model/auth.store";
 import { ForgotPasswordForm } from "@/features/auth/ui/ForgotPasswordForm";
 import { LoginForm } from "@/features/auth/ui/LoginForm";
 import { RegisterForm } from "@/features/auth/ui/RegisterForm";
+import { PageBackground } from "@/shared/ui";
 import styles from "./AuthHomeScreen.module.css";
 
 export function AuthHomeScreen() {
@@ -29,16 +30,14 @@ export function AuthHomeScreen() {
 
   return (
     <main className={styles.main}>
+      <PageBackground />
       <div className={styles.container}>
         <header className={styles.header}>
-          <h1 className={styles.title}>Auth MVP</h1>
-          <p className={styles.subtitle}>
-            Next.js + Axios + Zustand + localStorage token strategy.
-          </p>
+          <p className={styles.subtitle}>Введіть логін та пароль для входу в ваш акаунт</p>
         </header>
 
         {!initialized && !loading ? (
-          <div className={styles.initCard}>Initializing auth...</div>
+          <div className={styles.initCard}>Готуємо вашу сесію...</div>
         ) : null}
 
         {initialized && !isAuthenticated ? (

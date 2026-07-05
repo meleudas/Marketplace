@@ -50,6 +50,7 @@ export { Container } from "./Container";
 export { Grid } from "./Grid";
 export { ProductCard } from "./ProductCard";
 export type { ProductCardData } from "./ProductCard";
+export { ProductCardSkeleton } from "./ProductCardSkeleton";
 export { Pagination } from "./Pagination";
 export { Header } from "./Header";
 export { Footer } from "./Footer";

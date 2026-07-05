@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { loginFormSchema, type LoginFormValues } from "@/features/auth/model/auth.form-schemas";
 import { useAuth } from "@/features/auth/model/auth.store";
+import { Button, TextField } from "@/shared/ui";
 import styles from "./LoginForm.module.css";
 
 interface LoginFormProps {
@@ -45,7 +46,7 @@ export function LoginForm({ onSwitchToRegister, onForgotPassword }: LoginFormPro
     if (isTwoFactorStep && !twoFactorCode) {
       setFieldError("twoFactorCode", {
         type: "manual",
-        message: "2FA code is required",
+        message: "Потрібен код підтвердження",
       });
       return;
     }
@@ -84,100 +85,103 @@ export function LoginForm({ onSwitchToRegister, onForgotPassword }: LoginFormPro
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
-      <h2 className={styles.title}>Login</h2>
+      <div className={styles.header}>
+        <h2 className={styles.title}>{isTwoFactorStep ? "Підтвердіть вхід" : "Ласкаво просимо назад"}</h2>
+        <p className={styles.description}>
+          {isTwoFactorStep
+            ? "Введіть код підтвердження з пошти, щоб продовжити."
+            : "Увійдіть за допомогою електронної пошти й пароля або продовжіть через Google."}
+        </p>
+      </div>
 
       {!isTwoFactorStep ? (
         <>
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="login-email">
-              Email
-            </label>
-            <input
-              id="login-email"
-              type="email"
-              {...registerField("email")}
-              className={styles.input}
-              placeholder="you@example.com"
-            />
-            {errors.email ? <p className={styles.fieldError}>{errors.email.message}</p> : null}
-          </div>
+          <TextField
+            id="login-email"
+            label="Ел. пошта"
+            kind="email"
+            placeholder="ваша@пошта.укр"
+            autoComplete="email"
+            disabled={loading}
+            error={errors.email?.message}
+            {...registerField("email")}
+          />
 
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="login-password">
-              Password
-            </label>
-            <input
-              id="login-password"
-              type="password"
-              {...registerField("password")}
-              className={styles.input}
-              placeholder="********"
-            />
-            {errors.password ? <p className={styles.fieldError}>{errors.password.message}</p> : null}
-          </div>
+          <TextField
+            id="login-password"
+            label="Пароль"
+            kind="password"
+            placeholder="••••••••"
+            autoComplete="current-password"
+            disabled={loading}
+            error={errors.password?.message}
+            {...registerField("password")}
+          />
         </>
       ) : (
         <>
-          <p className={styles.helperText}>
-            Enter the verification code sent to your email.
-          </p>
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="login-two-factor-code">
-              2FA Code
-            </label>
-            <input
-              id="login-two-factor-code"
-              type="text"
-              {...registerField("twoFactorCode")}
-              className={styles.input}
-              placeholder="123456"
-            />
-            {errors.twoFactorCode ? (
-              <p className={styles.fieldError}>{errors.twoFactorCode.message}</p>
-            ) : null}
-          </div>
+          <TextField
+            id="login-two-factor-code"
+            label="Код підтвердження"
+            kind="text"
+            placeholder="123456"
+            autoComplete="one-time-code"
+            disabled={loading}
+            error={errors.twoFactorCode?.message}
+            {...registerField("twoFactorCode")}
+          />
         </>
       )}
 
-      {error ? <p className={styles.errorMessage}>{error}</p> : null}
-      {success ? <p className={styles.successMessage}>{success}</p> : null}
+      {error ? (
+        <div className={styles.errorMessage} role="alert">
+          {error}
+        </div>
+      ) : null}
+      {success ? <div className={styles.successMessage}>{success}</div> : null}
 
-      <button
+      <Button
         type="submit"
+        variant="gradient"
+        fullWidth
         disabled={loading}
         className={styles.submitButton}
       >
-        {loading ? "Logging in..." : isTwoFactorStep ? "Verify and login" : "Login"}
-      </button>
+        {loading ? "Вхід..." : isTwoFactorStep ? "Підтвердити і увійти" : "Увійти"}
+      </Button>
 
       {isTwoFactorStep ? (
-        <button
+        <Button
           type="button"
+          variant="dark"
+          fullWidth
           disabled={loading}
           onClick={handleBackToCredentials}
           className={styles.secondaryButton}
         >
-          Use different account
-        </button>
+          Використати інший акаунт
+        </Button>
       ) : null}
 
-      <button
+      <Button
         type="button"
+        variant="secondary"
+        fullWidth
         disabled={loading}
         onClick={startGoogleLogin}
         className={styles.googleButton}
       >
-        Continue with Google
-      </button>
+        Продовжити через Google
+      </Button>
 
       <div className={styles.secondaryActions}>
         <button type="button" onClick={onForgotPassword} className={styles.linkButton}>
-          Forgot password?
+          Забули пароль?
         </button>
         <p className={styles.switchText}>
-          No account yet?{" "}
+          Немає акаунта?{" "}
           <button type="button" onClick={onSwitchToRegister} className={styles.linkButton}>
-            Register
+            Створити
           </button>
         </p>
       </div>
