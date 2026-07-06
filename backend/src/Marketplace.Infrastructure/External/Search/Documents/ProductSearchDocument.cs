@@ -9,6 +9,8 @@ public sealed class ProductSearchDocument
     public string Description { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public decimal? OldPrice { get; set; }
+    public decimal? DiscountPercent { get; set; }
+    public bool IsOnSale { get; set; }
     public long CategoryId { get; set; }
     public string Status { get; set; } = string.Empty;
     public bool HasVariants { get; set; }
@@ -16,6 +18,8 @@ public sealed class ProductSearchDocument
     public int MinStock { get; set; }
     public int AvailableQty { get; set; }
     public string AvailabilityStatus { get; set; } = string.Empty;
+    public long ViewCount { get; set; }
+    public long SalesCount { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public IReadOnlyList<string> Tags { get; set; } = [];

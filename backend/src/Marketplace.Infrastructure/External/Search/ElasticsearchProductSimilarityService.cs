@@ -121,6 +121,7 @@ public sealed class ElasticsearchProductSimilarityService : IProductSimilaritySe
             x.Description,
             x.Price,
             x.OldPrice,
+            x.DiscountPercent,
             x.CategoryId,
             x.Status,
             x.HasVariants,
