@@ -198,6 +198,21 @@ public sealed class IntegrationCatalogCategoriesSqliteTests
             CatalogProductSearchFilters filters,
             CancellationToken ct = default)
             => Task.FromResult(Result<ProductSearchResultDto>.Failure("Elasticsearch unavailable"));
+
+        public Task<Result<ProductSearchResultDto>> SearchCatalogOnSaleProductsAsync(
+            CatalogOnSaleProductFilters filters,
+            CancellationToken ct = default)
+            => Task.FromResult(Result<ProductSearchResultDto>.Failure("Elasticsearch unavailable"));
+
+        public Task<Result<ProductSearchResultDto>> SearchCatalogNewProductsAsync(
+            CatalogBrowsableProductFilters filters,
+            CancellationToken ct = default)
+            => Task.FromResult(Result<ProductSearchResultDto>.Failure("Elasticsearch unavailable"));
+
+        public Task<Result<ProductSearchResultDto>> SearchCatalogPopularProductsAsync(
+            CatalogBrowsableProductFilters filters,
+            CancellationToken ct = default)
+            => Task.FromResult(Result<ProductSearchResultDto>.Failure("Elasticsearch unavailable"));
     }
 
     private sealed class NoopCachePort : IAppCachePort

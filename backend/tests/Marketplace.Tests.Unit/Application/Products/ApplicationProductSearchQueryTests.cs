@@ -20,7 +20,7 @@ public class ApplicationProductSearchQueryTests
     {
         var service = new StubSearchService(Result<ProductSearchResultDto>.Success(
             new ProductSearchResultDto(
-                [new ProductListItemDto(1, Guid.NewGuid(), "A", "a", "d", 10, null, 1, "active", false, 0, 0, 0, "out_of_stock", DateTime.UtcNow, DateTime.UtcNow, [])],
+                [new ProductListItemDto(1, Guid.NewGuid(), "A", "a", "d", 10, null, null, 1, "active", false, 0, 0, 0, "out_of_stock", DateTime.UtcNow, DateTime.UtcNow, [])],
                 1, 1, 20)));
         var handler = new SearchCatalogProductsQueryHandler(
             service,
@@ -243,12 +243,42 @@ public class ApplicationProductSearchQueryTests
             CatalogProductSearchFilters filters,
             CancellationToken ct = default)
             => Task.FromResult(_result);
+
+        public Task<Result<ProductSearchResultDto>> SearchCatalogOnSaleProductsAsync(
+            CatalogOnSaleProductFilters filters,
+            CancellationToken ct = default)
+            => Task.FromResult(_result);
+
+        public Task<Result<ProductSearchResultDto>> SearchCatalogNewProductsAsync(
+            CatalogBrowsableProductFilters filters,
+            CancellationToken ct = default)
+            => Marketplace.Tests.Common.Fakes.ProductSearchServiceFakeMethods.SearchCatalogBrowsableUnavailableAsync(ct);
+
+        public Task<Result<ProductSearchResultDto>> SearchCatalogPopularProductsAsync(
+            CatalogBrowsableProductFilters filters,
+            CancellationToken ct = default)
+            => Marketplace.Tests.Common.Fakes.ProductSearchServiceFakeMethods.SearchCatalogBrowsableUnavailableAsync(ct);
     }
 
     private sealed class ThrowingSearchService : IProductSearchService
     {
         public Task<Result<ProductSearchResultDto>> SearchCatalogProductsAsync(
             CatalogProductSearchFilters filters,
+            CancellationToken ct = default)
+            => throw new InvalidOperationException("Elasticsearch unavailable");
+
+        public Task<Result<ProductSearchResultDto>> SearchCatalogOnSaleProductsAsync(
+            CatalogOnSaleProductFilters filters,
+            CancellationToken ct = default)
+            => throw new InvalidOperationException("Elasticsearch unavailable");
+
+        public Task<Result<ProductSearchResultDto>> SearchCatalogNewProductsAsync(
+            CatalogBrowsableProductFilters filters,
+            CancellationToken ct = default)
+            => throw new InvalidOperationException("Elasticsearch unavailable");
+
+        public Task<Result<ProductSearchResultDto>> SearchCatalogPopularProductsAsync(
+            CatalogBrowsableProductFilters filters,
             CancellationToken ct = default)
             => throw new InvalidOperationException("Elasticsearch unavailable");
     }
@@ -279,6 +309,15 @@ public class ApplicationProductSearchQueryTests
 
         public Task<IReadOnlyList<Product>> ListActiveAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Product>>(_items.Values.Where(x => x.Status == ProductStatus.Active && !x.IsDeleted).ToList());
+
+        public Task<IReadOnlyList<Product>> ListActiveOnSaleAsync(Guid? companyId = null, IReadOnlyList<long>? categoryIds = null, decimal? minPrice = null, decimal? maxPrice = null, decimal? minDiscountPercent = null, CancellationToken ct = default)
+            => Marketplace.Tests.Common.Fakes.ProductRepositoryFakeMethods.ListActiveOnSaleAsync(_items.Values, companyId, categoryIds, minPrice, maxPrice, minDiscountPercent, ct);
+
+        public Task<IReadOnlyList<Product>> ListActiveNewestAsync(Guid? companyId = null, IReadOnlyList<long>? categoryIds = null, decimal? minPrice = null, decimal? maxPrice = null, CancellationToken ct = default)
+            => Marketplace.Tests.Common.Fakes.ProductRepositoryFakeMethods.ListActiveNewestAsync(_items.Values, companyId, categoryIds, minPrice, maxPrice, ct);
+
+        public Task<IReadOnlyList<Product>> ListActivePopularAsync(Guid? companyId = null, IReadOnlyList<long>? categoryIds = null, decimal? minPrice = null, decimal? maxPrice = null, CancellationToken ct = default)
+            => Marketplace.Tests.Common.Fakes.ProductRepositoryFakeMethods.ListActivePopularAsync(_items.Values, companyId, categoryIds, minPrice, maxPrice, ct);
 
         public Task<IReadOnlyList<Product>> ListPendingReviewAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Product>>(_items.Values.Where(x => x.Status == ProductStatus.PendingReview && !x.IsDeleted).ToList());

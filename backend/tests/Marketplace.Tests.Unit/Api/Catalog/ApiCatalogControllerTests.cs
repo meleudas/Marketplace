@@ -102,7 +102,7 @@ public class ApiCatalogControllerTests
         var sender = new RecordingSender
         {
             NextResult = Result<IReadOnlyList<ProductListItemDto>>.Success(
-                [new ProductListItemDto(1, Guid.NewGuid(), "Product", "product", "Desc", 100, null, 1, "active", false, 10, 1, 10, "in_stock", DateTime.UtcNow, DateTime.UtcNow, [])])
+                [new ProductListItemDto(1, Guid.NewGuid(), "Product", "product", "Desc", 100, null, null, 1, "active", false, 10, 1, 10, "in_stock", DateTime.UtcNow, DateTime.UtcNow, [])])
         };
 
         var controller = new CatalogController(sender, NullLogger<CatalogController>.Instance);
