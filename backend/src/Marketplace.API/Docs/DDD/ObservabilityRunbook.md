@@ -10,7 +10,7 @@
 - Prometheus scrapes Collector (`:8889`), не API напряму.
 - Traces → Jaeger; dashboards/alerts → Grafana (`http://localhost:3001` з profile `observability`).
 
-Локальний запуск: `docker compose -f docker-compose.yml -f docker-compose.observability.yml --profile observability up -d` і `OTEL_ENABLED=true` у `.env` (див. [09-local-docker-compose-runbook.md](../../../../../docs/platform-engineering/09-local-docker-compose-runbook.md)).
+Локальний запуск: `docker compose -f docker-compose.dev.yml -f docker-compose.monitoring.yml -f docker-compose.observability.yml --profile observability up -d` і `OTEL_ENABLED=true` у `.env` (див. [09-local-docker-compose-runbook.md](../../../../../docs/platform-engineering/09-local-docker-compose-runbook.md)).
 
 Перевірка стеку: `backend/scripts/observability-smoke.ps1`. Sonar: `backend/scripts/sonar-scan.ps1`. Grafana alerts: `observability/grafana/provisioning/alerting/rules.yaml` (13 правил).
 

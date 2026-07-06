@@ -225,12 +225,387 @@ public class ApplicationProductSearchQueryTests
             NullLogger<SearchCatalogProductsQueryHandler>.Instance);
 
         var result = await handler.Handle(
-            new SearchCatalogProductsQuery(null, null, null, null, null, null, null, "Tolkien", "hardcover", "fantasy", null, null, 1, 20, null),
+            new SearchCatalogProductsQuery(null, null, null, null, null, null, null, ["Tolkien"], "hardcover", ["fantasy"], null, null, 1, 20, null),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value!.Items);
         Assert.Equal("the-hobbit", result.Value.Items[0].Slug);
+    }
+
+    [Fact]
+    public async Task Falls_Back_To_Db_And_Filters_By_Any_Of_Multiple_Authors()
+    {
+        var companyId = Guid.NewGuid();
+        var products = new InMemoryProductRepository();
+        products.Seed(Product.Reconstitute(
+            ProductId.From(20),
+            CompanyId.From(companyId),
+            "The Hobbit",
+            "the-hobbit",
+            "Fantasy book",
+            new Money(30),
+            null,
+            5,
+            0,
+            CategoryId.From(1),
+            ProductStatus.Active,
+            null,
+            0,
+            0,
+            0,
+            false,
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+        products.Seed(Product.Reconstitute(
+            ProductId.From(21),
+            CompanyId.From(companyId),
+            "Clean Code",
+            "clean-code",
+            "Programming book",
+            new Money(40),
+            null,
+            5,
+            0,
+            CategoryId.From(1),
+            ProductStatus.Active,
+            null,
+            0,
+            0,
+            0,
+            false,
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+        products.Seed(Product.Reconstitute(
+            ProductId.From(22),
+            CompanyId.From(companyId),
+            "Harry Potter",
+            "harry-potter",
+            "Fantasy book",
+            new Money(25),
+            null,
+            5,
+            0,
+            CategoryId.From(1),
+            ProductStatus.Active,
+            null,
+            0,
+            0,
+            0,
+            false,
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+
+        var details = new InMemoryProductDetailRepository();
+        details.Seed(ProductDetail.Reconstitute(
+            ProductDetailId.From(1),
+            ProductId.From(20),
+            "the-hobbit",
+            new JsonBlob("""{"author":"Tolkien"}"""),
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            [],
+            [],
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+        details.Seed(ProductDetail.Reconstitute(
+            ProductDetailId.From(2),
+            ProductId.From(21),
+            "clean-code",
+            new JsonBlob("""{"author":"Martin"}"""),
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            [],
+            [],
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+        details.Seed(ProductDetail.Reconstitute(
+            ProductDetailId.From(3),
+            ProductId.From(22),
+            "harry-potter",
+            new JsonBlob("""{"author":"Rowling"}"""),
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            [],
+            [],
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+
+        var stocks = new InMemoryWarehouseStockRepository();
+        stocks.Seed(WarehouseStock.Create(WarehouseStockId.From(1), CompanyId.From(companyId), WarehouseId.From(1), ProductId.From(20), 3, 0, 0));
+        stocks.Seed(WarehouseStock.Create(WarehouseStockId.From(2), CompanyId.From(companyId), WarehouseId.From(1), ProductId.From(21), 3, 0, 0));
+        stocks.Seed(WarehouseStock.Create(WarehouseStockId.From(3), CompanyId.From(companyId), WarehouseId.From(1), ProductId.From(22), 3, 0, 0));
+
+        var handler = new SearchCatalogProductsQueryHandler(
+            new StubSearchService(Result<ProductSearchResultDto>.Failure("Elasticsearch down")),
+            products,
+            details,
+            new InMemoryProductImageRepository(),
+            stocks,
+            NullLogger<SearchCatalogProductsQueryHandler>.Instance);
+
+        var result = await handler.Handle(
+            new SearchCatalogProductsQuery(null, null, null, null, null, null, null, ["Tolkien", "Martin"], null, null, null, null, 1, 20, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.Value!.Items.Count);
+        Assert.Contains(result.Value.Items, x => x.Slug == "the-hobbit");
+        Assert.Contains(result.Value.Items, x => x.Slug == "clean-code");
+    }
+
+    [Fact]
+    public async Task Falls_Back_To_Db_And_Filters_By_Genre_Tag()
+    {
+        var companyId = Guid.NewGuid();
+        var products = new InMemoryProductRepository();
+        products.Seed(Product.Reconstitute(
+            ProductId.From(20),
+            CompanyId.From(companyId),
+            "The Hobbit",
+            "the-hobbit",
+            "Fantasy book",
+            new Money(30),
+            null,
+            5,
+            0,
+            CategoryId.From(1),
+            ProductStatus.Active,
+            null,
+            0,
+            0,
+            0,
+            false,
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+        products.Seed(Product.Reconstitute(
+            ProductId.From(21),
+            CompanyId.From(companyId),
+            "Clean Code",
+            "clean-code",
+            "Programming book",
+            new Money(40),
+            null,
+            5,
+            0,
+            CategoryId.From(1),
+            ProductStatus.Active,
+            null,
+            0,
+            0,
+            0,
+            false,
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+
+        var details = new InMemoryProductDetailRepository();
+        details.Seed(ProductDetail.Reconstitute(
+            ProductDetailId.From(1),
+            ProductId.From(20),
+            "the-hobbit",
+            new JsonBlob("""{"author":"Tolkien"}"""),
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            ["фентезі", "популярне"],
+            [],
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+        details.Seed(ProductDetail.Reconstitute(
+            ProductDetailId.From(2),
+            ProductId.From(21),
+            "clean-code",
+            new JsonBlob("""{"author":"Martin","genre":"it"}"""),
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            [],
+            [],
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+
+        var stocks = new InMemoryWarehouseStockRepository();
+        stocks.Seed(WarehouseStock.Create(WarehouseStockId.From(1), CompanyId.From(companyId), WarehouseId.From(1), ProductId.From(20), 3, 0, 0));
+        stocks.Seed(WarehouseStock.Create(WarehouseStockId.From(2), CompanyId.From(companyId), WarehouseId.From(1), ProductId.From(21), 3, 0, 0));
+
+        var handler = new SearchCatalogProductsQueryHandler(
+            new StubSearchService(Result<ProductSearchResultDto>.Failure("Elasticsearch down")),
+            products,
+            details,
+            new InMemoryProductImageRepository(),
+            stocks,
+            NullLogger<SearchCatalogProductsQueryHandler>.Instance);
+
+        var fantasyResult = await handler.Handle(
+            new SearchCatalogProductsQuery(null, null, null, null, null, null, null, null, null, ["фентезі"], null, null, 1, 20, null),
+            CancellationToken.None);
+        var itResult = await handler.Handle(
+            new SearchCatalogProductsQuery(null, null, null, null, null, null, null, null, null, ["it"], null, null, 1, 20, null),
+            CancellationToken.None);
+
+        Assert.True(fantasyResult.IsSuccess);
+        Assert.Single(fantasyResult.Value!.Items);
+        Assert.Equal("the-hobbit", fantasyResult.Value.Items[0].Slug);
+
+        Assert.True(itResult.IsSuccess);
+        Assert.Single(itResult.Value!.Items);
+        Assert.Equal("clean-code", itResult.Value.Items[0].Slug);
+    }
+
+    [Fact]
+    public async Task Falls_Back_To_Db_When_Elasticsearch_Returns_Empty_Facet_Results()
+    {
+        var companyId = Guid.NewGuid();
+        var products = new InMemoryProductRepository();
+        products.Seed(Product.Reconstitute(
+            ProductId.From(30),
+            CompanyId.From(companyId),
+            "Солодка Даруся",
+            "solodka-darusia",
+            "Книга",
+            new Money(320),
+            null,
+            5,
+            0,
+            CategoryId.From(11),
+            ProductStatus.Active,
+            null,
+            0,
+            0,
+            0,
+            false,
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+
+        var details = new InMemoryProductDetailRepository();
+        details.Seed(ProductDetail.Reconstitute(
+            ProductDetailId.From(1),
+            ProductId.From(30),
+            "solodka-darusia",
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            [],
+            ["Марія Матіос"],
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+
+        var stocks = new InMemoryWarehouseStockRepository();
+        stocks.Seed(WarehouseStock.Create(WarehouseStockId.From(1), CompanyId.From(companyId), WarehouseId.From(1), ProductId.From(30), 3, 0, 0));
+
+        var handler = new SearchCatalogProductsQueryHandler(
+            new StubSearchService(Result<ProductSearchResultDto>.Success(new ProductSearchResultDto([], 0, 1, 20))),
+            products,
+            details,
+            new InMemoryProductImageRepository(),
+            stocks,
+            NullLogger<SearchCatalogProductsQueryHandler>.Instance);
+
+        var result = await handler.Handle(
+            new SearchCatalogProductsQuery(null, null, null, null, null, null, null, ["Марія Матіос"], null, null, null, null, 1, 20, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!.Items);
+        Assert.Equal("solodka-darusia", result.Value.Items[0].Slug);
+    }
+
+    [Fact]
+    public async Task Falls_Back_To_Db_And_Filters_By_Author_In_Brands()
+    {
+        var companyId = Guid.NewGuid();
+        var products = new InMemoryProductRepository();
+        products.Seed(Product.Reconstitute(
+            ProductId.From(31),
+            CompanyId.From(companyId),
+            "Солодка Даруся",
+            "solodka-darusia-brands",
+            "Книга",
+            new Money(320),
+            null,
+            5,
+            0,
+            CategoryId.From(11),
+            ProductStatus.Active,
+            null,
+            0,
+            0,
+            0,
+            false,
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+
+        var details = new InMemoryProductDetailRepository();
+        details.Seed(ProductDetail.Reconstitute(
+            ProductDetailId.From(1),
+            ProductId.From(31),
+            "solodka-darusia-brands",
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            JsonBlob.Empty,
+            [],
+            ["Марія Матіос"],
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+
+        var stocks = new InMemoryWarehouseStockRepository();
+        stocks.Seed(WarehouseStock.Create(WarehouseStockId.From(1), CompanyId.From(companyId), WarehouseId.From(1), ProductId.From(31), 3, 0, 0));
+
+        var handler = new SearchCatalogProductsQueryHandler(
+            new StubSearchService(Result<ProductSearchResultDto>.Failure("Elasticsearch down")),
+            products,
+            details,
+            new InMemoryProductImageRepository(),
+            stocks,
+            NullLogger<SearchCatalogProductsQueryHandler>.Instance);
+
+        var result = await handler.Handle(
+            new SearchCatalogProductsQuery(null, null, null, null, null, null, null, ["Марія Матіос"], null, null, null, null, 1, 20, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!.Items);
+        Assert.Equal("solodka-darusia-brands", result.Value.Items[0].Slug);
     }
 
     private sealed class StubSearchService : IProductSearchService

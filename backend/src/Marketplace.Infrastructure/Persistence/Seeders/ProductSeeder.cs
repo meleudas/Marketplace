@@ -8,6 +8,9 @@ record BookDef(string Title, string Author, long CatId, decimal Price);
 
 public class ProductSeeder : IDbSeeder
 {
+    private const string FormatElectronic = "електронний";
+    private const string FormatPaper = "паперовий";
+
     public async Task SeedAsync(ApplicationDbContext context, IServiceProvider sp, CancellationToken ct = default)
     {
         if (await context.Products.AnyAsync(ct))
@@ -111,52 +114,73 @@ public class ProductSeeder : IDbSeeder
         var details = new List<ProductDetailRecord>();
         var images = new List<ProductImageRecord>();
 
-        foreach (var book in bookDefs)
+        for (var bookIndex = 0; bookIndex < bookDefs.Count; bookIndex++)
         {
+            var book = bookDefs[bookIndex];
+            var formats = ResolveFormats(bookIndex, rng);
             var numEditions = rng.Next(3, Math.Min(8, companies.Count + 1));
             var assignedCompanies = companies.OrderBy(_ => rng.Next()).Take(numEditions).ToList();
+            var genre = ResolveGenre(book.CatId);
+            var titleSlug = Slugify(book.Title);
 
             foreach (var company in assignedCompanies)
             {
-                index++;
-                var slug = $"{book.Title.ToLowerInvariant().Replace(' ', '-').Replace("«", "").Replace("»", "").Replace(":", "").Replace("'", "").Replace(",", "")}-{index}";
-                var stock = rng.Next(5, 200);
-                var price = book.Price + (rng.Next(-50, 100) / 10m) * 10;
-
-                products.Add(new ProductRecord
+                foreach (var format in formats)
                 {
-                    CompanyId = company.Id,
-                    Name = book.Title,
-                    Slug = slug,
-                    Description = $"Книга «{book.Title}» — {book.Author}. Українською мовою.",
-                    Price = Math.Max(50, price),
-                    OldPrice = rng.Next(3) == 0 ? Math.Max(50, price + rng.Next(50, 200)) : null,
-                    Stock = stock,
-                    MinStock = 5,
-                    CategoryId = book.CatId,
-                    Status = 1,
-                    SubmittedByUserId = null,
-                    IsDeleted = false,
-                    CreatedAt = now,
-                    UpdatedAt = now,
-                });
+                    index++;
+                    var formatSlug = FormatSlug(format);
+                    var slug = $"{titleSlug}-{formatSlug}-{index}";
+                    var stock = format == FormatElectronic
+                        ? rng.Next(50, 500)
+                        : rng.Next(5, 200);
+                    var price = ResolveFormatPrice(book.Price, format, rng);
 
-                details.Add(new ProductDetailRecord
-                {
-                    Slug = slug,
-                    Tags = new[] { book.CatId switch { >= 61 and <= 63 => "класика", >= 71 and <= 73 => "фентезі", >= 81 and <= 83 => "детектив", >= 41 and <= 44 => "it", >= 51 and <= 53 => "освіта", >= 31 and <= 33 => "бізнес", >= 21 and <= 23 => "дитяча", _ => "художня" }, "українська", "популярне" },
-                    Brands = new[] { book.Author },
-                    SpecificationsRaw = JsonSerializer.Serialize(new { isbn = $"978-{rng.Next(100, 999)}-{rng.Next(1000, 9999)}-{rng.Next(10, 99)}-{rng.Next(1, 10)}", pages = rng.Next(100, 800), year = 2020 + rng.Next(0, 6), language = "Українська", format = "Тверда обкладинка" }),
-                    CreatedAt = now,
-                    UpdatedAt = now,
-                });
+                    products.Add(new ProductRecord
+                    {
+                        CompanyId = company.Id,
+                        Name = $"{book.Title} ({FormatLabel(format)})",
+                        Slug = slug,
+                        Description = $"Книга «{book.Title}» — {book.Author}. Формат: {FormatLabel(format)}. Українською мовою.",
+                        Price = price,
+                        OldPrice = rng.Next(3) == 0 ? Math.Max(50, price + rng.Next(50, 200)) : null,
+                        Stock = stock,
+                        MinStock = 5,
+                        CategoryId = book.CatId,
+                        Status = 1,
+                        HasVariants = false,
+                        SubmittedByUserId = null,
+                        IsDeleted = false,
+                        CreatedAt = now,
+                        UpdatedAt = now,
+                    });
+
+                    details.Add(new ProductDetailRecord
+                    {
+                        Slug = slug,
+                        AttributesRaw = JsonSerializer.Serialize(new { author = book.Author, genre, format }),
+                        Tags = [genre, $"format:{format}", "українська", "популярне"],
+                        Brands = [book.Author],
+                        SpecificationsRaw = JsonSerializer.Serialize(new
+                        {
+                            isbn = format == FormatElectronic
+                                ? $"978-{rng.Next(100, 999)}-{rng.Next(1000, 9999)}-{rng.Next(10, 99)}-{rng.Next(1, 10)}"
+                                : $"978-{rng.Next(100, 999)}-{rng.Next(1000, 9999)}-{rng.Next(10, 99)}-{rng.Next(1, 10)}",
+                            pages = format == FormatElectronic ? (int?)null : rng.Next(100, 800),
+                            year = 2020 + rng.Next(0, 6),
+                            language = "Українська",
+                            format = FormatLabel(format),
+                        }),
+                        CreatedAt = now,
+                        UpdatedAt = now,
+                    });
+                }
             }
         }
 
         context.Products.AddRange(products);
         await context.SaveChangesAsync(ct);
 
-        for (int i = 0; i < details.Count; i++)
+        for (var i = 0; i < details.Count; i++)
             details[i].ProductId = products[i].Id;
 
         context.ProductDetails.AddRange(details);
@@ -179,4 +203,63 @@ public class ProductSeeder : IDbSeeder
         context.ProductImages.AddRange(images);
         await context.SaveChangesAsync(ct);
     }
+
+    private static IReadOnlyList<string> ResolveFormats(int bookIndex, Random rng)
+    {
+        return (bookIndex % 3, rng.Next(4)) switch
+        {
+            (0, _) => [FormatPaper, FormatElectronic],
+            (1, _) => [FormatPaper],
+            (2, 0) => [FormatPaper, FormatElectronic],
+            (2, _) => [FormatElectronic],
+            _ => [FormatPaper],
+        };
+    }
+
+    private static decimal ResolveFormatPrice(decimal basePrice, string format, Random rng)
+    {
+        var adjusted = format == FormatElectronic
+            ? basePrice * 0.65m
+            : basePrice;
+
+        adjusted += (rng.Next(-50, 100) / 10m) * 10;
+        return Math.Max(format == FormatElectronic ? 29 : 50, adjusted);
+    }
+
+    private static string FormatLabel(string format) =>
+        format switch
+        {
+            FormatElectronic => "Електронна",
+            FormatPaper => "Паперова",
+            _ => format,
+        };
+
+    private static string FormatSlug(string format) =>
+        format switch
+        {
+            FormatElectronic => "elektronna",
+            FormatPaper => "paperova",
+            _ => Slugify(format),
+        };
+
+    private static string Slugify(string value) =>
+        value.ToLowerInvariant()
+            .Replace(' ', '-')
+            .Replace("«", "")
+            .Replace("»", "")
+            .Replace(":", "")
+            .Replace("'", "")
+            .Replace(",", "");
+
+    private static string ResolveGenre(long categoryId) => categoryId switch
+    {
+        >= 61 and <= 63 => "класика",
+        >= 71 and <= 73 => "фентезі",
+        >= 81 and <= 83 => "детектив",
+        >= 41 and <= 44 => "it",
+        >= 51 and <= 53 => "освіта",
+        >= 31 and <= 33 => "бізнес",
+        >= 21 and <= 23 => "дитяча",
+        _ => "художня"
+    };
 }

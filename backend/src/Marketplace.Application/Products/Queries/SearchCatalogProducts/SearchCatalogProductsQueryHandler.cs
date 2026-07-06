@@ -39,6 +39,11 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
     public async Task<Result<ProductSearchResultDto>> Handle(SearchCatalogProductsQuery request, CancellationToken ct)
     {
         var searchTerm = string.IsNullOrWhiteSpace(request.Name) ? request.Query : request.Name;
+        var hasFacetFilters = ProductCatalogFacetReader.HasFacetFilters(
+            request.Authors,
+            request.Format,
+            request.Genres,
+            request.Tags);
         var filters = new CatalogProductSearchFilters(
             searchTerm,
             request.CategoryIds,
@@ -46,9 +51,9 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
             request.MinPrice,
             request.MaxPrice,
             request.AvailabilityStatus,
-            request.Author,
+            request.Authors,
             request.Format,
-            request.Genre,
+            request.Genres,
             request.Tags,
             request.Sort,
             request.Page,
@@ -59,9 +64,19 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
         {
             var esResult = await _searchService.SearchCatalogProductsAsync(filters, ct);
             if (esResult.IsSuccess)
-                return Result<ProductSearchResultDto>.Success(await EnrichAsync(esResult.Value!, ct));
+            {
+                if (esResult.Value!.Total > 0 || !hasFacetFilters)
+                    return Result<ProductSearchResultDto>.Success(await EnrichAsync(esResult.Value, ct));
 
-            _logger.LogInformation("Catalog search fallback to DB because Elasticsearch returned failure: {Error}", esResult.Error);
+                _logger.LogInformation(
+                    "Catalog search fallback to DB because Elasticsearch returned zero facet-filtered results.");
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Catalog search fallback to DB because Elasticsearch returned failure: {Error}",
+                    esResult.Error);
+            }
         }
         catch (Exception ex)
         {
@@ -70,67 +85,72 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
 
         try
         {
-            var products = await _productRepository.ListActiveAsync(ct);
-            var hasFacetFilters = !string.IsNullOrWhiteSpace(request.Author)
-                || !string.IsNullOrWhiteSpace(request.Format)
-                || !string.IsNullOrWhiteSpace(request.Genre)
-                || request.Tags is { Count: > 0 };
-
-            var rows = new List<(ProductListItemDto Dto, int Score)>(products.Count);
-            foreach (var p in products)
-            {
-                var stockRows = await _stockRepository.ListByProductAsync(p.CompanyId, p.Id, ct);
-                var available = stockRows.Sum(x => x.Available);
-                var availability = available <= 0 ? "out_of_stock" : available <= 5 ? "low_stock" : "in_stock";
-                var dto = ProductMapper.ToListItemDto(p, available, availability);
-
-                if (request.CategoryIds is { Count: > 0 } && !request.CategoryIds.Contains(dto.CategoryId))
-                    continue;
-                if (request.CompanyId.HasValue && dto.CompanyId != request.CompanyId.Value)
-                    continue;
-                if (request.MinPrice.HasValue && dto.Price < request.MinPrice.Value)
-                    continue;
-                if (request.MaxPrice.HasValue && dto.Price > request.MaxPrice.Value)
-                    continue;
-                if (!string.IsNullOrWhiteSpace(request.AvailabilityStatus) &&
-                    !string.Equals(dto.AvailabilityStatus, request.AvailabilityStatus.Trim(), StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                if (hasFacetFilters)
-                {
-                    var detail = await _productDetailRepository.GetByProductIdAsync(p.Id, ct);
-                    var facets = ProductCatalogFacetReader.Read(
-                        detail?.Attributes ?? JsonBlob.Empty,
-                        detail?.Tags ?? []);
-                    if (!ProductCatalogFacetReader.Matches(facets, request.Author, request.Format, request.Genre, request.Tags))
-                        continue;
-                }
-
-                var score = Score(dto, searchTerm);
-                if (!string.IsNullOrWhiteSpace(searchTerm) && score == 0)
-                    continue;
-
-                rows.Add((dto, score));
-            }
-
-            var sorted = Sort(rows, request.Sort).ToList();
-            var total = sorted.Count;
-            var page = request.Page <= 0 ? 1 : request.Page;
-            var pageSize = request.PageSize <= 0 ? 20 : request.PageSize;
-            var items = sorted
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(x => x.Dto)
-                .ToList();
-
-            return Result<ProductSearchResultDto>.Success(
-                await EnrichAsync(new ProductSearchResultDto(items, total, page, pageSize), ct));
+            return Result<ProductSearchResultDto>.Success(await SearchInDatabaseAsync(request, searchTerm, hasFacetFilters, ct));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Catalog DB fallback search failed");
             return Result<ProductSearchResultDto>.Failure($"Failed to search products: {ex.Message}");
         }
+    }
+
+    private async Task<ProductSearchResultDto> SearchInDatabaseAsync(
+        SearchCatalogProductsQuery request,
+        string? searchTerm,
+        bool hasFacetFilters,
+        CancellationToken ct)
+    {
+        var products = await _productRepository.ListActiveAsync(ct);
+        var rows = new List<(ProductListItemDto Dto, int Score)>(products.Count);
+
+        foreach (var p in products)
+        {
+            var stockRows = await _stockRepository.ListByProductAsync(p.CompanyId, p.Id, ct);
+            var available = stockRows.Sum(x => x.Available);
+            var availability = available <= 0 ? "out_of_stock" : available <= 5 ? "low_stock" : "in_stock";
+            var dto = ProductMapper.ToListItemDto(p, available, availability);
+
+            if (request.CategoryIds is { Count: > 0 } && !request.CategoryIds.Contains(dto.CategoryId))
+                continue;
+            if (request.CompanyId.HasValue && dto.CompanyId != request.CompanyId.Value)
+                continue;
+            if (request.MinPrice.HasValue && dto.Price < request.MinPrice.Value)
+                continue;
+            if (request.MaxPrice.HasValue && dto.Price > request.MaxPrice.Value)
+                continue;
+            if (!string.IsNullOrWhiteSpace(request.AvailabilityStatus) &&
+                !string.Equals(dto.AvailabilityStatus, request.AvailabilityStatus.Trim(), StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (hasFacetFilters)
+            {
+                var detail = await _productDetailRepository.GetByProductIdAsync(p.Id, ct);
+                var facets = ProductCatalogFacetReader.Read(
+                    detail?.Attributes ?? JsonBlob.Empty,
+                    detail?.Tags ?? [],
+                    detail?.Brands ?? []);
+                if (!ProductCatalogFacetReader.Matches(facets, request.Authors, request.Format, request.Genres, request.Tags))
+                    continue;
+            }
+
+            var score = Score(dto, searchTerm);
+            if (!string.IsNullOrWhiteSpace(searchTerm) && score == 0)
+                continue;
+
+            rows.Add((dto, score));
+        }
+
+        var sorted = Sort(rows, request.Sort).ToList();
+        var total = sorted.Count;
+        var page = request.Page <= 0 ? 1 : request.Page;
+        var pageSize = request.PageSize <= 0 ? 20 : request.PageSize;
+        var items = sorted
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => x.Dto)
+            .ToList();
+
+        return await EnrichAsync(new ProductSearchResultDto(items, total, page, pageSize), ct);
     }
 
     private async Task<ProductSearchResultDto> EnrichAsync(ProductSearchResultDto result, CancellationToken ct)

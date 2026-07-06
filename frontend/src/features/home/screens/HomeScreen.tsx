@@ -60,7 +60,8 @@ export function HomeScreen() {
         if (!cancelled) {
           setRecommendations([]);
         }
-      } finally {
+      }
+      finally {
         if (!cancelled) {
           setRecommendationsLoading(false);
         }

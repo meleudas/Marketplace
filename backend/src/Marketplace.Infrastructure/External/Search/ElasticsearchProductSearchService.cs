@@ -208,7 +208,10 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
         }
 
         var detail = await _productDetailRepository.GetByProductIdAsync(product.Id, ct);
-        var facets = ProductCatalogFacetReader.Read(detail?.Attributes ?? JsonBlob.Empty, detail?.Tags ?? []);
+        var facets = ProductCatalogFacetReader.Read(
+            detail?.Attributes ?? JsonBlob.Empty,
+            detail?.Tags ?? [],
+            detail?.Brands ?? []);
         var stockRows = await _stockRepository.ListByProductAsync(product.CompanyId, product.Id, ct);
         var availableQty = stockRows.Sum(x => x.Available);
         var availability = availableQty <= 0 ? "out_of_stock" : availableQty <= 5 ? "low_stock" : "in_stock";
@@ -351,11 +354,23 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
                 .Value(filters.AvailabilityStatus.Trim().ToLowerInvariant())));
         }
 
-        if (!string.IsNullOrWhiteSpace(filters.Author))
+        if (filters.Authors is { Count: > 0 })
         {
-            b.Filter(f => f.Term(t => t
-                .Field(field => field.Author)
-                .Value(ProductCatalogFacetReader.Normalize(filters.Author))));
+            var authorValues = ProductCatalogFacetReader.NormalizeAuthors(filters.Authors)
+                .Select(FieldValue.String)
+                .ToArray();
+            if (authorValues.Length > 0)
+            {
+                b.Filter(f => f.Bool(bb => bb
+                    .Should(
+                        s => s.Terms(t => t
+                            .Field(field => field.Author)
+                            .Terms(new TermsQueryField(authorValues))),
+                        s => s.Terms(t => t
+                            .Field(field => field.Brands)
+                            .Terms(new TermsQueryField(authorValues))))
+                    .MinimumShouldMatch(1)));
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(filters.Format))
@@ -365,11 +380,23 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
                 .Value(ProductCatalogFacetReader.Normalize(filters.Format))));
         }
 
-        if (!string.IsNullOrWhiteSpace(filters.Genre))
+        if (filters.Genres is { Count: > 0 })
         {
-            b.Filter(f => f.Term(t => t
-                .Field(field => field.Genres)
-                .Value(ProductCatalogFacetReader.Normalize(filters.Genre))));
+            var genreValues = ProductCatalogFacetReader.NormalizeGenres(filters.Genres)
+                .Select(FieldValue.String)
+                .ToArray();
+            if (genreValues.Length > 0)
+            {
+                b.Filter(f => f.Bool(bb => bb
+                    .Should(
+                        s => s.Terms(t => t
+                            .Field(field => field.Genres)
+                            .Terms(new TermsQueryField(genreValues))),
+                        s => s.Terms(t => t
+                            .Field(field => field.Tags)
+                            .Terms(new TermsQueryField(genreValues))))
+                    .MinimumShouldMatch(1)));
+            }
         }
 
         if (filters.Tags is { Count: > 0 })
