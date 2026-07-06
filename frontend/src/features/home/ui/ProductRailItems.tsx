@@ -10,15 +10,7 @@ interface ProductRailItemsProps {
 export function ProductRailItems({ items }: ProductRailItemsProps) {
   return items.map((item) => (
     <Link key={item.id} href={item.href} className={styles.cardLink} role="listitem">
-      <ProductCard
-        product={{
-          id: item.id,
-          title: item.title,
-          price: item.price,
-          imageUrl: item.imageUrl,
-          inStock: item.inStock,
-        }}
-      />
+      <ProductCard product={item} />
     </Link>
   ));
 }

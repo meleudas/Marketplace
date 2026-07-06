@@ -82,6 +82,9 @@ export interface SearchCatalogProductsParams {
   minPrice?: number;
   maxPrice?: number;
   availabilityStatus?: string;
+  author?: string;
+  format?: string;
+  genre?: string;
   sort?: string;
   page?: number;
   pageSize?: number;
@@ -99,6 +102,9 @@ export const searchCatalogProducts = async (
   if (typeof params.minPrice === "number") searchParams.set("minPrice", String(params.minPrice));
   if (typeof params.maxPrice === "number") searchParams.set("maxPrice", String(params.maxPrice));
   if (params.availabilityStatus) searchParams.set("availabilityStatus", params.availabilityStatus);
+  if (params.author) searchParams.set("author", params.author);
+  if (params.format) searchParams.set("format", params.format);
+  if (params.genre) searchParams.set("genre", params.genre);
   if (params.sort) searchParams.set("sort", params.sort);
   if (typeof params.page === "number") searchParams.set("page", String(params.page));
   if (typeof params.pageSize === "number") searchParams.set("pageSize", String(params.pageSize));

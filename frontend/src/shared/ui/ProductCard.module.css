@@ -126,10 +126,33 @@
 
 .footer {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-8);
   margin-top: var(--space-4);
+}
+
+.priceGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.discountBadge {
+  position: absolute;
+  top: var(--space-8);
+  left: var(--space-8);
+  z-index: 1;
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-pink);
+  color: var(--color-white);
+  font-family: var(--font-primary);
+  font-size: var(--typography-body2-font-size);
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 4px 12px rgb(238 2 144 / 0.35);
 }
 
 .price {
@@ -141,7 +164,26 @@
   transition: color var(--ui-transition-fast);
 }
 
-.card:hover .price {
+.priceSale {
+  font-family: var(--font-primary);
+  font-size: var(--typography-body3-font-size);
+  font-weight: 700;
+  line-height: var(--typography-body3-line-height);
+  color: var(--color-primary-pink);
+  transition: color var(--ui-transition-fast);
+}
+
+.oldPrice {
+  font-family: var(--font-primary);
+  font-size: var(--typography-body2-font-size);
+  font-weight: var(--typography-body2-font-weight);
+  line-height: var(--typography-body2-line-height);
+  color: var(--color-neutral-400);
+  text-decoration: line-through;
+}
+
+.card:hover .price,
+.card:hover .priceSale {
   color: var(--color-primary-light-blue);
 }
 
@@ -150,7 +192,8 @@
   .image,
   .imagePlaceholder,
   .body,
-  .price {
+  .price,
+  .priceSale {
     transition: none;
   }
 

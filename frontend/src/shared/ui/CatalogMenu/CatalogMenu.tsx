@@ -9,7 +9,7 @@ import { PageBackground } from "../PageBackground";
 import { Typography } from "../Typography";
 import styles from "./CatalogMenu.module.css";
 
-export type CatalogFormatFilter = "all" | "paper" | "electronic";
+export type CatalogFormatFilter = "all" | "hardcover" | "paperback";
 
 export interface CatalogMenuCategory {
   id: number;
@@ -30,8 +30,8 @@ interface CatalogMenuProps {
 
 const FORMAT_OPTIONS: Array<{ value: CatalogFormatFilter; label: string }> = [
   { value: "all", label: "Всі" },
-  { value: "paper", label: "Паперові" },
-  { value: "electronic", label: "Електронні" },
+  { value: "hardcover", label: "Тверда обкладинка" },
+  { value: "paperback", label: "М'яка обкладинка" },
 ];
 
 function sortCategories(a: CatalogMenuCategory, b: CatalogMenuCategory): number {
