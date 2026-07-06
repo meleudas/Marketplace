@@ -8,4 +8,16 @@ public interface IProductSearchService
     Task<Result<ProductSearchResultDto>> SearchCatalogProductsAsync(
         CatalogProductSearchFilters filters,
         CancellationToken ct = default);
+
+    Task<Result<ProductSearchResultDto>> SearchCatalogOnSaleProductsAsync(
+        CatalogOnSaleProductFilters filters,
+        CancellationToken ct = default);
+
+    Task<Result<ProductSearchResultDto>> SearchCatalogNewProductsAsync(
+        CatalogBrowsableProductFilters filters,
+        CancellationToken ct = default);
+
+    Task<Result<ProductSearchResultDto>> SearchCatalogPopularProductsAsync(
+        CatalogBrowsableProductFilters filters,
+        CancellationToken ct = default);
 }

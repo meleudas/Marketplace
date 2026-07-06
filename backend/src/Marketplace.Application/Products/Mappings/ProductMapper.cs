@@ -1,3 +1,4 @@
+using Marketplace.Application.Products.Catalog;
 using Marketplace.Application.Products.DTOs;
 using Marketplace.Domain.Catalog.Entities;
 
@@ -18,6 +19,7 @@ public static class ProductMapper
             p.Description,
             p.Price.Amount,
             p.OldPrice?.Amount,
+            ProductDiscount.Percent(p.Price.Amount, p.OldPrice?.Amount),
             p.CategoryId.Value,
             p.Status.ToString(),
             p.HasVariants,

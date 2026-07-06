@@ -8,6 +8,7 @@ public sealed record ProductListItemDto(
     string Description,
     decimal Price,
     decimal? OldPrice,
+    decimal? DiscountPercent,
     long CategoryId,
     string Status,
     bool HasVariants,

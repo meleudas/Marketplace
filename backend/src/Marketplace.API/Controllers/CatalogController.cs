@@ -5,6 +5,9 @@ using Marketplace.Application.Behavior.Commands.TrackSearchQuery;
 using Marketplace.Application.Behavior.Options;
 using Marketplace.Application.Products.Queries.GetCatalogProductBySlug;
 using Marketplace.Application.Products.Queries.GetCatalogProducts;
+using Marketplace.Application.Products.Queries.ListCatalogNewProducts;
+using Marketplace.Application.Products.Queries.ListCatalogOnSaleProducts;
+using Marketplace.Application.Products.Queries.ListCatalogPopularProducts;
 using Marketplace.Application.Products.Queries.SearchCatalogProducts;
 using Marketplace.Application.Products.Queries.GetSimilarProductsById;
 using Marketplace.Application.Products.Queries.GetSimilarProductsBySlug;
@@ -101,6 +104,62 @@ public sealed class CatalogController : ControllerBase
         using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CatalogLatencyMs, new KeyValuePair<string, object?>("operation", "get_products"));
         var result = await _sender.Send(new GetCatalogProductsQuery(), ct);
         RecordCatalogResult("get_products", result.IsSuccess, result.Error);
+        return result.ToActionResult();
+    }
+
+    [HttpGet("products/on-sale")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetOnSaleProducts([FromQuery] ListCatalogOnSaleProductsRequest request, CancellationToken ct)
+    {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CatalogLatencyMs, new KeyValuePair<string, object?>("operation", "get_on_sale_products"));
+        var result = await _sender.Send(new ListCatalogOnSaleProductsQuery(
+            request.CategoryIds,
+            request.CompanyId,
+            request.MinPrice,
+            request.MaxPrice,
+            request.MinDiscountPercent,
+            request.AvailabilityStatus,
+            request.Sort,
+            request.Page ?? 1,
+            request.PageSize ?? 20,
+            request.SearchAfter), ct);
+        RecordCatalogResult("get_on_sale_products", result.IsSuccess, result.Error);
+        return result.ToActionResult();
+    }
+
+    [HttpGet("products/new")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetNewProducts([FromQuery] ListCatalogBrowsableProductsRequest request, CancellationToken ct)
+    {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CatalogLatencyMs, new KeyValuePair<string, object?>("operation", "get_new_products"));
+        var result = await _sender.Send(new ListCatalogNewProductsQuery(
+            request.CategoryIds,
+            request.CompanyId,
+            request.MinPrice,
+            request.MaxPrice,
+            request.AvailabilityStatus,
+            request.Page ?? 1,
+            request.PageSize ?? 20,
+            request.SearchAfter), ct);
+        RecordCatalogResult("get_new_products", result.IsSuccess, result.Error);
+        return result.ToActionResult();
+    }
+
+    [HttpGet("products/popular")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetPopularProducts([FromQuery] ListCatalogBrowsableProductsRequest request, CancellationToken ct)
+    {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CatalogLatencyMs, new KeyValuePair<string, object?>("operation", "get_popular_products"));
+        var result = await _sender.Send(new ListCatalogPopularProductsQuery(
+            request.CategoryIds,
+            request.CompanyId,
+            request.MinPrice,
+            request.MaxPrice,
+            request.AvailabilityStatus,
+            request.Page ?? 1,
+            request.PageSize ?? 20,
+            request.SearchAfter), ct);
+        RecordCatalogResult("get_popular_products", result.IsSuccess, result.Error);
         return result.ToActionResult();
     }
 
@@ -232,6 +291,28 @@ public sealed class CatalogController : ControllerBase
             _logger.LogDebug("Search tracking skipped: {Error}", track.Error);
     }
 }
+
+public sealed record ListCatalogBrowsableProductsRequest(
+    List<long>? CategoryIds,
+    Guid? CompanyId,
+    decimal? MinPrice,
+    decimal? MaxPrice,
+    string? AvailabilityStatus,
+    int? Page,
+    int? PageSize,
+    string? SearchAfter);
+
+public sealed record ListCatalogOnSaleProductsRequest(
+    List<long>? CategoryIds,
+    Guid? CompanyId,
+    decimal? MinPrice,
+    decimal? MaxPrice,
+    decimal? MinDiscountPercent,
+    string? AvailabilityStatus,
+    string? Sort,
+    int? Page,
+    int? PageSize,
+    string? SearchAfter);
 
 public sealed record SearchCatalogProductsRequest(
     string? Name,
