@@ -4,6 +4,7 @@ import type {
   CatalogCompanyDto,
   CatalogProductDetailDto,
   CatalogProductListItemDto,
+  PersonalizedRecommendationsResultDto,
   ProductAvailabilityDto,
   ProductSearchResultDto,
 } from "@/features/storefront/model/catalog.types";
@@ -50,6 +51,27 @@ export const getCatalogCategories = async (): Promise<CatalogCategoryDto[]> => {
 export const getCatalogProducts = async (): Promise<CatalogProductListItemDto[]> => {
   const response = await apiClient.get<unknown>("/catalog/products");
   return extractList<CatalogProductListItemDto>(response.data);
+};
+
+export interface GetPersonalizedRecommendationsParams {
+  limit?: number;
+}
+
+export const getPersonalizedRecommendations = async (
+  params: GetPersonalizedRecommendationsParams = {},
+): Promise<PersonalizedRecommendationsResultDto> => {
+  const searchParams = new URLSearchParams();
+
+  if (typeof params.limit === "number") {
+    searchParams.set("limit", String(params.limit));
+  }
+
+  const query = searchParams.toString();
+  const response = await apiClient.get<PersonalizedRecommendationsResultDto>(
+    query ? `/catalog/recommendations/me?${query}` : "/catalog/recommendations/me",
+  );
+
+  return response.data;
 };
 
 export interface SearchCatalogProductsParams {
