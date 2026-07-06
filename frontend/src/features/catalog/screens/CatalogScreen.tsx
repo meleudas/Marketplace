@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   getCatalogCategories,
-  getCatalogProductBySlug,
   getCatalogProducts,
   searchCatalogProducts,
 } from "@/features/storefront/api/catalog.api";
@@ -13,7 +12,6 @@ import {
   getCategoryFilterIds,
   getChildCategories,
   getRootCategories,
-  productMatchesCategoryFilter,
   resolveCategorySelection,
 } from "@/features/storefront/lib/catalog-category-filter";
 import {
@@ -24,12 +22,22 @@ import {
   type CatalogProductSort,
 } from "@/features/storefront/lib/catalog-product-sort";
 import type { CatalogCategoryDto, CatalogProductListItemDto } from "@/features/storefront/model/catalog.types";
+import { mapCatalogProductToCardData } from "@/features/storefront/lib/map-catalog-product-to-card";
+import {
+  AUTHOR_FILTER_OPTIONS,
+  DEFAULT_CATALOG_MAX_PRICE,
+  DEFAULT_CATALOG_MIN_PRICE,
+  FORMAT_FILTER_OPTIONS,
+  GENRE_FILTER_OPTIONS,
+  resolveAppliedPriceFilter,
+} from "@/features/catalog/lib/catalog-filter-options";
 import { StateBlock } from "@/features/storefront/ui/StateBlock";
 import {
   ArrowsSortIcon,
   Button,
   CatalogMenu,
   Checkbox,
+  CloseIcon,
   FilterIcon,
   PageLayout,
   Pagination,
@@ -37,7 +45,6 @@ import {
   ProductCardSkeleton,
 } from "@/shared/ui";
 import iconStyles from "@/shared/ui/icons/Icon.module.css";
-import type { ProductCardData } from "@/shared/ui/ProductCard";
 import styles from "./CatalogScreen.module.css";
 
 interface CatalogScreenProps {
@@ -46,50 +53,18 @@ interface CatalogScreenProps {
 
 const PAGE_SIZE = 8;
 
-const mapProductToCard = (
-  product: CatalogProductListItemDto,
-  imageUrl?: string | null,
-): ProductCardData => ({
-  id: String(product.id),
-  title: product.name,
-  price: product.price,
-  imageUrl: imageUrl ?? undefined,
-  inStock: product.availabilityStatus !== "out_of_stock" && product.availableQty > 0,
-});
+const toggleSingleFilter = (currentValue: string | null, nextValue: string): string | null =>
+  currentValue === nextValue ? null : nextValue;
 
-const filterProductsLocally = (
-  items: CatalogProductListItemDto[],
-  options: {
-    query: string;
-    categoryFilterIds?: number[];
-    inStockOnly: boolean;
-    sort: CatalogProductSort | null;
-  },
-): CatalogProductListItemDto[] => {
-  const query = options.query.toLowerCase();
-  let result = [...items];
+const parsePriceFilter = (value: string): number | undefined => {
+  const normalized = value.trim().replace(",", ".");
 
-  if (options.categoryFilterIds && options.categoryFilterIds.length > 0) {
-    result = result.filter((product) =>
-      productMatchesCategoryFilter(product.categoryId, options.categoryFilterIds!),
-    );
+  if (!normalized) {
+    return undefined;
   }
 
-  if (options.inStockOnly) {
-    result = result.filter(
-      (product) => product.availabilityStatus !== "out_of_stock" && product.availableQty > 0,
-    );
-  }
-
-  if (query) {
-    result = result.filter((product) =>
-      [product.name, product.description, product.slug].some((value) =>
-        value.toLowerCase().includes(query),
-      ),
-    );
-  }
-
-  return options.sort ? sortCatalogProducts(result, options.sort) : result;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : undefined;
 };
 
 export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
@@ -98,10 +73,18 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<CatalogCategoryDto[]>([]);
   const [products, setProducts] = useState<CatalogProductListItemDto[]>([]);
-  const [productImages, setProductImages] = useState<Record<string, string | null>>({});
 
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [inStockOnly, setInStockOnly] = useState(false);
+  const [appliedGenre, setAppliedGenre] = useState<string | null>(null);
+  const [appliedAuthor, setAppliedAuthor] = useState<string | null>(null);
+  const [appliedFormat, setAppliedFormat] = useState<string | null>(null);
+  const [appliedMinPrice, setAppliedMinPrice] = useState("");
+  const [appliedMaxPrice, setAppliedMaxPrice] = useState("");
+  const [draftGenre, setDraftGenre] = useState<string | null>(null);
+  const [draftAuthor, setDraftAuthor] = useState<string | null>(null);
+  const [draftFormat, setDraftFormat] = useState<string | null>(null);
+  const [draftMinPrice, setDraftMinPrice] = useState(DEFAULT_CATALOG_MIN_PRICE);
+  const [draftMaxPrice, setDraftMaxPrice] = useState(DEFAULT_CATALOG_MAX_PRICE);
   const [selectedRootSlug, setSelectedRootSlug] = useState<string | null>(null);
   const [selectedSubcategorySlug, setSelectedSubcategorySlug] = useState<string | null>(null);
   const [selectedSort, setSelectedSort] = useState<CatalogProductSort>(DEFAULT_CATALOG_PRODUCT_SORT);
@@ -111,7 +94,6 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const pendingScrollY = useRef<number | null>(null);
-  const productImagesRef = useRef<Record<string, string | null>>({});
 
   useEffect(() => {
     const load = async () => {
@@ -146,7 +128,17 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedRootSlug, selectedSubcategorySlug, inStockOnly, selectedSort, searchQuery]);
+  }, [
+    appliedAuthor,
+    appliedFormat,
+    appliedGenre,
+    appliedMaxPrice,
+    appliedMinPrice,
+    selectedRootSlug,
+    selectedSubcategorySlug,
+    selectedSort,
+    searchQuery,
+  ]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -172,32 +164,35 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
         const categoryFilterIds = selectedCategory
           ? getCategoryFilterIds(categories, selectedCategory)
           : undefined;
+        const minPrice = parsePriceFilter(appliedMinPrice);
+        const maxPrice = parsePriceFilter(appliedMaxPrice);
         const shouldUseSearchEndpoint = Boolean(
-          searchQuery || selectedCategory || inStockOnly || selectedSort !== DEFAULT_CATALOG_PRODUCT_SORT,
+          searchQuery ||
+            selectedCategory ||
+            appliedAuthor ||
+            appliedFormat ||
+            appliedGenre ||
+            typeof minPrice === "number" ||
+            typeof maxPrice === "number" ||
+            selectedSort !== DEFAULT_CATALOG_PRODUCT_SORT,
         );
 
-        let nextProducts = await getCatalogProducts();
-
-        if (shouldUseSearchEndpoint) {
-          const searchResult = await searchCatalogProducts({
-            query: searchQuery || undefined,
-            categoryIds: categoryFilterIds,
-            availabilityStatus: inStockOnly ? "in_stock" : undefined,
-            sort: selectedSort !== DEFAULT_CATALOG_PRODUCT_SORT ? selectedSort : undefined,
-            page: 1,
-            pageSize: 200,
-          });
-
-          nextProducts =
-            searchResult.items.length > 0
-              ? searchResult.items
-              : filterProductsLocally(nextProducts, {
-                  query: searchQuery,
-                  categoryFilterIds,
-                  inStockOnly,
-                  sort: selectedSort,
-                });
-        }
+        const nextProducts = shouldUseSearchEndpoint
+          ? (
+              await searchCatalogProducts({
+                query: searchQuery || undefined,
+                categoryIds: categoryFilterIds,
+                minPrice,
+                maxPrice,
+                author: appliedAuthor ?? undefined,
+                format: appliedFormat ?? undefined,
+                genre: appliedGenre ?? undefined,
+                sort: selectedSort !== DEFAULT_CATALOG_PRODUCT_SORT ? selectedSort : undefined,
+                page: 1,
+                pageSize: 200,
+              })
+            ).items
+          : await getCatalogProducts();
 
         if (!cancelled) {
           setProducts(nextProducts);
@@ -218,7 +213,18 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     return () => {
       cancelled = true;
     };
-  }, [categories, inStockOnly, searchQuery, selectedRootSlug, selectedSubcategorySlug, selectedSort]);
+  }, [
+    appliedAuthor,
+    appliedFormat,
+    appliedGenre,
+    appliedMaxPrice,
+    appliedMinPrice,
+    categories,
+    searchQuery,
+    selectedRootSlug,
+    selectedSubcategorySlug,
+    selectedSort,
+  ]);
 
   const rootCategories = useMemo(() => getRootCategories(categories), [categories]);
 
@@ -254,8 +260,6 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     currentPage * PAGE_SIZE,
   );
 
-  productImagesRef.current = productImages;
-
   useLayoutEffect(() => {
     if (pendingScrollY.current === null) {
       return;
@@ -266,51 +270,7 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
   }, [currentPage, paginatedProducts]);
 
   useEffect(() => {
-    const slugsToLoad = products
-      .map((product) => product.slug)
-      .filter((slug) => !(slug in productImagesRef.current));
-
-    if (slugsToLoad.length === 0) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadImages = async () => {
-      const entries = await Promise.all(
-        slugsToLoad.map(async (slug) => {
-          try {
-            const details = await getCatalogProductBySlug(slug);
-            const image = details.images[0]?.thumbnailUrl ?? details.images[0]?.imageUrl ?? null;
-            return [slug, image] as const;
-          } catch {
-            return [slug, null] as const;
-          }
-        }),
-      );
-
-      if (cancelled) {
-        return;
-      }
-
-      setProductImages((current) => {
-        const next = { ...current };
-        for (const [slug, image] of entries) {
-          next[slug] = image;
-        }
-        return next;
-      });
-    };
-
-    void loadImages();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [products]);
-
-  useEffect(() => {
-    if (!sortModalOpen) {
+    if (!sortModalOpen && !filtersOpen) {
       return;
     }
 
@@ -320,7 +280,7 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [sortModalOpen]);
+  }, [filtersOpen, sortModalOpen]);
 
   const sortButtonLabel = getCatalogProductSortLabel(selectedSort);
 
@@ -336,6 +296,25 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
   const handleSortSelect = (sort: CatalogProductSort) => {
     setSelectedSort(sort);
     setSortModalOpen(false);
+  };
+
+  const handleOpenFilters = () => {
+    setSortModalOpen(false);
+    setDraftGenre(appliedGenre);
+    setDraftAuthor(appliedAuthor);
+    setDraftFormat(appliedFormat);
+    setDraftMinPrice(appliedMinPrice || DEFAULT_CATALOG_MIN_PRICE);
+    setDraftMaxPrice(appliedMaxPrice || DEFAULT_CATALOG_MAX_PRICE);
+    setFiltersOpen(true);
+  };
+
+  const handleApplyFilters = () => {
+    setAppliedGenre(draftGenre);
+    setAppliedAuthor(draftAuthor);
+    setAppliedFormat(draftFormat);
+    setAppliedMinPrice(resolveAppliedPriceFilter(draftMinPrice, DEFAULT_CATALOG_MIN_PRICE));
+    setAppliedMaxPrice(resolveAppliedPriceFilter(draftMaxPrice, DEFAULT_CATALOG_MAX_PRICE));
+    setFiltersOpen(false);
   };
 
   const handleRootCategoryClick = (slug: string) => {
@@ -447,8 +426,9 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
               size="lg"
               fullWidth
               leadingIcon={<FilterIcon className={iconStyles.icon} />}
+              aria-haspopup="dialog"
               aria-expanded={filtersOpen}
-              onClick={() => setFiltersOpen((open) => !open)}
+              onClick={handleOpenFilters}
             >
               Фільтри
             </Button>
@@ -470,12 +450,121 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
       </div>
 
       {filtersOpen && !isInitialLoading ? (
-        <section className={styles.filterPanel} aria-label="Фільтри">
-          <Checkbox
-            label="Тільки в наявності"
-            checked={inStockOnly}
-            onCheckedChange={setInStockOnly}
-          />
+        <section className={styles.filterPanel} role="dialog" aria-modal="true" aria-label="Фільтри">
+          <div className={styles.filterHeader}>
+            <h2 className={styles.filterTitle}>Фільтри</h2>
+            <button
+              type="button"
+              className={styles.filterCloseButton}
+              aria-label="Закрити фільтри"
+              onClick={() => setFiltersOpen(false)}
+            >
+              <CloseIcon className={iconStyles.icon} />
+            </button>
+          </div>
+
+          <div className={styles.filterContent}>
+            <section className={styles.filterSection} aria-labelledby="genre-filter-title">
+              <h3 id="genre-filter-title" className={styles.filterSectionTitle}>
+                Жанр
+              </h3>
+              <div className={styles.filterList}>
+                {GENRE_FILTER_OPTIONS.map((option) => (
+                  <Checkbox
+                    key={option.value}
+                    label={option.label}
+                    checked={draftGenre === option.value}
+                    onCheckedChange={() =>
+                      setDraftGenre((current) => toggleSingleFilter(current, option.value))
+                    }
+                  />
+                ))}
+              </div>
+              <span className={styles.showAll}>Показати всі</span>
+            </section>
+
+            <section
+              className={[styles.filterSection, styles.authorSection].join(" ")}
+              aria-labelledby="author-filter-title"
+            >
+              <div>
+                <h3 id="author-filter-title" className={styles.filterSectionTitle}>
+                  Автор
+                </h3>
+                <div className={styles.filterList}>
+                  {AUTHOR_FILTER_OPTIONS.map((option) => (
+                    <Checkbox
+                      key={option.value}
+                      label={option.label}
+                      checked={draftAuthor === option.value}
+                      onCheckedChange={() =>
+                        setDraftAuthor((current) => toggleSingleFilter(current, option.value))
+                      }
+                    />
+                  ))}
+                </div>
+                <span className={styles.showAll}>Показати всі</span>
+              </div>
+              <img className={styles.filterCat} src="/filter-cat.svg" alt="" aria-hidden="true" />
+            </section>
+
+            <section className={styles.filterSection} aria-labelledby="format-filter-title">
+              <h3 id="format-filter-title" className={styles.filterSectionTitle}>
+                Формат книги
+              </h3>
+              <div className={styles.filterList}>
+                {FORMAT_FILTER_OPTIONS.map((option) => (
+                  <Checkbox
+                    key={option.value}
+                    label={option.label}
+                    checked={draftFormat === option.value}
+                    onCheckedChange={() =>
+                      setDraftFormat((current) => toggleSingleFilter(current, option.value))
+                    }
+                  />
+                ))}
+              </div>
+            </section>
+
+            <section className={styles.filterSection} aria-labelledby="price-filter-title">
+              <h3 id="price-filter-title" className={styles.filterSectionTitle}>
+                Ціна
+              </h3>
+              <div className={styles.priceRow}>
+                <label className={styles.priceField}>
+                  <span className={styles.priceLabel}>Від</span>
+                  <input
+                    className={styles.priceInput}
+                    inputMode="numeric"
+                    value={draftMinPrice}
+                    onChange={(event) => setDraftMinPrice(event.target.value)}
+                  />
+                </label>
+                <label className={styles.priceField}>
+                  <span className={styles.priceLabel}>До</span>
+                  <input
+                    className={styles.priceInput}
+                    inputMode="numeric"
+                    value={draftMaxPrice}
+                    onChange={(event) => setDraftMaxPrice(event.target.value)}
+                  />
+                </label>
+              </div>
+            </section>
+          </div>
+
+          <div className={styles.filterActions}>
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              fullWidth
+              className={styles.applyFiltersButton}
+              onClick={handleApplyFilters}
+            >
+              Застосувати
+            </Button>
+          </div>
         </section>
       ) : null}
 
@@ -488,7 +577,9 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
           ))}
         </div>
       ) : !loading && !error && filteredProducts.length === 0 ? (
-        <StateBlock message="Товарів за обраними фільтрами не знайдено" />
+        <p className={styles.emptyState} role="status">
+          Товарів за обраними фільтрами не знайдено
+        </p>
       ) : null}
 
       {!loading && !error && paginatedProducts.length > 0 ? (
@@ -500,7 +591,7 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
                 href={`/products/${product.slug}`}
                 className={styles.cardLink}
               >
-                <ProductCard product={mapProductToCard(product, productImages[product.slug])} />
+                <ProductCard product={mapCatalogProductToCardData(product)} />
               </Link>
             ))}
           </div>

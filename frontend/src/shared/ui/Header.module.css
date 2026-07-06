@@ -209,28 +209,12 @@
   padding-block: var(--space-4);
 }
 
-.spinner {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  border-radius: 9999px;
-  border: 2px solid rgb(255 255 255 / 0.2);
-  border-top-color: var(--color-primary-pink);
-  animation: searchSpin 0.9s linear infinite;
-}
-
 .loadingText {
   font-size: 16px;
   line-height: 1.4;
   color: #c0c1c6;
   font-family: var(--font-primary), sans-serif;
   font-style: italic;
-}
-
-@keyframes searchSpin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .previewItem {

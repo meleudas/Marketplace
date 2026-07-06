@@ -55,6 +55,7 @@ export interface CatalogProductListItemDto {
   description: string;
   price: number;
   oldPrice: number | null;
+  discountPercent: number | null;
   categoryId: number;
   status: string;
   hasVariants: boolean;
@@ -64,6 +65,7 @@ export interface CatalogProductListItemDto {
   availabilityStatus: AvailabilityStatus;
   createdAt: string;
   updatedAt: string;
+  imageUrls: string[];
 }
 
 export interface ProductSearchResultDto {

@@ -56,5 +56,7 @@ export { Header } from "./Header";
 export { Footer } from "./Footer";
 export { PageLayout } from "./PageLayout";
 export { PageBackground } from "./PageBackground";
+export { Spinner } from "./Spinner";
+export type { SpinnerProps, SpinnerSize } from "./Spinner";
 export { CatalogMenu } from "./CatalogMenu";
 export type { CatalogFormatFilter, CatalogMenuCategory } from "./CatalogMenu";
