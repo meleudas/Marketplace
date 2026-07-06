@@ -5,9 +5,14 @@ namespace Marketplace.Application.Products.Catalog;
 
 public static class ProductCatalogFacetReader
 {
-    public static ProductCatalogFacets Read(JsonBlob attributes, IReadOnlyList<string>? tags)
+    public static ProductCatalogFacets Read(
+        JsonBlob attributes,
+        IReadOnlyList<string>? tags,
+        IReadOnlyList<string>? brands = null)
     {
         var tagList = tags ?? [];
+        var authorCandidates = new List<string>();
+        var formatFromTags = new List<string>();
         var genres = new List<string>();
         var normalizedTags = new List<string>();
 
@@ -18,21 +23,37 @@ public static class ProductCatalogFacetReader
 
             if (TryParsePrefixedTag(tag, "genre:", out var genreFromTag))
                 genres.Add(Normalize(genreFromTag));
-            else if (TryParsePrefixedTag(tag, "format:", out _))
-                continue;
-            else if (TryParsePrefixedTag(tag, "author:", out _))
-                continue;
+            else if (TryParsePrefixedTag(tag, "format:", out var formatFromTag))
+                formatFromTags.Add(Normalize(formatFromTag));
+            else if (TryParsePrefixedTag(tag, "author:", out var authorFromTag))
+                authorCandidates.Add(Normalize(authorFromTag));
             else
                 normalizedTags.Add(Normalize(tag));
         }
 
-        var author = ReadStringProperty(attributes, "author", "Author", "автор");
-        var format = ReadStringProperty(attributes, "format", "Format", "формат");
+        var authorFromAttributes = ReadStringProperty(attributes, "author", "Author", "автор");
+        if (!string.IsNullOrWhiteSpace(authorFromAttributes))
+            authorCandidates.Insert(0, Normalize(authorFromAttributes));
+
+        foreach (var brand in brands ?? [])
+        {
+            if (!string.IsNullOrWhiteSpace(brand))
+                authorCandidates.Add(Normalize(brand));
+        }
+
+        var authorValues = authorCandidates
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var format = ReadStringProperty(attributes, "format", "Format", "формат")
+            ?? formatFromTags.FirstOrDefault();
         genres.AddRange(ReadStringListProperty(attributes, "genre", "genres", "Genre", "Genres", "жанр")
             .Select(Normalize));
 
         return new ProductCatalogFacets(
-            string.IsNullOrWhiteSpace(author) ? null : Normalize(author),
+            authorValues.Length > 0 ? authorValues[0] : null,
+            authorValues,
             string.IsNullOrWhiteSpace(format) ? null : Normalize(format),
             genres.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
             normalizedTags.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
@@ -40,21 +61,19 @@ public static class ProductCatalogFacetReader
 
     public static bool Matches(
         ProductCatalogFacets facets,
-        string? author,
+        IReadOnlyList<string>? authors,
         string? format,
-        string? genre,
+        IReadOnlyList<string>? genres,
         IReadOnlyList<string>? tags)
     {
-        if (!string.IsNullOrWhiteSpace(author) &&
-            !string.Equals(facets.Author, Normalize(author), StringComparison.OrdinalIgnoreCase))
+        if (!MatchesAnyAuthor(facets, authors))
             return false;
 
         if (!string.IsNullOrWhiteSpace(format) &&
             !string.Equals(facets.Format, Normalize(format), StringComparison.OrdinalIgnoreCase))
             return false;
 
-        if (!string.IsNullOrWhiteSpace(genre) &&
-            !facets.Genres.Contains(Normalize(genre), StringComparer.OrdinalIgnoreCase))
+        if (!MatchesAnyGenre(facets, genres))
             return false;
 
         if (tags is { Count: > 0 })
@@ -67,6 +86,71 @@ public static class ProductCatalogFacetReader
         }
 
         return true;
+    }
+
+    public static bool HasFacetFilters(
+        IReadOnlyList<string>? authors,
+        string? format,
+        IReadOnlyList<string>? genres,
+        IReadOnlyList<string>? tags) =>
+        authors is { Count: > 0 }
+        || !string.IsNullOrWhiteSpace(format)
+        || genres is { Count: > 0 }
+        || tags is { Count: > 0 };
+
+    public static IReadOnlyList<string> NormalizeAuthors(IReadOnlyList<string>? authors)
+    {
+        if (authors is null || authors.Count == 0)
+            return [];
+
+        return authors
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => Normalize(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public static IReadOnlyList<string> NormalizeGenres(IReadOnlyList<string>? genres)
+    {
+        if (genres is null || genres.Count == 0)
+            return [];
+
+        return genres
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => Normalize(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public static bool MatchesAnyAuthor(ProductCatalogFacets facets, IReadOnlyList<string>? authors)
+    {
+        var normalizedAuthors = NormalizeAuthors(authors);
+        if (normalizedAuthors.Count == 0)
+            return true;
+
+        if (facets.AuthorValues.Count == 0)
+            return false;
+
+        return normalizedAuthors.Any(requested =>
+            facets.AuthorValues.Contains(requested, StringComparer.OrdinalIgnoreCase));
+    }
+
+    public static bool MatchesAnyGenre(ProductCatalogFacets facets, IReadOnlyList<string>? genres)
+    {
+        var normalizedGenres = NormalizeGenres(genres);
+        if (normalizedGenres.Count == 0)
+            return true;
+
+        foreach (var genre in normalizedGenres)
+        {
+            if (facets.Genres.Contains(genre, StringComparer.OrdinalIgnoreCase))
+                return true;
+
+            if (facets.Tags.Contains(genre, StringComparer.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     public static string Normalize(string value) => value.Trim().ToLowerInvariant();
