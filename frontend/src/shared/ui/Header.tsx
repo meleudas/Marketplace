@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { searchCatalogProducts, type CatalogSearchProductDto } from "@/shared/api/catalog-search.api";
 import { Container } from "./Container";
+import { Spinner } from "./Spinner";
 import { TextField } from "./TextField";
 import {
   BookTopLogo,
@@ -205,7 +206,7 @@ export function Header({
 
                 {searchLoading ? (
                   <div className={styles.loadingState} role="status" aria-live="polite">
-                    <span className={styles.spinner} aria-hidden="true" />
+                    <Spinner aria-hidden="true" />
                     <span className={styles.loadingText}>Завантаження...</span>
                   </div>
                 ) : previewItems.length > 0 ? (

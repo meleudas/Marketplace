@@ -56,14 +56,6 @@
   user-select: none;
 }
 
-.recommendationCard {
-  display: block;
-  flex: 0 0 auto;
-  width: clamp(160px, 42vw, 220px);
-  text-decoration: none;
-  color: inherit;
-}
-
 @media (max-width: 480px) {
   .promoBanner {
     padding: var(--space-12);

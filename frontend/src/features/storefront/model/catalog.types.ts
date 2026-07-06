@@ -64,6 +64,7 @@ export interface CatalogProductListItemDto {
   availabilityStatus: AvailabilityStatus;
   createdAt: string;
   updatedAt: string;
+  imageUrls: string[];
 }
 
 export interface ProductSearchResultDto {

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   getCatalogCategories,
-  getCatalogProductBySlug,
   getCatalogProducts,
   searchCatalogProducts,
 } from "@/features/storefront/api/catalog.api";
@@ -13,7 +12,6 @@ import {
   getCategoryFilterIds,
   getChildCategories,
   getRootCategories,
-  productMatchesCategoryFilter,
   resolveCategorySelection,
 } from "@/features/storefront/lib/catalog-category-filter";
 import {
@@ -46,51 +44,13 @@ interface CatalogScreenProps {
 
 const PAGE_SIZE = 8;
 
-const mapProductToCard = (
-  product: CatalogProductListItemDto,
-  imageUrl?: string | null,
-): ProductCardData => ({
+const mapProductToCard = (product: CatalogProductListItemDto): ProductCardData => ({
   id: String(product.id),
   title: product.name,
   price: product.price,
-  imageUrl: imageUrl ?? undefined,
+  imageUrl: product.imageUrls[0] ?? undefined,
   inStock: product.availabilityStatus !== "out_of_stock" && product.availableQty > 0,
 });
-
-const filterProductsLocally = (
-  items: CatalogProductListItemDto[],
-  options: {
-    query: string;
-    categoryFilterIds?: number[];
-    inStockOnly: boolean;
-    sort: CatalogProductSort | null;
-  },
-): CatalogProductListItemDto[] => {
-  const query = options.query.toLowerCase();
-  let result = [...items];
-
-  if (options.categoryFilterIds && options.categoryFilterIds.length > 0) {
-    result = result.filter((product) =>
-      productMatchesCategoryFilter(product.categoryId, options.categoryFilterIds!),
-    );
-  }
-
-  if (options.inStockOnly) {
-    result = result.filter(
-      (product) => product.availabilityStatus !== "out_of_stock" && product.availableQty > 0,
-    );
-  }
-
-  if (query) {
-    result = result.filter((product) =>
-      [product.name, product.description, product.slug].some((value) =>
-        value.toLowerCase().includes(query),
-      ),
-    );
-  }
-
-  return options.sort ? sortCatalogProducts(result, options.sort) : result;
-};
 
 export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
   const router = useRouter();
@@ -98,7 +58,6 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<CatalogCategoryDto[]>([]);
   const [products, setProducts] = useState<CatalogProductListItemDto[]>([]);
-  const [productImages, setProductImages] = useState<Record<string, string | null>>({});
 
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [inStockOnly, setInStockOnly] = useState(false);
@@ -111,7 +70,6 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const pendingScrollY = useRef<number | null>(null);
-  const productImagesRef = useRef<Record<string, string | null>>({});
 
   useEffect(() => {
     const load = async () => {
@@ -176,28 +134,18 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
           searchQuery || selectedCategory || inStockOnly || selectedSort !== DEFAULT_CATALOG_PRODUCT_SORT,
         );
 
-        let nextProducts = await getCatalogProducts();
-
-        if (shouldUseSearchEndpoint) {
-          const searchResult = await searchCatalogProducts({
-            query: searchQuery || undefined,
-            categoryIds: categoryFilterIds,
-            availabilityStatus: inStockOnly ? "in_stock" : undefined,
-            sort: selectedSort !== DEFAULT_CATALOG_PRODUCT_SORT ? selectedSort : undefined,
-            page: 1,
-            pageSize: 200,
-          });
-
-          nextProducts =
-            searchResult.items.length > 0
-              ? searchResult.items
-              : filterProductsLocally(nextProducts, {
-                  query: searchQuery,
-                  categoryFilterIds,
-                  inStockOnly,
-                  sort: selectedSort,
-                });
-        }
+        const nextProducts = shouldUseSearchEndpoint
+          ? (
+              await searchCatalogProducts({
+                query: searchQuery || undefined,
+                categoryIds: categoryFilterIds,
+                availabilityStatus: inStockOnly ? "in_stock" : undefined,
+                sort: selectedSort !== DEFAULT_CATALOG_PRODUCT_SORT ? selectedSort : undefined,
+                page: 1,
+                pageSize: 200,
+              })
+            ).items
+          : await getCatalogProducts();
 
         if (!cancelled) {
           setProducts(nextProducts);
@@ -254,8 +202,6 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     currentPage * PAGE_SIZE,
   );
 
-  productImagesRef.current = productImages;
-
   useLayoutEffect(() => {
     if (pendingScrollY.current === null) {
       return;
@@ -264,50 +210,6 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     window.scrollTo(0, pendingScrollY.current);
     pendingScrollY.current = null;
   }, [currentPage, paginatedProducts]);
-
-  useEffect(() => {
-    const slugsToLoad = products
-      .map((product) => product.slug)
-      .filter((slug) => !(slug in productImagesRef.current));
-
-    if (slugsToLoad.length === 0) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadImages = async () => {
-      const entries = await Promise.all(
-        slugsToLoad.map(async (slug) => {
-          try {
-            const details = await getCatalogProductBySlug(slug);
-            const image = details.images[0]?.thumbnailUrl ?? details.images[0]?.imageUrl ?? null;
-            return [slug, image] as const;
-          } catch {
-            return [slug, null] as const;
-          }
-        }),
-      );
-
-      if (cancelled) {
-        return;
-      }
-
-      setProductImages((current) => {
-        const next = { ...current };
-        for (const [slug, image] of entries) {
-          next[slug] = image;
-        }
-        return next;
-      });
-    };
-
-    void loadImages();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [products]);
 
   useEffect(() => {
     if (!sortModalOpen) {
@@ -500,7 +402,7 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
                 href={`/products/${product.slug}`}
                 className={styles.cardLink}
               >
-                <ProductCard product={mapProductToCard(product, productImages[product.slug])} />
+                <ProductCard product={mapProductToCard(product)} />
               </Link>
             ))}
           </div>

@@ -1,29 +1,36 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   getCatalogCategories,
-  getCatalogProductBySlug,
+  getCatalogNewProducts,
+  getCatalogOnSaleProducts,
+  getCatalogPopularProducts,
   getPersonalizedRecommendations,
 } from "@/features/storefront/api/catalog.api";
-import type { CatalogCategoryDto, CatalogProductListItemDto } from "@/features/storefront/model/catalog.types";
-import { CatalogMenu, PageLayout, ProductCard, type ProductCardData } from "@/shared/ui";
+import type { CatalogCategoryDto } from "@/features/storefront/model/catalog.types";
+import { mapProductToRailCard, type ProductRailCard } from "@/features/home/lib/map-product-to-rail-card";
+import { CatalogMenu, PageLayout } from "@/shared/ui";
+import { ProductRailItems } from "../ui/ProductRailItems";
 import { RecommendationsRail } from "../ui/RecommendationsRail";
 import styles from "./HomeScreen.module.css";
 
-interface RecommendationCard extends ProductCardData {
-  href: string;
-}
+const HOME_RAIL_PAGE_SIZE = 12;
 
 export function HomeScreen() {
   const router = useRouter();
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [categories, setCategories] = useState<CatalogCategoryDto[]>([]);
-  const [recommendations, setRecommendations] = useState<RecommendationCard[]>([]);
+  const [recommendations, setRecommendations] = useState<ProductRailCard[]>([]);
+  const [popular, setPopular] = useState<ProductRailCard[]>([]);
+  const [newProducts, setNewProducts] = useState<ProductRailCard[]>([]);
+  const [onSale, setOnSale] = useState<ProductRailCard[]>([]);
   const [recommendationsLoading, setRecommendationsLoading] = useState(true);
+  const [popularLoading, setPopularLoading] = useState(true);
+  const [newProductsLoading, setNewProductsLoading] = useState(true);
+  const [onSaleLoading, setOnSaleLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
@@ -44,43 +51,16 @@ export function HomeScreen() {
     const loadRecommendations = async () => {
       try {
         setRecommendationsLoading(true);
-        const result = await getPersonalizedRecommendations({ limit: 12 });
-        const items = await Promise.all(
-          result.items.map(async (product: CatalogProductListItemDto) => {
-            try {
-              const details = await getCatalogProductBySlug(product.slug);
-              const imageUrl = details.images[0]?.thumbnailUrl ?? details.images[0]?.imageUrl ?? null;
-
-              return {
-                id: String(product.id),
-                imageUrl,
-                inStock: product.availabilityStatus !== "out_of_stock" && product.availableQty > 0,
-                price: product.price,
-                title: product.name,
-                href: `/products/${product.slug}`,
-              } satisfies RecommendationCard;
-            } catch {
-              return {
-                id: String(product.id),
-                imageUrl: null,
-                inStock: product.availabilityStatus !== "out_of_stock" && product.availableQty > 0,
-                price: product.price,
-                title: product.name,
-                href: `/products/${product.slug}`,
-              } satisfies RecommendationCard;
-            }
-          }),
-        );
+        const result = await getPersonalizedRecommendations({ limit: HOME_RAIL_PAGE_SIZE });
 
         if (!cancelled) {
-          setRecommendations(items);
+          setRecommendations(result.items.map(mapProductToRailCard));
         }
       } catch {
         if (!cancelled) {
           setRecommendations([]);
         }
-      }
-      finally {
+      } finally {
         if (!cancelled) {
           setRecommendationsLoading(false);
         }
@@ -88,6 +68,47 @@ export function HomeScreen() {
     };
 
     void loadRecommendations();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadBrowseRails = async () => {
+      setPopularLoading(true);
+      setNewProductsLoading(true);
+      setOnSaleLoading(true);
+
+      const [popularResult, newResult, onSaleResult] = await Promise.allSettled([
+        getCatalogPopularProducts({ pageSize: HOME_RAIL_PAGE_SIZE }),
+        getCatalogNewProducts({ pageSize: HOME_RAIL_PAGE_SIZE }),
+        getCatalogOnSaleProducts({ pageSize: HOME_RAIL_PAGE_SIZE }),
+      ]);
+
+      if (cancelled) {
+        return;
+      }
+
+      setPopular(
+        popularResult.status === "fulfilled"
+          ? popularResult.value.items.map(mapProductToRailCard)
+          : [],
+      );
+      setNewProducts(
+        newResult.status === "fulfilled" ? newResult.value.items.map(mapProductToRailCard) : [],
+      );
+      setOnSale(
+        onSaleResult.status === "fulfilled" ? onSaleResult.value.items.map(mapProductToRailCard) : [],
+      );
+      setPopularLoading(false);
+      setNewProductsLoading(false);
+      setOnSaleLoading(false);
+    };
+
+    void loadBrowseRails();
 
     return () => {
       cancelled = true;
@@ -118,24 +139,19 @@ export function HomeScreen() {
       </section>
 
       <RecommendationsRail title="Рекомендовані" loading={recommendationsLoading}>
-        {recommendations.map((item) => (
-          <Link
-            key={item.id}
-            href={item.href}
-            className={styles.recommendationCard}
-            role="listitem"
-          >
-            <ProductCard
-              product={{
-                id: item.id,
-                title: item.title,
-                price: item.price,
-                imageUrl: item.imageUrl ?? undefined,
-                inStock: item.inStock,
-              }}
-            />
-          </Link>
-        ))}
+        <ProductRailItems items={recommendations} />
+      </RecommendationsRail>
+
+      <RecommendationsRail title="Популярні" loading={popularLoading}>
+        <ProductRailItems items={popular} />
+      </RecommendationsRail>
+
+      <RecommendationsRail title="Новинки" loading={newProductsLoading}>
+        <ProductRailItems items={newProducts} />
+      </RecommendationsRail>
+
+      <RecommendationsRail title="Акції" loading={onSaleLoading}>
+        <ProductRailItems items={onSale} />
       </RecommendationsRail>
 
       <CatalogMenu

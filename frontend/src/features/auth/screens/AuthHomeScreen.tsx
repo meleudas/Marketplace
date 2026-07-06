@@ -6,7 +6,7 @@ import { useAuth } from "@/features/auth/model/auth.store";
 import { ForgotPasswordForm } from "@/features/auth/ui/ForgotPasswordForm";
 import { LoginForm } from "@/features/auth/ui/LoginForm";
 import { RegisterForm } from "@/features/auth/ui/RegisterForm";
-import { PageBackground } from "@/shared/ui";
+import { PageBackground, Spinner } from "@/shared/ui";
 import styles from "./AuthHomeScreen.module.css";
 
 export function AuthHomeScreen() {
@@ -17,6 +17,7 @@ export function AuthHomeScreen() {
   const loading = useAuth((state) => state.loading);
   const initialized = useAuth((state) => state.initialized);
   const loadMe = useAuth((state) => state.loadMe);
+  const isRedirecting = initialized && isAuthenticated;
 
   useEffect(() => {
     void loadMe();
@@ -32,37 +33,47 @@ export function AuthHomeScreen() {
     <main className={styles.main}>
       <PageBackground />
       <div className={styles.container}>
-        <header className={styles.header}>
-          <p className={styles.subtitle}>Введіть логін та пароль для входу в ваш акаунт</p>
-        </header>
-
-        {!initialized && !loading ? (
-          <div className={styles.initCard}>Готуємо вашу сесію...</div>
-        ) : null}
-
-        {initialized && !isAuthenticated ? (
-          <section className={styles.authSection}>
+        {isRedirecting ? (
+          <div className={styles.redirectingState}>
+            <Spinner size="lg" />
+          </div>
+        ) : (
+          <>
             {authMode === "login" ? (
-              <LoginForm
-                onSwitchToRegister={() => setAuthMode("register")}
-                onForgotPassword={() => setAuthMode("forgotPassword")}
-              />
+              <header className={styles.header}>
+                <p className={styles.subtitle}>Введіть логін та пароль для входу в ваш акаунт</p>
+              </header>
             ) : null}
 
-            {authMode === "register" ? (
-              <RegisterForm onSwitchToLogin={() => setAuthMode("login")} />
+            {!initialized && !loading ? (
+              <div className={styles.initCard}>Готуємо вашу сесію...</div>
             ) : null}
 
-            {authMode === "forgotPassword" ? (
-              <ForgotPasswordForm onSwitchToLogin={() => setAuthMode("login")} />
+            {initialized && !isAuthenticated ? (
+              <section className={styles.authSection}>
+                {authMode === "login" ? (
+                  <LoginForm
+                    onSwitchToRegister={() => setAuthMode("register")}
+                    onForgotPassword={() => setAuthMode("forgotPassword")}
+                  />
+                ) : null}
+
+                {authMode === "register" ? (
+                  <RegisterForm onSwitchToLogin={() => setAuthMode("login")} />
+                ) : null}
+
+                {authMode === "forgotPassword" ? (
+                  <ForgotPasswordForm onSwitchToLogin={() => setAuthMode("login")} />
+                ) : null}
+              </section>
             ) : null}
-          </section>
-        ) : null}
+          </>
+        )}
       </div>
 
-      {loading ? (
+      {loading && !isRedirecting ? (
         <div className={styles.loadingOverlay}>
-          <div className={styles.spinner} />
+          <Spinner size="lg" />
         </div>
       ) : null}
     </main>

@@ -115,6 +115,81 @@ export const searchCatalogProducts = async (
   return response.data;
 };
 
+export interface ListCatalogBrowsableProductsParams {
+  categoryIds?: number[];
+  companyId?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  availabilityStatus?: string;
+  sort?: string;
+  page?: number;
+  pageSize?: number;
+  searchAfter?: string;
+}
+
+export interface ListCatalogOnSaleProductsParams extends ListCatalogBrowsableProductsParams {
+  minDiscountPercent?: number;
+}
+
+const buildBrowsableProductsSearchParams = (
+  params: ListCatalogBrowsableProductsParams,
+): URLSearchParams => {
+  const searchParams = new URLSearchParams();
+
+  if (params.companyId) searchParams.set("companyId", params.companyId);
+  if (typeof params.minPrice === "number") searchParams.set("minPrice", String(params.minPrice));
+  if (typeof params.maxPrice === "number") searchParams.set("maxPrice", String(params.maxPrice));
+  if (params.availabilityStatus) searchParams.set("availabilityStatus", params.availabilityStatus);
+  if (params.sort) searchParams.set("sort", params.sort);
+  if (typeof params.page === "number") searchParams.set("page", String(params.page));
+  if (typeof params.pageSize === "number") searchParams.set("pageSize", String(params.pageSize));
+  if (params.searchAfter) searchParams.set("searchAfter", params.searchAfter);
+
+  for (const categoryId of params.categoryIds ?? []) {
+    searchParams.append("categoryIds", String(categoryId));
+  }
+
+  return searchParams;
+};
+
+const getCatalogBrowsableProducts = async (
+  path: "popular" | "new" | "on-sale",
+  params: ListCatalogBrowsableProductsParams = {},
+): Promise<ProductSearchResultDto> => {
+  const searchParams = buildBrowsableProductsSearchParams(params);
+  const query = searchParams.toString();
+  const response = await apiClient.get<ProductSearchResultDto>(
+    query ? `/catalog/products/${path}?${query}` : `/catalog/products/${path}`,
+  );
+
+  return response.data;
+};
+
+export const getCatalogPopularProducts = async (
+  params: ListCatalogBrowsableProductsParams = {},
+): Promise<ProductSearchResultDto> => getCatalogBrowsableProducts("popular", params);
+
+export const getCatalogNewProducts = async (
+  params: ListCatalogBrowsableProductsParams = {},
+): Promise<ProductSearchResultDto> => getCatalogBrowsableProducts("new", params);
+
+export const getCatalogOnSaleProducts = async (
+  params: ListCatalogOnSaleProductsParams = {},
+): Promise<ProductSearchResultDto> => {
+  const searchParams = buildBrowsableProductsSearchParams(params);
+
+  if (typeof params.minDiscountPercent === "number") {
+    searchParams.set("minDiscountPercent", String(params.minDiscountPercent));
+  }
+
+  const query = searchParams.toString();
+  const response = await apiClient.get<ProductSearchResultDto>(
+    query ? `/catalog/products/on-sale?${query}` : "/catalog/products/on-sale",
+  );
+
+  return response.data;
+};
+
 export const getCatalogProductBySlug = async (slug: string): Promise<CatalogProductDetailDto> => {
   const response = await apiClient.get<CatalogProductDetailDto>(`/catalog/products/${slug}`);
   return response.data;
