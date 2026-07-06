@@ -6,11 +6,13 @@
 
 ## 2. As-is
 
-[`docker-compose.yml`](../../docker-compose.yml) — api, postgres, redis, elasticsearch, minio.
+[`docker-compose.dev.yml`](../../docker-compose.dev.yml) — api, postgres, redis, elasticsearch, minio.
+
+Моніторинг і SonarQube — [`docker-compose.monitoring.yml`](../../docker-compose.monitoring.yml) (profiles `observability`, `sonar`).
 
 ## 3. To-be
 
-Додаткові сервіси з profiles; API з OTLP env.
+Профілі в окремому compose; API з OTLP env через [`docker-compose.observability.yml`](../../docker-compose.observability.yml).
 
 ## 4. Покрокова інтеграція
 
@@ -18,19 +20,19 @@
 
 ```powershell
 # з кореня репозиторію (API з OTEL_ENABLED через override)
-docker compose -f docker-compose.yml -f docker-compose.observability.yml --profile observability up -d --build
+docker compose -f docker-compose.dev.yml -f docker-compose.monitoring.yml -f docker-compose.observability.yml --profile observability up -d --build
 ```
 
 ### Тільки observability (API вже запущений)
 
 ```powershell
-docker compose --profile observability up -d otel-collector prometheus jaeger grafana
+docker compose -f docker-compose.dev.yml -f docker-compose.monitoring.yml --profile observability up -d otel-collector prometheus jaeger grafana
 ```
 
 ### SonarQube
 
 ```powershell
-docker compose --profile sonar up -d
+docker compose -f docker-compose.dev.yml -f docker-compose.monitoring.yml --profile sonar up -d
 # http://localhost:9002
 ```
 
@@ -78,7 +80,7 @@ start http://localhost:3001
 
 ## 5. Конфігурація
 
-Див. `observability/` та оновлений root `docker-compose.yml`.
+Див. `observability/`, [`docker-compose.monitoring.yml`](../../docker-compose.monitoring.yml) та [`docker-compose.observability.yml`](../../docker-compose.observability.yml).
 
 ## 6. Безпека
 
@@ -97,7 +99,7 @@ N/A (локальний runbook).
 ## 9. Rollback
 
 ```powershell
-docker compose --profile observability down
+docker compose -f docker-compose.dev.yml -f docker-compose.monitoring.yml --profile observability down
 ```
 
 ## 10. Definition of Done

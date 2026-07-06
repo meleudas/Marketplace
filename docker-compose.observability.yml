@@ -1,3 +1,9 @@
+# API overrides when observability profile is enabled.
+# Requires docker-compose.monitoring.yml with --profile observability.
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml -f docker-compose.monitoring.yml -f docker-compose.observability.yml --profile observability up -d --build
+
 services:
   api:
     environment:
