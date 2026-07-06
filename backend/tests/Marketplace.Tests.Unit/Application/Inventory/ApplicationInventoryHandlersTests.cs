@@ -408,6 +408,15 @@ public class ApplicationInventoryHandlersTests
         public Task<IReadOnlyList<Product>> ListActiveAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Product>>([]);
 
+        public Task<IReadOnlyList<Product>> ListActiveOnSaleAsync(Guid? companyId = null, IReadOnlyList<long>? categoryIds = null, decimal? minPrice = null, decimal? maxPrice = null, decimal? minDiscountPercent = null, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Product>>([]);
+
+        public Task<IReadOnlyList<Product>> ListActiveNewestAsync(Guid? companyId = null, IReadOnlyList<long>? categoryIds = null, decimal? minPrice = null, decimal? maxPrice = null, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Product>>([]);
+
+        public Task<IReadOnlyList<Product>> ListActivePopularAsync(Guid? companyId = null, IReadOnlyList<long>? categoryIds = null, decimal? minPrice = null, decimal? maxPrice = null, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Product>>([]);
+
         public Task<IReadOnlyList<Product>> ListPendingReviewAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Product>>([]);
 

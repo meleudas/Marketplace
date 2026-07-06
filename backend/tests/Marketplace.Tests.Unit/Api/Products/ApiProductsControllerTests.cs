@@ -39,7 +39,7 @@ public class ApiProductsControllerTests
         var sender = new RecordingSender
         {
             NextResult = Result<ProductDto>.Success(new ProductDto(
-                new ProductListItemDto(11, Guid.NewGuid(), "N", "n", "d", 10, null, 1, "pending_review", false, 0, 0, 0, "out_of_stock", DateTime.UtcNow, DateTime.UtcNow, []),
+                new ProductListItemDto(11, Guid.NewGuid(), "N", "n", "d", 10, null, null, 1, "pending_review", false, 0, 0, 0, "out_of_stock", DateTime.UtcNow, DateTime.UtcNow, []),
                 null,
                 []))
         };
@@ -59,7 +59,7 @@ public class ApiProductsControllerTests
         var sender = new RecordingSender
         {
             NextResult = Result<ProductDto>.Success(new ProductDto(
-                new ProductListItemDto(11, Guid.NewGuid(), "N", "n", "d", 10, null, 1, "pending_review", false, 0, 0, 0, "out_of_stock", DateTime.UtcNow, DateTime.UtcNow, []),
+                new ProductListItemDto(11, Guid.NewGuid(), "N", "n", "d", 10, null, null, 1, "pending_review", false, 0, 0, 0, "out_of_stock", DateTime.UtcNow, DateTime.UtcNow, []),
                 null,
                 []))
         };

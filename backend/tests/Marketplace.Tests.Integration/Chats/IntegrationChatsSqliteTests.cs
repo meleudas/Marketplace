@@ -102,6 +102,12 @@ public sealed class IntegrationChatsSqliteTests
             Task.FromResult<IReadOnlyList<Marketplace.Domain.Catalog.Entities.Product>>([]);
         public Task<IReadOnlyList<Marketplace.Domain.Catalog.Entities.Product>> ListActiveAsync(CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<Marketplace.Domain.Catalog.Entities.Product>>([]);
+        public Task<IReadOnlyList<Marketplace.Domain.Catalog.Entities.Product>> ListActiveOnSaleAsync(Guid? companyId = null, IReadOnlyList<long>? categoryIds = null, decimal? minPrice = null, decimal? maxPrice = null, decimal? minDiscountPercent = null, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Marketplace.Domain.Catalog.Entities.Product>>([]);
+        public Task<IReadOnlyList<Marketplace.Domain.Catalog.Entities.Product>> ListActiveNewestAsync(Guid? companyId = null, IReadOnlyList<long>? categoryIds = null, decimal? minPrice = null, decimal? maxPrice = null, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Marketplace.Domain.Catalog.Entities.Product>>([]);
+        public Task<IReadOnlyList<Marketplace.Domain.Catalog.Entities.Product>> ListActivePopularAsync(Guid? companyId = null, IReadOnlyList<long>? categoryIds = null, decimal? minPrice = null, decimal? maxPrice = null, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<Marketplace.Domain.Catalog.Entities.Product>>([]);
         public Task<IReadOnlyList<Marketplace.Domain.Catalog.Entities.Product>> ListPendingReviewAsync(CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<Marketplace.Domain.Catalog.Entities.Product>>([]);
         public Task AddAsync(Marketplace.Domain.Catalog.Entities.Product product, CancellationToken ct = default) => Task.CompletedTask;
