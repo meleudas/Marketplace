@@ -68,6 +68,13 @@
   width: 100%;
 }
 
+.redirectingState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
 .loadingOverlay {
   position: fixed;
   inset: 0;
@@ -77,21 +84,6 @@
   justify-content: center;
   background: rgb(0 0 0 / 0.45);
   backdrop-filter: blur(2px);
-}
-
-.spinner {
-  width: 48px;
-  height: 48px;
-  border-radius: 9999px;
-  border: 4px solid rgb(255 255 255 / 0.25);
-  border-top-color: var(--color-primary-pink);
-  animation: spin 0.9s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 
