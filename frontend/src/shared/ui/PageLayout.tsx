@@ -8,11 +8,18 @@ import styles from "./PageLayout.module.css";
 interface PageLayoutProps {
   children: ReactNode;
   className?: string;
+  showHeader?: boolean;
   headerProps?: ComponentProps<typeof Header>;
   footerProps?: ComponentProps<typeof Footer>;
 }
 
-export function PageLayout({ children, className, headerProps, footerProps }: PageLayoutProps) {
+export function PageLayout({
+  children,
+  className,
+  showHeader = true,
+  headerProps,
+  footerProps,
+}: PageLayoutProps) {
   const mainClassName = [styles.main, className].filter(Boolean).join(" ");
 
   return (
@@ -20,7 +27,7 @@ export function PageLayout({ children, className, headerProps, footerProps }: Pa
       <PageBackground />
 
       <div className={styles.pageContent}>
-        <Header {...headerProps} />
+        {showHeader ? <Header {...headerProps} /> : null}
         <Container as="main" className={mainClassName}>
           {children}
         </Container>

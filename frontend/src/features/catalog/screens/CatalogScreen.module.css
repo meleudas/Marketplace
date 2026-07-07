@@ -35,7 +35,7 @@
 
 .selectedFilters {
   display: grid;
-  gap: var(--space-6);
+  gap: var(--space-8);
 }
 
 .selectedFiltersTitle {
@@ -63,7 +63,7 @@
   min-width: 0;
   height: 36px;
   min-height: 36px;
-  padding-inline: var(--space-10);
+  padding-inline: var(--space-8);
   font-size: var(--typography-body2-font-size);
   flex-shrink: 0;
 }

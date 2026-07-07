@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button } from "../Button";
-import { Container } from "../Container";
-import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from "../icons";
-import iconStyles from "../icons/Icon.module.css";
-import { PageBackground } from "../PageBackground";
-import { Typography } from "../Typography";
+import { Button } from "@/shared/ui/Button";
+import { Container } from "@/shared/ui/Container";
+import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from "@/shared/ui/icons";
+import iconStyles from "@/shared/ui/icons/Icon.module.css";
+import { PageBackground } from "@/shared/ui/PageBackground";
+import { Typography } from "@/shared/ui/Typography";
 import styles from "./CatalogMenu.module.css";
 
 export type CatalogFormatFilter = "all" | "електронний" | "паперовий";
