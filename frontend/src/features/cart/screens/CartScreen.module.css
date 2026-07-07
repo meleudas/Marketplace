@@ -3,7 +3,6 @@
     display: flex;
     flex-direction: column;
     min-height: 65vh;
-    max-width: 430px;
     color: #ffffff;
 }
 
@@ -156,7 +155,9 @@
     cursor: pointer;
     padding: 0;
     color: #a3c2e0;
-    transition: color 0.15s, transform 0.15s;
+    transition:
+        color 0.15s,
+        transform 0.15s;
 }
 
 .trashBtn:hover {
@@ -305,7 +306,6 @@
     bottom: 0;
     left: 0;
     right: 0;
-    background: #191920;
     border-top: 1px solid #80838d;
     padding: 16px 20px;
     display: flex;
@@ -362,10 +362,8 @@
     background: #d80082;
 }
 
-
 @media (min-width: 768px) and (max-width: 1023px) {
     .root {
-        max-width: 900px;
         padding: 32px 20px 60px;
         min-height: 65vh;
     }
@@ -394,12 +392,10 @@
 
     .bottomBar {
         position: static;
-        background: rgba(255, 255, 255, 0.04);
         border: 1px solid rgba(255, 255, 255, 0.06);
         border-radius: 10px;
         padding: 20px;
         margin: 0;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
         gap: 16px;
     }
 
@@ -413,7 +409,6 @@
 
 @media (min-width: 1024px) {
     .root {
-        max-width: 1200px;
         padding: 40px 20px 80px;
         min-height: 70vh;
     }
@@ -442,12 +437,10 @@
 
     .bottomBar {
         position: static;
-        background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 12px;
         padding: 24px;
         margin: 0;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }
 
     .ctaBtn {

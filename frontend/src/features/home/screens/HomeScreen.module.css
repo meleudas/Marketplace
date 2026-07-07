@@ -107,7 +107,7 @@
     white-space: normal;
   }
 }
-=======
+
 .tagPillsList {
   display: flex;
   gap: var(--space-8);

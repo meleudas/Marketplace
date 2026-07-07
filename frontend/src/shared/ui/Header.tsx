@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { searchCatalogProducts, type CatalogSearchProductDto } from "@/shared/api/catalog-search.api";
+import {
+  searchCatalogProducts,
+  type CatalogSearchProductDto,
+} from "@/shared/api/catalog-search.api";
+import { useCartStore } from "@/features/cart/model/cart.store";
+import { useAuth } from "@/features/auth/model/auth.store";
 import { Container } from "./Container";
 import { Spinner } from "./Spinner";
 import { TextField } from "./TextField";
@@ -31,25 +36,39 @@ interface HeaderProps {
   homeHref?: string;
   userHref?: string;
   cartHref?: string;
+  searchValue?: string;
   searchPlaceholder?: string;
-  onSearchQueryChange?: (value: string) => void;
+  onSearchChange?: (value: string) => void;
   onMenuClick?: () => void;
 }
 
 export function Header({
   homeHref = "/",
   userHref = "/auth",
-  cartHref = "#",
-  searchValue,
+  cartHref = "/cart",
+  searchValue: controlledSearchValue,
   searchPlaceholder = "Пошук",
-  onSearchQueryChange,
+  onSearchChange,
   onMenuClick,
 }: HeaderProps) {
-  return (
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
+  const [searchValue, setSearchValue] = useState(controlledSearchValue ?? "");
   const [searchResults, setSearchResults] = useState<SearchPreviewItem[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+
+  const { isAuthenticated, initialized: authInitialized } = useAuth();
+  const {
+    totalItems: cartCount,
+    loadCart,
+    initialized: cartInitialized,
+  } = useCartStore();
+
+  useEffect(() => {
+    if (authInitialized && isAuthenticated && !cartInitialized) {
+      loadCart();
+    }
+  }, [authInitialized, isAuthenticated, cartInitialized, loadCart]);
+
   const hasSearchQuery = Boolean(searchValue.trim());
 
   const handleOpenSearch = () => {
@@ -60,10 +79,13 @@ export function Header({
     setIsSearchExpanded(false);
     setSearchValue("");
     setSearchResults([]);
-    onSearchQueryChange?.("");
+    onSearchChange?.("");
   };
 
-  const previewItems = useMemo(() => searchResults.slice(0, 4), [searchResults]);
+  const previewItems = useMemo(
+    () => searchResults.slice(0, 4),
+    [searchResults],
+  );
 
   useEffect(() => {
     if (!isSearchExpanded) {
@@ -83,8 +105,8 @@ export function Header({
   }, [isSearchExpanded]);
 
   useEffect(() => {
-    onSearchQueryChange?.(searchValue);
-  }, [onSearchQueryChange, searchValue]);
+    onSearchChange?.(searchValue);
+  }, [onSearchChange, searchValue]);
 
   useEffect(() => {
     const query = searchValue.trim();
@@ -135,7 +157,10 @@ export function Header({
   }, [isSearchExpanded, searchValue]);
 
   return (
-    <header className={styles.header} data-search-open={isSearchExpanded ? "true" : "false"}>
+    <header
+      className={styles.header}
+      data-search-open={isSearchExpanded ? "true" : "false"}
+    >
       <Container className={styles.inner}>
         <div className={styles.topRow}>
           <button
@@ -190,17 +215,6 @@ export function Header({
           </div>
         </div>
 
-        <TextField
-          kind="search"
-          className={`${styles.search} ${styles.primarySearch}`}
-          value={searchValue}
-          placeholder={searchPlaceholder}
-          aria-label="Пошук"
-          leadingIcon={<SearchIcon className={iconStyles.icon} />}
-          trailingIcon={<MicrophoneIcon className={iconStyles.icon} />}
-          onFocus={handleOpenSearch}
-          onChange={(event) => setSearchValue(event.target.value)}
-        />
         <div className={styles.searchSheet}>
           <div className={styles.searchSheetInner}>
             <div className={styles.searchSheetHeader}>
