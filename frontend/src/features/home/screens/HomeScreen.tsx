@@ -165,8 +165,14 @@ export function HomeScreen() {
           sortOrder: category.sortOrder,
         }))}
         onClose={() => setCatalogOpen(false)}
-        onCategorySelect={(slug) => router.push(`/catalog/${slug}`)}
-        onShowAll={() => router.push("/catalog")}
+        onCategorySelect={(slug, format) => {
+          const formatParam = format === "all" ? "" : `?format=${encodeURIComponent(format)}`;
+          router.push(`/catalog/${slug}${formatParam}`);
+        }}
+        onShowAll={(format) => {
+          const formatParam = format === "all" ? "" : `?format=${encodeURIComponent(format)}`;
+          router.push(`/catalog${formatParam}`);
+        }}
       />
     </PageLayout>
   );
