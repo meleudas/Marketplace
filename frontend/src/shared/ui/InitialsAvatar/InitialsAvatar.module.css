@@ -1,0 +1,17 @@
+.avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #5f7081;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.initial {
+  font-family: "Roboto", sans-serif;
+  font-size: 24px;
+  font-weight: 500;
+  color: #ffffff;
+}

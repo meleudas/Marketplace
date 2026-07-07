@@ -23,7 +23,7 @@ export function AuthHomeScreen() {
 
   useEffect(() => {
     if (initialized && isAuthenticated) {
-      router.replace("/home");
+      router.replace("/");
     }
   }, [initialized, isAuthenticated, router]);
 

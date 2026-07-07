@@ -1,0 +1,27 @@
+.spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  border-style: solid;
+  border-color: rgb(255 255 255 / 0.2);
+  border-top-color: var(--color-primary-pink, #ee0290);
+  animation: spinnerSpin 0.9s linear infinite;
+}
+
+.sm {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}
+
+.lg {
+  width: 48px;
+  height: 48px;
+  border-width: 4px;
+}
+
+@keyframes spinnerSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,5 +1,6 @@
 "use client";
 
+<<<<<<< Updated upstream
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
@@ -30,6 +31,25 @@ import {
 } from "@/shared/ui";
 import iconStyles from "@/shared/ui/icons/Icon.module.css";
 import type { ProductCardData } from "@/shared/ui/ProductCard";
+=======
+import Image from "next/image";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  getCatalogCategories,
+  getCatalogNewProducts,
+  getCatalogOnSaleProducts,
+  getCatalogPopularProducts,
+  getPersonalizedRecommendations,
+  searchCatalogProducts,
+} from "@/features/storefront/api/catalog.api";
+import type { CatalogCategoryDto } from "@/features/storefront/model/catalog.types";
+import { mapProductToRailCard, type ProductRailCard } from "@/features/home/lib/map-product-to-rail-card";
+import { CatalogMenu, PageLayout, ProductCard, Spinner } from "@/shared/ui";
+import { ProductRailItems } from "../ui/ProductRailItems";
+import { RecommendationsRail } from "../ui/RecommendationsRail";
+>>>>>>> Stashed changes
 import styles from "./HomeScreen.module.css";
 
 const PAGE_SIZE = 8;
@@ -96,6 +116,30 @@ export function HomeScreen() {
   const pendingScrollY = useRef<number | null>(null);
   const productImagesRef = useRef<Record<string, string | null>>({});
 
+  const [feedItems, setFeedItems] = useState<ProductRailCard[]>([]);
+  const [feedLoading, setFeedLoading] = useState(false);
+  const [feedPage, setFeedPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+
+  const loadFeed = useCallback(async (page: number, categoryId: number | null, append: boolean) => {
+    setFeedLoading(true);
+    try {
+      const response = await searchCatalogProducts({
+        categoryIds: categoryId ? [categoryId] : undefined,
+        page,
+        pageSize: 12,
+      });
+      const newItems = response.items.map(mapProductToRailCard);
+      
+      setFeedItems((prev) => (append ? [...prev, ...newItems] : newItems));
+      setHasMore(response.items.length === 12);
+    } catch {
+    } finally {
+      setFeedLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -112,8 +156,37 @@ export function HomeScreen() {
   }, []);
 
   useEffect(() => {
+<<<<<<< Updated upstream
     setCurrentPage(1);
   }, [selectedCategorySlug, inStockOnly, selectedSort, searchQuery]);
+=======
+    setFeedPage(1);
+    setHasMore(true);
+    void loadFeed(1, selectedCategory, false);
+  }, [selectedCategory, loadFeed]);
+
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const triggerRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (feedLoading) return;
+      if (observerRef.current) observerRef.current.disconnect();
+
+      observerRef.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          const nextPage = feedPage + 1;
+          setFeedPage(nextPage);
+          void loadFeed(nextPage, selectedCategory, true);
+        }
+      });
+
+      if (node) observerRef.current.observe(node);
+    },
+    [feedLoading, hasMore, feedPage, selectedCategory, loadFeed]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+>>>>>>> Stashed changes
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -273,13 +346,13 @@ export function HomeScreen() {
   return (
     <PageLayout
       headerProps={{
-        homeHref: "/home",
+        homeHref: "/",
         userHref: "/me",
         searchValue: searchInput,
         searchPlaceholder: "Пошук книг",
         onSearchChange: setSearchInput,
       }}
-      footerProps={{ homeHref: "/home" }}
+      footerProps={{ homeHref: "/" }}
     >
       {categories.length > 0 ? (
         <div className={styles.categories} role="tablist" aria-label="Категорії">
@@ -317,6 +390,7 @@ export function HomeScreen() {
           Фільтри
         </Button>
 
+<<<<<<< Updated upstream
         <div className={styles.sortAnchor}>
           <Button
             type="button"
@@ -418,6 +492,99 @@ export function HomeScreen() {
           onClick={() => setSortModalOpen(false)}
         />
       ) : null}
+=======
+      <RecommendationsRail title="Рекомендовані" loading={recommendationsLoading} viewAllHref="/catalog">
+        <ProductRailItems items={recommendations} />
+      </RecommendationsRail>
+
+      <RecommendationsRail title="Популярні" loading={popularLoading} viewAllHref="/catalog?sort=relevance">
+        <ProductRailItems items={popular} />
+      </RecommendationsRail>
+
+      <RecommendationsRail title="Новинки" loading={newProductsLoading} viewAllHref="/catalog?sort=newest">
+        <ProductRailItems items={newProducts} />
+      </RecommendationsRail>
+
+      <RecommendationsRail title="Акції" loading={onSaleLoading} viewAllHref="/catalog">
+        <ProductRailItems items={onSale} />
+      </RecommendationsRail>
+
+      <section className={styles.feedSection}>
+        <div className={styles.feedHeader}>
+          <h2 className={styles.feedTitle}>Спеціально для вас</h2>
+          
+          <div className={styles.tagPillsList} role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedCategory === null}
+              className={`${styles.tagPill} ${selectedCategory === null ? styles.tagPillActive : ""}`}
+              onClick={() => setSelectedCategory(null)}
+            >
+              Всі
+            </button>
+            {categories
+              .filter((c) => c.parentId === null && c.productCount > 0)
+              .map((cat) => (
+                <button
+                  type="button"
+                  key={cat.id}
+                  role="tab"
+                  aria-selected={selectedCategory === cat.id}
+                  className={`${styles.tagPill} ${selectedCategory === cat.id ? styles.tagPillActive : ""}`}
+                  onClick={() => setSelectedCategory(cat.id)}
+                >
+                  #{cat.name}
+                </button>
+              ))}
+          </div>
+        </div>
+
+        {feedItems.length > 0 ? (
+          <div className={styles.feedGrid}>
+            {feedItems.map((item) => (
+              <Link key={item.id} href={item.href} className={styles.feedCardLink}>
+                <ProductCard product={item} />
+              </Link>
+            ))}
+          </div>
+        ) : (
+          !feedLoading && (
+            <div className={styles.feedEmpty}>
+              Немає товарів у цій категорії
+            </div>
+          )
+        )}
+
+        {feedLoading && (
+          <div className={styles.feedLoading}>
+            <Spinner />
+          </div>
+        )}
+
+        {hasMore && <div ref={triggerRef} className={styles.scrollTrigger} />}
+      </section>
+
+      <CatalogMenu
+        open={catalogOpen}
+        categories={categories.map((category) => ({
+          id: category.id,
+          name: category.name,
+          slug: category.slug,
+          parentId: category.parentId,
+          sortOrder: category.sortOrder,
+        }))}
+        onClose={() => setCatalogOpen(false)}
+        onCategorySelect={(slug, format) => {
+          const formatParam = format === "all" ? "" : `?format=${encodeURIComponent(format)}`;
+          router.push(`/catalog/${slug}${formatParam}`);
+        }}
+        onShowAll={(format) => {
+          const formatParam = format === "all" ? "" : `?format=${encodeURIComponent(format)}`;
+          router.push(`/catalog${formatParam}`);
+        }}
+      />
+>>>>>>> Stashed changes
     </PageLayout>
   );
 }
