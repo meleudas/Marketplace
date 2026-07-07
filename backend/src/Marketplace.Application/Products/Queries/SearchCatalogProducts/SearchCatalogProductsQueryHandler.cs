@@ -39,6 +39,7 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
     public async Task<Result<ProductSearchResultDto>> Handle(SearchCatalogProductsQuery request, CancellationToken ct)
     {
         var searchTerm = string.IsNullOrWhiteSpace(request.Name) ? request.Query : request.Name;
+        var hasSearchTerm = !string.IsNullOrWhiteSpace(searchTerm);
         var hasFacetFilters = ProductCatalogFacetReader.HasFacetFilters(
             request.Authors,
             request.Format,
@@ -65,11 +66,11 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
             var esResult = await _searchService.SearchCatalogProductsAsync(filters, ct);
             if (esResult.IsSuccess)
             {
-                if (esResult.Value!.Total > 0 || !hasFacetFilters)
+                if (esResult.Value!.Total > 0 || (!hasFacetFilters && !hasSearchTerm))
                     return Result<ProductSearchResultDto>.Success(await EnrichAsync(esResult.Value, ct));
 
                 _logger.LogInformation(
-                    "Catalog search fallback to DB because Elasticsearch returned zero facet-filtered results.");
+                    "Catalog search fallback to DB because Elasticsearch returned zero results with filters/search term.");
             }
             else
             {
@@ -164,15 +165,92 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
         if (string.IsNullOrWhiteSpace(query))
             return 1;
 
-        var q = query.Trim().ToLowerInvariant();
+        var q = query.Trim();
         var score = 0;
         if (dto.Name.Contains(q, StringComparison.OrdinalIgnoreCase))
             score += 3;
+        else if (NameFuzzyMatches(dto.Name, q))
+            score += 2;
         if (dto.Description.Contains(q, StringComparison.OrdinalIgnoreCase))
             score += 2;
         if (dto.Slug.Contains(q, StringComparison.OrdinalIgnoreCase))
             score += 1;
         return score;
+    }
+
+    private static bool NameFuzzyMatches(string name, string query)
+    {
+        var normalizedName = NormalizeForFuzzy(name);
+        var normalizedQuery = NormalizeForFuzzy(query);
+        if (normalizedName.Length == 0 || normalizedQuery.Length == 0)
+            return false;
+
+        if (normalizedName.Contains(normalizedQuery, StringComparison.Ordinal))
+            return true;
+
+        var queryDistance = AllowedDistance(normalizedQuery.Length);
+        if (LevenshteinDistance(normalizedName, normalizedQuery, queryDistance) <= queryDistance)
+            return true;
+
+        var nameTokens = normalizedName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var token in nameTokens)
+        {
+            var tokenDistance = AllowedDistance(Math.Max(token.Length, normalizedQuery.Length));
+            if (LevenshteinDistance(token, normalizedQuery, tokenDistance) <= tokenDistance)
+                return true;
+        }
+
+        return false;
+    }
+
+    private static string NormalizeForFuzzy(string value)
+        => new(value
+            .Trim()
+            .ToLowerInvariant()
+            .Select(ch => char.IsLetterOrDigit(ch) || char.IsWhiteSpace(ch) ? ch : ' ')
+            .ToArray());
+
+    private static int AllowedDistance(int length)
+    {
+        if (length <= 4)
+            return 1;
+        if (length <= 8)
+            return 2;
+        return 3;
+    }
+
+    private static int LevenshteinDistance(string left, string right, int maxDistance)
+    {
+        if (Math.Abs(left.Length - right.Length) > maxDistance)
+            return maxDistance + 1;
+
+        var previous = new int[right.Length + 1];
+        var current = new int[right.Length + 1];
+
+        for (var j = 0; j <= right.Length; j++)
+            previous[j] = j;
+
+        for (var i = 1; i <= left.Length; i++)
+        {
+            current[0] = i;
+            var rowMin = current[0];
+
+            for (var j = 1; j <= right.Length; j++)
+            {
+                var cost = left[i - 1] == right[j - 1] ? 0 : 1;
+                current[j] = Math.Min(
+                    Math.Min(current[j - 1] + 1, previous[j] + 1),
+                    previous[j - 1] + cost);
+                rowMin = Math.Min(rowMin, current[j]);
+            }
+
+            if (rowMin > maxDistance)
+                return maxDistance + 1;
+
+            (previous, current) = (current, previous);
+        }
+
+        return previous[right.Length];
     }
 
     private static IEnumerable<(ProductListItemDto Dto, int Score)> Sort(

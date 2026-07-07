@@ -312,13 +312,29 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
 
         if (!string.IsNullOrWhiteSpace(filters.Name))
         {
-            b.Must(m => m.Match(match => match
-                .Field(x => x.Name)
-                .Query(filters.Name)
-                .Fuzziness(new Fuzziness("AUTO"))
-                .PrefixLength(1)
-                .MaxExpansions(50)
-                .Operator(Operator.And)));
+            var searchName = filters.Name.Trim();
+            if (searchName.Length <= 2)
+            {
+                b.Must(m => m.MatchPhrasePrefix(prefix => prefix
+                    .Field(x => x.Name)
+                    .Query(searchName)));
+            }
+            else
+            {
+                b.Must(m => m.Bool(bb => bb
+                    .Should(
+                        s => s.Match(match => match
+                            .Field(x => x.Name)
+                            .Query(searchName)
+                            .Fuzziness(new Fuzziness("AUTO"))
+                            .PrefixLength(1)
+                            .MaxExpansions(50)
+                            .Operator(Operator.Or)),
+                        s => s.MatchPhrasePrefix(prefix => prefix
+                            .Field(x => x.Name)
+                            .Query(searchName)))
+                    .MinimumShouldMatch(1)));
+            }
         }
 
         if (filters.CategoryIds is { Count: > 0 })

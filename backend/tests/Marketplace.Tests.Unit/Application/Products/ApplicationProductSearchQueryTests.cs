@@ -86,6 +86,52 @@ public class ApplicationProductSearchQueryTests
     }
 
     [Fact]
+    public async Task Falls_Back_To_Db_And_Finds_Product_By_Fuzzy_Name()
+    {
+        var products = new InMemoryProductRepository();
+        products.Seed(Product.Reconstitute(
+            ProductId.From(12),
+            CompanyId.From(Guid.NewGuid()),
+            "Keyboard",
+            "keyboard",
+            "Gaming keyboard",
+            new Money(120),
+            null,
+            2,
+            0,
+            CategoryId.From(5),
+            ProductStatus.Active,
+            null,
+            0,
+            0,
+            0,
+            false,
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+
+        var stocks = new InMemoryWarehouseStockRepository();
+        stocks.Seed(WarehouseStock.Create(WarehouseStockId.From(1), CompanyId.From(Guid.NewGuid()), WarehouseId.From(1), ProductId.From(12), 5, 0, 0));
+
+        var handler = new SearchCatalogProductsQueryHandler(
+            new StubSearchService(Result<ProductSearchResultDto>.Failure("Elasticsearch down")),
+            products,
+            new InMemoryProductDetailRepository(),
+            new InMemoryProductImageRepository(),
+            stocks,
+            NullLogger<SearchCatalogProductsQueryHandler>.Instance);
+
+        var result = await handler.Handle(
+            new SearchCatalogProductsQuery("keyboar", null, null, null, null, null, null, null, null, null, null, null, 1, 20, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!.Items);
+        Assert.Equal("keyboard", result.Value.Items[0].Slug);
+    }
+
+    [Fact]
     public async Task Falls_Back_To_Db_When_Elasticsearch_Throws()
     {
         var products = new InMemoryProductRepository();
@@ -542,6 +588,53 @@ public class ApplicationProductSearchQueryTests
         Assert.True(result.IsSuccess);
         Assert.Single(result.Value!.Items);
         Assert.Equal("solodka-darusia", result.Value.Items[0].Slug);
+    }
+
+    [Fact]
+    public async Task Falls_Back_To_Db_When_Elasticsearch_Returns_Empty_Name_Search_Results()
+    {
+        var companyId = Guid.NewGuid();
+        var products = new InMemoryProductRepository();
+        products.Seed(Product.Reconstitute(
+            ProductId.From(32),
+            CompanyId.From(companyId),
+            "Кобзар",
+            "kobzar",
+            "Книга",
+            new Money(250),
+            null,
+            5,
+            0,
+            CategoryId.From(11),
+            ProductStatus.Active,
+            null,
+            0,
+            0,
+            0,
+            false,
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+
+        var stocks = new InMemoryWarehouseStockRepository();
+        stocks.Seed(WarehouseStock.Create(WarehouseStockId.From(1), CompanyId.From(companyId), WarehouseId.From(1), ProductId.From(32), 3, 0, 0));
+
+        var handler = new SearchCatalogProductsQueryHandler(
+            new StubSearchService(Result<ProductSearchResultDto>.Success(new ProductSearchResultDto([], 0, 1, 20))),
+            products,
+            new InMemoryProductDetailRepository(),
+            new InMemoryProductImageRepository(),
+            stocks,
+            NullLogger<SearchCatalogProductsQueryHandler>.Instance);
+
+        var result = await handler.Handle(
+            new SearchCatalogProductsQuery("к", null, null, null, null, null, null, null, null, null, null, null, 1, 20, null),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!.Items);
+        Assert.Equal("kobzar", result.Value.Items[0].Slug);
     }
 
     [Fact]
