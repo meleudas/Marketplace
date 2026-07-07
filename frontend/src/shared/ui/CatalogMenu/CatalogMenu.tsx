@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "../Button";
 import { Container } from "../Container";
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from "../icons";
@@ -9,7 +9,7 @@ import { PageBackground } from "../PageBackground";
 import { Typography } from "../Typography";
 import styles from "./CatalogMenu.module.css";
 
-export type CatalogFormatFilter = "all" | "hardcover" | "paperback";
+export type CatalogFormatFilter = "all" | "електронний" | "паперовий";
 
 export interface CatalogMenuCategory {
   id: number;
@@ -23,15 +23,15 @@ interface CatalogMenuProps {
   open: boolean;
   categories: CatalogMenuCategory[];
   onClose: () => void;
-  onCategorySelect?: (slug: string) => void;
-  onShowAll?: () => void;
-  onFormatChange?: (format: CatalogFormatFilter) => void;
+  onCategorySelect?: (slug: string, format: CatalogFormatFilter) => void;
+  onShowAll?: (format: CatalogFormatFilter) => void;
+  activeFormat?: CatalogFormatFilter;
 }
 
 const FORMAT_OPTIONS: Array<{ value: CatalogFormatFilter; label: string }> = [
   { value: "all", label: "Всі" },
-  { value: "hardcover", label: "Тверда обкладинка" },
-  { value: "paperback", label: "М'яка обкладинка" },
+  { value: "електронний", label: "Електронна" },
+  { value: "паперовий", label: "Паперова" },
 ];
 
 function sortCategories(a: CatalogMenuCategory, b: CatalogMenuCategory): number {
@@ -44,10 +44,11 @@ export function CatalogMenu({
   onClose,
   onCategorySelect,
   onShowAll,
-  onFormatChange,
+  activeFormat = "all",
 }: CatalogMenuProps) {
-  const [formatFilter, setFormatFilter] = useState<CatalogFormatFilter>("all");
+  const [selectedFormat, setSelectedFormat] = useState<CatalogFormatFilter | null>(null);
   const [activeRootCategory, setActiveRootCategory] = useState<CatalogMenuCategory | null>(null);
+  const formatFilter = selectedFormat ?? activeFormat;
 
   const rootCategories = useMemo(
     () => categories.filter((category) => category.parentId == null).sort(sortCategories),
@@ -64,10 +65,14 @@ export function CatalogMenu({
       .sort(sortCategories);
   }, [activeRootCategory, categories]);
 
+  const handleClose = useCallback(() => {
+    setSelectedFormat(null);
+    setActiveRootCategory(null);
+    onClose();
+  }, [onClose]);
+
   useEffect(() => {
     if (!open) {
-      setActiveRootCategory(null);
-      setFormatFilter("all");
       return;
     }
 
@@ -84,7 +89,7 @@ export function CatalogMenu({
         return;
       }
 
-      onClose();
+      handleClose();
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -93,15 +98,14 @@ export function CatalogMenu({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [activeRootCategory, onClose, open]);
+  }, [activeRootCategory, handleClose, open]);
 
   if (!open) {
     return null;
   }
 
   const handleFormatSelect = (format: CatalogFormatFilter) => {
-    setFormatFilter(format);
-    onFormatChange?.(format);
+    setSelectedFormat(format);
   };
 
   const handleRootCategoryClick = (category: CatalogMenuCategory) => {
@@ -111,13 +115,13 @@ export function CatalogMenu({
       return;
     }
 
-    onCategorySelect?.(category.slug);
-    onClose();
+    onCategorySelect?.(category.slug, formatFilter);
+    handleClose();
   };
 
   const handleSubcategoryClick = (slug: string) => {
-    onCategorySelect?.(slug);
-    onClose();
+    onCategorySelect?.(slug, formatFilter);
+    handleClose();
   };
 
   const handleShowSection = () => {
@@ -125,13 +129,13 @@ export function CatalogMenu({
       return;
     }
 
-    onCategorySelect?.(activeRootCategory.slug);
-    onClose();
+    onCategorySelect?.(activeRootCategory.slug, formatFilter);
+    handleClose();
   };
 
   const handleShowAll = () => {
-    onShowAll?.();
-    onClose();
+    onShowAll?.(formatFilter);
+    handleClose();
   };
 
   const handleBackToCatalog = () => {
@@ -155,7 +159,7 @@ export function CatalogMenu({
                 {activeRootCategory.name}
               </Typography>
             </h1>
-            <button type="button" className={styles.closeButton} aria-label="Закрити" onClick={onClose}>
+            <button type="button" className={styles.closeButton} aria-label="Закрити" onClick={handleClose}>
               <CloseIcon className={iconStyles.icon} />
             </button>
           </header>
@@ -209,7 +213,7 @@ export function CatalogMenu({
               Каталог
             </Typography>
           </h1>
-          <button type="button" className={styles.closeButton} aria-label="Закрити" onClick={onClose}>
+          <button type="button" className={styles.closeButton} aria-label="Закрити" onClick={handleClose}>
             <CloseIcon className={iconStyles.icon} />
           </button>
         </header>

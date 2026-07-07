@@ -61,6 +61,18 @@ export function resolveCategorySelection(
 }
 
 /** Category id plus all descendant ids (for root → subcategory filtering). */
+export function getCategoryFilterIdsFromSlugs(
+  categories: CatalogCategoryDto[],
+  slugs: readonly string[],
+): number[] {
+  const ids = slugs
+    .map((slug) => categories.find((category) => category.slug === slug))
+    .filter((category): category is CatalogCategoryDto => Boolean(category))
+    .flatMap((category) => getCategoryFilterIds(categories, category));
+
+  return [...new Set(ids)];
+}
+
 export function getCategoryFilterIds(
   categories: CatalogCategoryDto[],
   category: CatalogCategoryDto,

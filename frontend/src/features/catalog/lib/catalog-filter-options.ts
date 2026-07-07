@@ -6,16 +6,6 @@ export interface CatalogFilterOption {
 export const DEFAULT_CATALOG_MIN_PRICE = "1";
 export const DEFAULT_CATALOG_MAX_PRICE = "10000";
 
-/** Values match backend `ProductCatalogFacetReader` normalization (lowercase slugs). */
-export const GENRE_FILTER_OPTIONS: CatalogFilterOption[] = [
-  { label: "Фентезі", value: "fantasy" },
-  { label: "Романтика", value: "romance" },
-  { label: "Детективи", value: "detective" },
-  { label: "Поезія", value: "poetry" },
-  { label: "Мемуари", value: "memoir" },
-  { label: "Документальна проза", value: "non-fiction" },
-];
-
 /** Author display names from seed data; backend matches case-insensitively after normalize. */
 export const AUTHOR_FILTER_OPTIONS: CatalogFilterOption[] = [
   { label: "Тарас Шевченко", value: "Тарас Шевченко" },
@@ -26,11 +16,16 @@ export const AUTHOR_FILTER_OPTIONS: CatalogFilterOption[] = [
   { label: "Агата Крісті", value: "Agatha Christie" },
 ];
 
-/** Backend format facet values (see ApplicationProductSearchQueryTests). */
-export const FORMAT_FILTER_OPTIONS: CatalogFilterOption[] = [
-  { label: "Тверда обкладинка", value: "hardcover" },
-  { label: "М'яка обкладинка", value: "paperback" },
-];
+/** Backend format facet values from ProductSeeder (attributes.format). */
+export const FORMAT_FILTER_OPTIONS = [
+  { label: "Електронна", value: "електронний" },
+  { label: "Паперова", value: "паперовий" },
+] as const satisfies readonly CatalogFilterOption[];
+
+export type CatalogProductFormat = (typeof FORMAT_FILTER_OPTIONS)[number]["value"];
+
+export const isCatalogProductFormat = (value: string): value is CatalogProductFormat =>
+  FORMAT_FILTER_OPTIONS.some((option) => option.value === value);
 
 export const resolveAppliedPriceFilter = (value: string, defaultValue: string): string => {
   const trimmed = value.trim();
