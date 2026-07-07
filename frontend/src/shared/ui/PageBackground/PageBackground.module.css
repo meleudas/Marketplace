@@ -5,7 +5,6 @@
   overflow: hidden;
   pointer-events: none;
   background-color: #131417;
-
   --page-glow-spread: calc(var(--page-glow-size) / 2 + var(--page-glow-blur));
 
   background-image:

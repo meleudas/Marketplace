@@ -12,7 +12,7 @@ export async function clearAuthState(page: Page): Promise<void> {
   await page.context().clearCookies();
 }
 
-export async function getAccessToken(page: Page): Promise<string | null> {
+async function getAccessToken(page: Page): Promise<string | null> {
   return page.evaluate((key) => window.localStorage.getItem(key), ACCESS_TOKEN_KEY);
 }
 
@@ -38,7 +38,7 @@ async function readLoginError(page: Page, status: number): Promise<string> {
 
 export async function loginViaUi(
   page: Page,
-  credentials: { email: string; password: string; twoFactorCode?: string },
+  credentials: { email: string; password: string },
 ): Promise<void> {
   await waitForAuthUi(page);
 
@@ -52,25 +52,9 @@ export async function loginViaUi(
 
   await page.getByRole("button", { name: "Login", exact: true }).click();
 
-  if (credentials.twoFactorCode) {
-    await expect(page.getByLabel("2FA Code")).toBeVisible({ timeout: 15_000 });
-    await page.getByLabel("2FA Code").fill(credentials.twoFactorCode);
-
-    const verifyRequest = page.waitForResponse(
-      (response) =>
-        response.url().includes("/auth/login") && response.request().method() === "POST",
-    );
-    await page.getByRole("button", { name: "Verify and login" }).click();
-
-    const verifyResponse = await verifyRequest;
-    if (!verifyResponse.ok()) {
-      throw new Error(`Login failed: ${await readLoginError(page, verifyResponse.status())}`);
-    }
-  } else {
-    const loginResponse = await loginRequest;
-    if (!loginResponse.ok()) {
-      throw new Error(`Login failed: ${await readLoginError(page, loginResponse.status())}`);
-    }
+  const loginResponse = await loginRequest;
+  if (!loginResponse.ok()) {
+    throw new Error(`Login failed: ${await readLoginError(page, loginResponse.status())}`);
   }
 
   await page.waitForResponse(
@@ -82,7 +66,7 @@ export async function loginViaUi(
   );
 
   await page.waitForURL(/\/home$/, { timeout: AUTH_POLL_TIMEOUT });
-  await expectAuthenticated(page);
+  await expectAccessTokenExists(page);
 }
 
 export async function advanceForgotPasswordToStepTwo(page: Page, email: string): Promise<void> {
@@ -108,10 +92,6 @@ export async function logoutViaUi(page: Page): Promise<void> {
   await expectGuest(page);
 }
 
-export async function expectAuthenticated(page: Page): Promise<void> {
-  await expectAccessTokenExists(page);
-}
-
 export async function expectGuest(page: Page): Promise<void> {
   await expectAccessTokenMissing(page);
 }
@@ -130,16 +110,11 @@ export async function openForgotPasswordForm(page: Page): Promise<void> {
 
 export async function submitRegisterForm(
   page: Page,
-  data: { userName: string; email: string; password: string; phoneNumber?: string },
+  data: { userName: string; email: string; password: string },
 ): Promise<void> {
   await openRegisterForm(page);
   await page.getByLabel("Username").fill(data.userName);
   await page.getByLabel("Email").fill(data.email);
-
-  if (data.phoneNumber) {
-    await page.getByLabel("Phone number (optional)").fill(data.phoneNumber);
-  }
-
   await page.getByLabel("Password").fill(data.password);
   await page.getByRole("button", { name: "Register", exact: true }).click();
 }
@@ -152,15 +127,6 @@ export async function submitLoginForm(
   await page.getByLabel("Email").fill(data.email);
   await page.getByLabel("Password").fill(data.password);
   await page.getByRole("button", { name: "Login", exact: true }).click();
-}
-
-export async function waitForUsersMeRequest(page: Page): Promise<void> {
-  await page.waitForResponse(
-    (response) =>
-      response.url().includes("/users/me") &&
-      response.request().method() === "GET" &&
-      response.status() === 200,
-  );
 }
 
 export function getAuthorizationHeader(requestHeaders: Record<string, string>): string | undefined {

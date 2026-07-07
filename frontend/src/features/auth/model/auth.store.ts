@@ -31,7 +31,7 @@ const getErrorMessage = (error: unknown): string => {
   const data = axiosError.response?.data as ProblemDetails | string | undefined;
 
   if (!axiosError.response) {
-    return "Network error: backend is unavailable or blocked by CORS/proxy settings.";
+    return "Помилка мережі: бекенд недоступний або заблокований через CORS/проксі.";
   }
 
   if (typeof data === "string") {
@@ -48,7 +48,7 @@ const getErrorMessage = (error: unknown): string => {
     }
   }
 
-  return axiosError.message || "Unknown error";
+  return axiosError.message || "Невідома помилка";
 };
 
 const isRegistrationConfirmationRequired = (error: unknown): boolean => {
@@ -72,7 +72,7 @@ export const useAuth = create<AuthStore>((set, get) => ({
       set({ user: null, isAuthenticated: false });
       return {
         success: true,
-        message: "Підтвердіть пошту, щоб завершити створення акаунта.",
+        message: "Підтвердьте пошту, щоб завершити створення акаунта.",
       };
     } catch (error) {
       if (isRegistrationConfirmationRequired(error)) {
@@ -80,7 +80,7 @@ export const useAuth = create<AuthStore>((set, get) => ({
         set({ user: null, isAuthenticated: false });
         return {
           success: true,
-          message: "Підтвердіть пошту, щоб завершити створення акаунта.",
+          message: "Підтвердьте пошту, щоб завершити створення акаунта.",
         };
       }
 
@@ -99,7 +99,7 @@ export const useAuth = create<AuthStore>((set, get) => ({
       await confirmEmailRequest(payload);
       return {
         success: true,
-        message: "Email confirmed. Now you can login.",
+        message: "Пошту підтверджено. Тепер можна увійти.",
       };
     } catch (error) {
       const message = getErrorMessage(error);
@@ -121,7 +121,7 @@ export const useAuth = create<AuthStore>((set, get) => ({
         isAuthenticated: true,
       });
 
-      return { success: true, message: "Login successful." };
+      return { success: true, message: "Вхід виконано успішно." };
     } catch (error) {
       const message = getErrorMessage(error);
 
@@ -162,7 +162,7 @@ export const useAuth = create<AuthStore>((set, get) => ({
         isAuthenticated: true,
       });
 
-      return { success: true, message: "Google login successful." };
+      return { success: true, message: "Вхід через Google виконано успішно." };
     } catch (error) {
       const message = getErrorMessage(error);
       clearAccessToken();
@@ -179,7 +179,7 @@ export const useAuth = create<AuthStore>((set, get) => ({
       await forgotPassword(payload);
       return {
         success: true,
-        message: "Password reset code sent. Check your email.",
+        message: "Код для скидання пароля надіслано. Перевірте пошту.",
       };
     } catch (error) {
       const message = getErrorMessage(error);
@@ -195,7 +195,7 @@ export const useAuth = create<AuthStore>((set, get) => ({
       await resetPassword(payload);
       return {
         success: true,
-        message: "Password has been reset. You can login now.",
+        message: "Пароль скинуто. Тепер можна увійти.",
       };
     } catch (error) {
       const message = getErrorMessage(error);
@@ -220,7 +220,7 @@ export const useAuth = create<AuthStore>((set, get) => ({
       });
     }
 
-    return { success: true, message: "Logged out." };
+    return { success: true, message: "Вихід виконано." };
   },
 
   loadMe: async () => {

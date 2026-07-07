@@ -160,6 +160,15 @@ public sealed class ApplicationRestockNotificationsTests
         public Task<IReadOnlyList<Product>> ListActiveAsync(CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<Product>>([_product]);
 
+        public Task<IReadOnlyList<Product>> ListActiveOnSaleAsync(Guid? companyId = null, IReadOnlyList<long>? categoryIds = null, decimal? minPrice = null, decimal? maxPrice = null, decimal? minDiscountPercent = null, CancellationToken ct = default) =>
+            Marketplace.Tests.Common.Fakes.ProductRepositoryFakeMethods.ListActiveOnSaleAsync([_product], companyId, categoryIds, minPrice, maxPrice, minDiscountPercent, ct);
+
+        public Task<IReadOnlyList<Product>> ListActiveNewestAsync(Guid? companyId = null, IReadOnlyList<long>? categoryIds = null, decimal? minPrice = null, decimal? maxPrice = null, CancellationToken ct = default) =>
+            Marketplace.Tests.Common.Fakes.ProductRepositoryFakeMethods.ListActiveNewestAsync([_product], companyId, categoryIds, minPrice, maxPrice, ct);
+
+        public Task<IReadOnlyList<Product>> ListActivePopularAsync(Guid? companyId = null, IReadOnlyList<long>? categoryIds = null, decimal? minPrice = null, decimal? maxPrice = null, CancellationToken ct = default) =>
+            Marketplace.Tests.Common.Fakes.ProductRepositoryFakeMethods.ListActivePopularAsync([_product], companyId, categoryIds, minPrice, maxPrice, ct);
+
         public Task<IReadOnlyList<Product>> ListPendingReviewAsync(CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<Product>>(
                 _product.Status == ProductStatus.PendingReview ? [_product] : []);

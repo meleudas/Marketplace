@@ -121,6 +121,7 @@ public sealed class ElasticsearchProductSimilarityService : IProductSimilaritySe
             x.Description,
             x.Price,
             x.OldPrice,
+            x.DiscountPercent,
             x.CategoryId,
             x.Status,
             x.HasVariants,
@@ -129,5 +130,6 @@ public sealed class ElasticsearchProductSimilarityService : IProductSimilaritySe
             x.AvailableQty,
             x.AvailabilityStatus,
             x.CreatedAt,
-            x.UpdatedAt);
+            x.UpdatedAt,
+            []);
 }

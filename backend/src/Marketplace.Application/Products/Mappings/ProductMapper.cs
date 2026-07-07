@@ -1,3 +1,4 @@
+using Marketplace.Application.Products.Catalog;
 using Marketplace.Application.Products.DTOs;
 using Marketplace.Domain.Catalog.Entities;
 
@@ -5,7 +6,11 @@ namespace Marketplace.Application.Products.Mappings;
 
 public static class ProductMapper
 {
-    public static ProductListItemDto ToListItemDto(Product p, int availableQty, string availabilityStatus) =>
+    public static ProductListItemDto ToListItemDto(
+        Product p,
+        int availableQty,
+        string availabilityStatus,
+        IReadOnlyList<string>? imageUrls = null) =>
         new(
             p.Id.Value,
             p.CompanyId.Value,
@@ -14,6 +19,7 @@ public static class ProductMapper
             p.Description,
             p.Price.Amount,
             p.OldPrice?.Amount,
+            ProductDiscount.Percent(p.Price.Amount, p.OldPrice?.Amount),
             p.CategoryId.Value,
             p.Status.ToString(),
             p.HasVariants,
@@ -22,7 +28,8 @@ public static class ProductMapper
             availableQty,
             availabilityStatus,
             p.CreatedAt,
-            p.UpdatedAt);
+            p.UpdatedAt,
+            imageUrls ?? []);
 
     public static ProductDetailDto ToDetailDto(ProductDetail x) =>
         new(

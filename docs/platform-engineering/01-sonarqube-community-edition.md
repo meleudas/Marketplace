@@ -30,7 +30,7 @@ flowchart LR
 ### 4.1 Локально (Docker Compose profile `sonar`)
 
 ```powershell
-docker compose --profile sonar up -d
+docker compose -f docker-compose.dev.yml -f docker-compose.monitoring.yml --profile sonar up -d
 ```
 
 1. Відкрити `http://localhost:9002`, логін `admin` / `admin` (змінити пароль).

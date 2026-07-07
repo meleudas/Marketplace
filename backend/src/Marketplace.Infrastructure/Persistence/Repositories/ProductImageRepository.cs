@@ -21,6 +21,30 @@ public sealed class ProductImageRepository : IProductImageRepository
         return rows.Select(ToDomain).ToList();
     }
 
+    public async Task<IReadOnlyDictionary<long, IReadOnlyList<string>>> ListImageUrlsByProductIdsAsync(
+        IReadOnlyCollection<long> productIds,
+        CancellationToken ct = default)
+    {
+        if (productIds.Count == 0)
+            return new Dictionary<long, IReadOnlyList<string>>();
+
+        var ids = productIds.Distinct().ToArray();
+        var rows = await _context.ProductImages.AsNoTracking()
+            .Where(x => ids.Contains(x.ProductId) && !x.IsDeleted)
+            .OrderBy(x => x.SortOrder)
+            .Select(x => new { x.ProductId, x.ImageUrl, x.ThumbnailUrl })
+            .ToListAsync(ct);
+
+        return rows
+            .GroupBy(x => x.ProductId)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<string>)g
+                    .Select(x => !string.IsNullOrWhiteSpace(x.ImageUrl) ? x.ImageUrl : x.ThumbnailUrl)
+                    .Where(url => !string.IsNullOrWhiteSpace(url))
+                    .ToList());
+    }
+
     public async Task ReplaceForProductAsync(ProductId productId, IReadOnlyList<ProductImage> images, CancellationToken ct = default)
     {
         var existing = await _context.ProductImages.Where(x => x.ProductId == productId.Value).ToListAsync(ct);

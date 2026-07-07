@@ -40,7 +40,7 @@ const DEFAULT_SECTIONS: FooterSection[] = [
       { label: "Проєкти", href: "#" },
       { label: "Події", href: "#" },
       { label: "Партнери", href: "#" },
-      { label: "Про нас", href: "#" },
+      { label: "Про нас", href: "/about" },
     ],
   },
   {
@@ -84,9 +84,15 @@ function FooterSectionBlock({ section }: { section: FooterSection }) {
       <ul className={styles.list}>
         {section.links.map((link) => (
           <li key={link.label}>
-            <a href={link.href} className={styles.link}>
-              {link.label}
-            </a>
+            {link.href.startsWith("/") ? (
+              <Link href={link.href} className={styles.link}>
+                {link.label}
+              </Link>
+            ) : (
+              <a href={link.href} className={styles.link}>
+                {link.label}
+              </a>
+            )}
           </li>
         ))}
       </ul>

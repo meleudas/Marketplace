@@ -45,27 +45,20 @@ public sealed class SendGridEmailSender : IEmailPort, IEmailSender, IEmailHealth
 
     public Task SendConfirmationEmailAsync(string to, string token, CancellationToken ct = default)
     {
-        var link = EmailConfirmationLinkBuilder.Build(_frontend.BaseUrl, to, token);
-        var body =
-            "Підтвердіть email, перейшовши за посиланням:\n" + link + "\n\n" +
-            "Якщо ви не реєструвались, проігноруйте цей лист.";
-        return SendEmailAsync(to, "Підтвердження email", body, ct);
+        var message = TransactionalEmailContentBuilder.BuildConfirmation(_frontend.BaseUrl, to, token);
+        return SendEmailAsync(to, message.Subject, message.Body, ct);
     }
 
     public Task SendPasswordResetEmailAsync(string to, string token, CancellationToken ct = default)
     {
-        var body =
-            $"Ваш код для скидання пароля: {token}\n\n" +
-            "Якщо ви не запитували скидання, змініть пароль і перевірте безпеку акаунта.";
-        return SendEmailAsync(to, "Скидання пароля", body, ct);
+        var message = TransactionalEmailContentBuilder.BuildPasswordReset(token);
+        return SendEmailAsync(to, message.Subject, message.Body, ct);
     }
 
     public Task SendTwoFactorCodeEmailAsync(string to, string code, CancellationToken ct = default)
     {
-        var body =
-            $"Ваш код 2FA: {code}\n\n" +
-            "Код одноразовий. Нікому його не повідомляйте.";
-        return SendEmailAsync(to, "Код двофакторної автентифікації", body, ct);
+        var message = TransactionalEmailContentBuilder.BuildTwoFactorCode(code);
+        return SendEmailAsync(to, message.Subject, message.Body, ct);
     }
 
     public async Task<EmailHealthStatus> CheckAsync(CancellationToken ct = default)

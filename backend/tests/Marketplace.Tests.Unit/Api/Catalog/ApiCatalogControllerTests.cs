@@ -102,7 +102,7 @@ public class ApiCatalogControllerTests
         var sender = new RecordingSender
         {
             NextResult = Result<IReadOnlyList<ProductListItemDto>>.Success(
-                [new ProductListItemDto(1, Guid.NewGuid(), "Product", "product", "Desc", 100, null, 1, "active", false, 10, 1, 10, "in_stock", DateTime.UtcNow, DateTime.UtcNow)])
+                [new ProductListItemDto(1, Guid.NewGuid(), "Product", "product", "Desc", 100, null, null, 1, "active", false, 10, 1, 10, "in_stock", DateTime.UtcNow, DateTime.UtcNow, [])])
         };
 
         var controller = new CatalogController(sender, NullLogger<CatalogController>.Instance);
@@ -123,7 +123,7 @@ public class ApiCatalogControllerTests
 
         var controller = new CatalogController(sender, NullLogger<CatalogController>.Instance);
         var response = await controller.SearchProducts(
-            new SearchCatalogProductsRequest("Keyboard", null, [1, 2], null, 10, 1000, "in_stock", "price_asc", 2, 25, "cursor"),
+            new SearchCatalogProductsRequest("Keyboard", null, [1, 2], null, 10, 1000, "in_stock", null, null, null, null, "price_asc", 2, 25, "cursor"),
             CancellationToken.None);
 
         Assert.IsType<OkObjectResult>(response);

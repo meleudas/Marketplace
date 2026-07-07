@@ -389,6 +389,12 @@ public class ApplicationCheckoutCartCommandTests
         }
         public Task<IReadOnlyList<Product>> ListByCompanyAsync(CompanyId companyId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Product>>(_items.Values.Where(x => x.CompanyId == companyId).ToList());
         public Task<IReadOnlyList<Product>> ListActiveAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Product>>(_items.Values.Where(x => x.Status == ProductStatus.Active && !x.IsDeleted).ToList());
+        public Task<IReadOnlyList<Product>> ListActiveOnSaleAsync(Guid? companyId = null, IReadOnlyList<long>? categoryIds = null, decimal? minPrice = null, decimal? maxPrice = null, decimal? minDiscountPercent = null, CancellationToken ct = default)
+            => Marketplace.Tests.Common.Fakes.ProductRepositoryFakeMethods.ListActiveOnSaleAsync(_items.Values, companyId, categoryIds, minPrice, maxPrice, minDiscountPercent, ct);
+        public Task<IReadOnlyList<Product>> ListActiveNewestAsync(Guid? companyId = null, IReadOnlyList<long>? categoryIds = null, decimal? minPrice = null, decimal? maxPrice = null, CancellationToken ct = default)
+            => Marketplace.Tests.Common.Fakes.ProductRepositoryFakeMethods.ListActiveNewestAsync(_items.Values, companyId, categoryIds, minPrice, maxPrice, ct);
+        public Task<IReadOnlyList<Product>> ListActivePopularAsync(Guid? companyId = null, IReadOnlyList<long>? categoryIds = null, decimal? minPrice = null, decimal? maxPrice = null, CancellationToken ct = default)
+            => Marketplace.Tests.Common.Fakes.ProductRepositoryFakeMethods.ListActivePopularAsync(_items.Values, companyId, categoryIds, minPrice, maxPrice, ct);
         public Task<IReadOnlyList<Product>> ListPendingReviewAsync(CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<Product>>(_items.Values.Where(x => x.Status == ProductStatus.PendingReview && !x.IsDeleted).ToList());
         public Task AddAsync(Product product, CancellationToken ct = default) { Seed(product); return Task.CompletedTask; }

@@ -1,6 +1,7 @@
 using Marketplace.Application.Catalog.Cache;
 using Marketplace.Application.Common.Options;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Products.Catalog;
 using Marketplace.Application.Products.DTOs;
 using Marketplace.Application.Products.Mappings;
 using Marketplace.Domain.Catalog.Repositories;
@@ -15,13 +16,20 @@ namespace Marketplace.Application.Products.Queries.GetCatalogProducts;
 public sealed class GetCatalogProductsQueryHandler : IRequestHandler<GetCatalogProductsQuery, Result<IReadOnlyList<ProductListItemDto>>>
 {
     private readonly IProductRepository _productRepository;
+    private readonly IProductImageRepository _productImageRepository;
     private readonly IWarehouseStockRepository _stockRepository;
     private readonly IAppCachePort _cache;
     private readonly CacheTtlOptions _ttl;
 
-    public GetCatalogProductsQueryHandler(IProductRepository productRepository, IWarehouseStockRepository stockRepository, IAppCachePort cache, IOptions<CacheTtlOptions> ttl)
+    public GetCatalogProductsQueryHandler(
+        IProductRepository productRepository,
+        IProductImageRepository productImageRepository,
+        IWarehouseStockRepository stockRepository,
+        IAppCachePort cache,
+        IOptions<CacheTtlOptions> ttl)
     {
         _productRepository = productRepository;
+        _productImageRepository = productImageRepository;
         _stockRepository = stockRepository;
         _cache = cache;
         _ttl = ttl.Value;
@@ -36,14 +44,10 @@ public sealed class GetCatalogProductsQueryHandler : IRequestHandler<GetCatalogP
                 return Result<IReadOnlyList<ProductListItemDto>>.Success(cached);
 
             var products = await _productRepository.ListActiveAsync(ct);
-            var dtos = new List<ProductListItemDto>(products.Count);
-            foreach (var p in products)
-            {
-                var stockRows = await _stockRepository.ListByProductAsync(p.CompanyId, p.Id, ct);
-                var available = stockRows.Sum(x => x.Available);
-                var status = available <= 0 ? "out_of_stock" : available <= 5 ? "low_stock" : "in_stock";
-                dtos.Add(ProductMapper.ToListItemDto(p, available, status));
-            }
+            var dtos = await ProductListImageEnricher.WithImageUrlsAsync(
+                await BuildProductListAsync(products, ct),
+                _productImageRepository,
+                ct);
 
             await _cache.SetAsync(CatalogCacheKeys.ProductList, dtos, _ttl.CatalogProductList, ct);
             return Result<IReadOnlyList<ProductListItemDto>>.Success(dtos);
@@ -52,5 +56,21 @@ public sealed class GetCatalogProductsQueryHandler : IRequestHandler<GetCatalogP
         {
             return Result<IReadOnlyList<ProductListItemDto>>.Failure($"Failed to get catalog products: {ex.Message}");
         }
+    }
+
+    private async Task<IReadOnlyList<ProductListItemDto>> BuildProductListAsync(
+        IReadOnlyList<Domain.Catalog.Entities.Product> products,
+        CancellationToken ct)
+    {
+        var dtos = new List<ProductListItemDto>(products.Count);
+        foreach (var p in products)
+        {
+            var stockRows = await _stockRepository.ListByProductAsync(p.CompanyId, p.Id, ct);
+            var available = stockRows.Sum(x => x.Available);
+            var status = available <= 0 ? "out_of_stock" : available <= 5 ? "low_stock" : "in_stock";
+            dtos.Add(ProductMapper.ToListItemDto(p, available, status));
+        }
+
+        return dtos;
     }
 }

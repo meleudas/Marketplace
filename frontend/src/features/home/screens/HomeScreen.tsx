@@ -1,13 +1,13 @@
 "use client";
 
-<<<<<<< Updated upstream
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   getCatalogCategories,
-  getCatalogProductBySlug,
-  getCatalogProducts,
-  searchCatalogProducts,
+  getCatalogNewProducts,
+  getCatalogOnSaleProducts,
+  getCatalogPopularProducts,
+  getPersonalizedRecommendations,
 } from "@/features/storefront/api/catalog.api";
 import {
   CATALOG_PRODUCT_SORT_OPTIONS,
@@ -31,90 +31,27 @@ import {
 } from "@/shared/ui";
 import iconStyles from "@/shared/ui/icons/Icon.module.css";
 import type { ProductCardData } from "@/shared/ui/ProductCard";
-=======
-import Image from "next/image";
-import { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import {
-  getCatalogCategories,
-  getCatalogNewProducts,
-  getCatalogOnSaleProducts,
-  getCatalogPopularProducts,
-  getPersonalizedRecommendations,
-  searchCatalogProducts,
-} from "@/features/storefront/api/catalog.api";
 import type { CatalogCategoryDto } from "@/features/storefront/model/catalog.types";
 import { mapProductToRailCard, type ProductRailCard } from "@/features/home/lib/map-product-to-rail-card";
-import { CatalogMenu, PageLayout, ProductCard, Spinner } from "@/shared/ui";
+import { CatalogMenu, PageLayout } from "@/shared/ui";
 import { ProductRailItems } from "../ui/ProductRailItems";
 import { RecommendationsRail } from "../ui/RecommendationsRail";
->>>>>>> Stashed changes
 import styles from "./HomeScreen.module.css";
 
-const PAGE_SIZE = 8;
-
-const mapProductToCard = (
-  product: CatalogProductListItemDto,
-  imageUrl?: string | null,
-): ProductCardData => ({
-  id: String(product.id),
-  title: product.name,
-  price: product.price,
-  imageUrl: imageUrl ?? undefined,
-  inStock: product.availabilityStatus !== "out_of_stock" && product.availableQty > 0,
-});
-
-const filterProductsLocally = (
-  items: CatalogProductListItemDto[],
-  options: {
-    query: string;
-    categoryId?: number;
-    inStockOnly: boolean;
-    sort: CatalogProductSort | null;
-  },
-): CatalogProductListItemDto[] => {
-  const query = options.query.toLowerCase();
-  let result = [...items];
-
-  if (options.categoryId) {
-    result = result.filter((product) => product.categoryId === options.categoryId);
-  }
-
-  if (options.inStockOnly) {
-    result = result.filter(
-      (product) => product.availabilityStatus !== "out_of_stock" && product.availableQty > 0,
-    );
-  }
-
-  if (query) {
-    result = result.filter((product) =>
-      [product.name, product.description, product.slug].some((value) =>
-        value.toLowerCase().includes(query),
-      ),
-    );
-  }
-
-  return options.sort ? sortCatalogProducts(result, options.sort) : result;
-};
+const HOME_RAIL_PAGE_SIZE = 12;
 
 export function HomeScreen() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const [categories, setCategories] = useState<CatalogCategoryDto[]>([]);
-  const [products, setProducts] = useState<CatalogProductListItemDto[]>([]);
-  const [productImages, setProductImages] = useState<Record<string, string | null>>({});
-
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [inStockOnly, setInStockOnly] = useState(false);
-  const [selectedCategorySlug, setSelectedCategorySlug] = useState<string | null>(null);
-  const [selectedSort, setSelectedSort] = useState<CatalogProductSort | null>(null);
-  const [sortModalOpen, setSortModalOpen] = useState(false);
-  const [searchInput, setSearchInput] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const pendingScrollY = useRef<number | null>(null);
-  const productImagesRef = useRef<Record<string, string | null>>({});
+  const [recommendations, setRecommendations] = useState<ProductRailCard[]>([]);
+  const [popular, setPopular] = useState<ProductRailCard[]>([]);
+  const [newProducts, setNewProducts] = useState<ProductRailCard[]>([]);
+  const [onSale, setOnSale] = useState<ProductRailCard[]>([]);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(true);
+  const [popularLoading, setPopularLoading] = useState(true);
+  const [newProductsLoading, setNewProductsLoading] = useState(true);
+  const [onSaleLoading, setOnSaleLoading] = useState(true);
 
   const [feedItems, setFeedItems] = useState<ProductRailCard[]>([]);
   const [feedLoading, setFeedLoading] = useState(false);
@@ -143,12 +80,10 @@ export function HomeScreen() {
   useEffect(() => {
     const load = async () => {
       try {
-        setError(null);
         const categoriesData = await getCatalogCategories();
-
         setCategories(categoriesData.filter((category) => category.isActive));
       } catch {
-        setError("Не вдалося завантажити категорії");
+        setCategories([]);
       }
     };
 
@@ -156,37 +91,8 @@ export function HomeScreen() {
   }, []);
 
   useEffect(() => {
-<<<<<<< Updated upstream
     setCurrentPage(1);
   }, [selectedCategorySlug, inStockOnly, selectedSort, searchQuery]);
-=======
-    setFeedPage(1);
-    setHasMore(true);
-    void loadFeed(1, selectedCategory, false);
-  }, [selectedCategory, loadFeed]);
-
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const triggerRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (feedLoading) return;
-      if (observerRef.current) observerRef.current.disconnect();
-
-      observerRef.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          const nextPage = feedPage + 1;
-          setFeedPage(nextPage);
-          void loadFeed(nextPage, selectedCategory, true);
-        }
-      });
-
-      if (node) observerRef.current.observe(node);
-    },
-    [feedLoading, hasMore, feedPage, selectedCategory, loadFeed]
-  );
-
-  useEffect(() => {
-    let cancelled = false;
->>>>>>> Stashed changes
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -199,181 +105,92 @@ export function HomeScreen() {
   useEffect(() => {
     let cancelled = false;
 
-    const loadProducts = async () => {
+    const loadRecommendations = async () => {
       try {
-        setLoading(true);
-        setError(null);
-
-        const selectedCategory = selectedCategorySlug
-          ? categories.find((category) => category.slug === selectedCategorySlug)
-          : null;
-        const shouldUseSearchEndpoint = Boolean(
-          searchQuery || selectedCategory || inStockOnly || selectedSort,
-        );
-
-        let nextProducts = await getCatalogProducts();
-
-        if (shouldUseSearchEndpoint) {
-          const searchResult = await searchCatalogProducts({
-            query: searchQuery || undefined,
-            categoryIds: selectedCategory ? [selectedCategory.id] : undefined,
-            availabilityStatus: inStockOnly ? "in_stock" : undefined,
-            sort: selectedSort ?? undefined,
-            page: 1,
-            pageSize: 200,
-          });
-
-          nextProducts =
-            searchResult.items.length > 0
-              ? searchResult.items
-              : filterProductsLocally(nextProducts, {
-                  query: searchQuery,
-                  categoryId: selectedCategory?.id,
-                  inStockOnly,
-                  sort: selectedSort,
-                });
-        }
+        setRecommendationsLoading(true);
+        const result = await getPersonalizedRecommendations({ limit: HOME_RAIL_PAGE_SIZE });
 
         if (!cancelled) {
-          setProducts(nextProducts);
+          setRecommendations(result.items.map(mapProductToRailCard));
         }
       } catch {
         if (!cancelled) {
-          setError("Не вдалося завантажити товари");
+          setRecommendations([]);
         }
-      } finally {
+      }
+      finally {
         if (!cancelled) {
-          setLoading(false);
+          setRecommendationsLoading(false);
         }
       }
     };
 
-    void loadProducts();
+    void loadRecommendations();
 
     return () => {
       cancelled = true;
     };
-  }, [categories, inStockOnly, searchQuery, selectedCategorySlug, selectedSort]);
-
-  const filteredProducts = useMemo(() => {
-    return selectedSort && !searchQuery ? sortCatalogProducts(products, selectedSort) : products;
-  }, [products, searchQuery, selectedSort]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
+  }, []);
 
   useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
-
-  const paginatedProducts = filteredProducts.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
-  );
-
-  productImagesRef.current = productImages;
-
-  useLayoutEffect(() => {
-    if (pendingScrollY.current === null) {
-      return;
-    }
-
-    window.scrollTo(0, pendingScrollY.current);
-    pendingScrollY.current = null;
-  }, [currentPage, paginatedProducts]);
-
-  useEffect(() => {
-    const slugsToLoad = products
-      .map((product) => product.slug)
-      .filter((slug) => !(slug in productImagesRef.current));
-
-    if (slugsToLoad.length === 0) {
-      return;
-    }
-
     let cancelled = false;
 
-    const loadImages = async () => {
-      const entries = await Promise.all(
-        slugsToLoad.map(async (slug) => {
-          try {
-            const details = await getCatalogProductBySlug(slug);
-            const image = details.images[0]?.thumbnailUrl ?? details.images[0]?.imageUrl ?? null;
-            return [slug, image] as const;
-          } catch {
-            return [slug, null] as const;
-          }
-        }),
-      );
+    const loadBrowseRails = async () => {
+      setPopularLoading(true);
+      setNewProductsLoading(true);
+      setOnSaleLoading(true);
+
+      const [popularResult, newResult, onSaleResult] = await Promise.allSettled([
+        getCatalogPopularProducts({ pageSize: HOME_RAIL_PAGE_SIZE }),
+        getCatalogNewProducts({ pageSize: HOME_RAIL_PAGE_SIZE }),
+        getCatalogOnSaleProducts({ pageSize: HOME_RAIL_PAGE_SIZE }),
+      ]);
 
       if (cancelled) {
         return;
       }
 
-      setProductImages((current) => {
-        const next = { ...current };
-        for (const [slug, image] of entries) {
-          next[slug] = image;
-        }
-        return next;
-      });
+      setPopular(
+        popularResult.status === "fulfilled"
+          ? popularResult.value.items.map(mapProductToRailCard)
+          : [],
+      );
+      setNewProducts(
+        newResult.status === "fulfilled" ? newResult.value.items.map(mapProductToRailCard) : [],
+      );
+      setOnSale(
+        onSaleResult.status === "fulfilled" ? onSaleResult.value.items.map(mapProductToRailCard) : [],
+      );
+      setPopularLoading(false);
+      setNewProductsLoading(false);
+      setOnSaleLoading(false);
     };
 
-    void loadImages();
+    void loadBrowseRails();
 
     return () => {
       cancelled = true;
     };
-  }, [products]);
-
-  const sortButtonLabel = selectedSort ? getCatalogProductSortLabel(selectedSort) : "Сортувати";
-
-  const handlePageChange = (page: number) => {
-    if (page === currentPage) {
-      return;
-    }
-
-    pendingScrollY.current = window.scrollY;
-    setCurrentPage(page);
-  };
-
-  const handleSortSelect = (sort: CatalogProductSort) => {
-    setSelectedSort(sort);
-    setSortModalOpen(false);
-  };
+  }, []);
 
   return (
     <PageLayout
       headerProps={{
         homeHref: "/",
         userHref: "/me",
-        searchValue: searchInput,
-        searchPlaceholder: "Пошук книг",
-        onSearchChange: setSearchInput,
+        onMenuClick: () => setCatalogOpen(true),
       }}
       footerProps={{ homeHref: "/" }}
     >
-      {categories.length > 0 ? (
-        <div className={styles.categories} role="tablist" aria-label="Категорії">
-          {categories.map((category) => {
-            const isActive = selectedCategorySlug === category.slug;
-
-            return (
-              <button
-                key={category.id}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                className={`${styles.categoryChip} ${isActive ? styles.categoryChipActive : ""}`.trim()}
-                onClick={() =>
-                  setSelectedCategorySlug((current) => (current === category.slug ? null : category.slug))
-                }
-              >
-                {category.name}
-              </button>
-            );
-          })}
+      <section className={styles.promoBanner} aria-label="Рекламний банер">
+        <div className={styles.promoContent}>
+          <p className={styles.promoEyebrow}>Не пропусти!</p>
+          <p className={styles.promoQuote}>“Літературне чаювання”</p>
+          <p className={styles.promoDate}>
+            11:00 - Середа
+            <br />
+            15 квітня 2026
+          </p>
         </div>
       ) : null}
 
@@ -390,7 +207,6 @@ export function HomeScreen() {
           Фільтри
         </Button>
 
-<<<<<<< Updated upstream
         <div className={styles.sortAnchor}>
           <Button
             type="button"
@@ -492,79 +308,6 @@ export function HomeScreen() {
           onClick={() => setSortModalOpen(false)}
         />
       ) : null}
-=======
-      <RecommendationsRail title="Рекомендовані" loading={recommendationsLoading} viewAllHref="/catalog">
-        <ProductRailItems items={recommendations} />
-      </RecommendationsRail>
-
-      <RecommendationsRail title="Популярні" loading={popularLoading} viewAllHref="/catalog?sort=relevance">
-        <ProductRailItems items={popular} />
-      </RecommendationsRail>
-
-      <RecommendationsRail title="Новинки" loading={newProductsLoading} viewAllHref="/catalog?sort=newest">
-        <ProductRailItems items={newProducts} />
-      </RecommendationsRail>
-
-      <RecommendationsRail title="Акції" loading={onSaleLoading} viewAllHref="/catalog">
-        <ProductRailItems items={onSale} />
-      </RecommendationsRail>
-
-      <section className={styles.feedSection}>
-        <div className={styles.feedHeader}>
-          <h2 className={styles.feedTitle}>Спеціально для вас</h2>
-          
-          <div className={styles.tagPillsList} role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={selectedCategory === null}
-              className={`${styles.tagPill} ${selectedCategory === null ? styles.tagPillActive : ""}`}
-              onClick={() => setSelectedCategory(null)}
-            >
-              Всі
-            </button>
-            {categories
-              .filter((c) => c.parentId === null && c.productCount > 0)
-              .map((cat) => (
-                <button
-                  type="button"
-                  key={cat.id}
-                  role="tab"
-                  aria-selected={selectedCategory === cat.id}
-                  className={`${styles.tagPill} ${selectedCategory === cat.id ? styles.tagPillActive : ""}`}
-                  onClick={() => setSelectedCategory(cat.id)}
-                >
-                  #{cat.name}
-                </button>
-              ))}
-          </div>
-        </div>
-
-        {feedItems.length > 0 ? (
-          <div className={styles.feedGrid}>
-            {feedItems.map((item) => (
-              <Link key={item.id} href={item.href} className={styles.feedCardLink}>
-                <ProductCard product={item} />
-              </Link>
-            ))}
-          </div>
-        ) : (
-          !feedLoading && (
-            <div className={styles.feedEmpty}>
-              Немає товарів у цій категорії
-            </div>
-          )
-        )}
-
-        {feedLoading && (
-          <div className={styles.feedLoading}>
-            <Spinner />
-          </div>
-        )}
-
-        {hasMore && <div ref={triggerRef} className={styles.scrollTrigger} />}
-      </section>
-
       <CatalogMenu
         open={catalogOpen}
         categories={categories.map((category) => ({
@@ -584,7 +327,6 @@ export function HomeScreen() {
           router.push(`/catalog${formatParam}`);
         }}
       />
->>>>>>> Stashed changes
     </PageLayout>
   );
 }

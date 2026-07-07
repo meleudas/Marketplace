@@ -71,7 +71,7 @@ public class ApiUsersControllerTests
             => Task.FromResult(Result<IReadOnlyList<UserDto>>.Success([]));
 
         public Task<Result<UserDto>> GetMeAsync(Guid identityUserId, CancellationToken ct = default)
-            => Task.FromResult(Result<UserDto>.Success(new UserDto(identityUserId, "First", "Last", "Buyer", null, null, true, null, null, DateTime.UtcNow, DateTime.UtcNow, false, null, [])));
+            => Task.FromResult(Result<UserDto>.Success(new UserDto(identityUserId, "First", "Last", null, "buyer", "user@example.com", "+380501234567", null, null, true, null, null, DateTime.UtcNow, DateTime.UtcNow, false, null, [])));
 
         public Task<Result<IReadOnlyList<UserDto>>> SearchByUserNameAsync(string userName, CancellationToken ct = default)
             => Task.FromResult(Result<IReadOnlyList<UserDto>>.Success([]));

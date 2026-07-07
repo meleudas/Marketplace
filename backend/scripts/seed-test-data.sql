@@ -437,8 +437,9 @@ VALUES
     NULL
 );
 
--- 5) Categories (bookstore)
+-- 5) Categories (bookstore hierarchy: 4 roots + nested subcategories)
 INSERT INTO categories (
+    "Id",
     "Name",
     "Slug",
     "ImageUrl",
@@ -452,62 +453,54 @@ INSERT INTO categories (
     "IsDeleted",
     "DeletedAt"
 ) VALUES
-(
-    'Художня література',
-    'fiction',
-    NULL,
-    NULL,
-    'Романи, повісті та класика',
-    '{"seed":true,"segment":"books"}',
-    1,
-    TRUE,
-    NOW(),
-    NOW(),
-    FALSE,
-    NULL
-),
-(
-    'Детективи',
-    'detectives',
-    NULL,
-    1,
-    'Детективні романи та трилери',
-    '{"seed":true,"segment":"books"}',
-    2,
-    TRUE,
-    NOW(),
-    NOW(),
-    FALSE,
-    NULL
-),
-(
-    'Нон-фікшн',
-    'non-fiction',
-    NULL,
-    NULL,
-    'Біографії, історія, наука, бізнес',
-    '{"seed":true,"segment":"books"}',
-    3,
-    TRUE,
-    NOW(),
-    NOW(),
-    FALSE,
-    NULL
-),
-(
-    'Дитяча література',
-    'children',
-    NULL,
-    NULL,
-    'Книги для дітей та підлітків',
-    '{"seed":true,"segment":"books"}',
-    4,
-    TRUE,
-    NOW(),
-    NOW(),
-    FALSE,
-    NULL
-);
+(1, 'Художня література', 'fiction', NULL, NULL, 'Романи, детективи, фантастика та класика', '{"seed":true,"segment":"books","level":"root"}', 1, TRUE, NOW(), NOW(), FALSE, NULL),
+(11, 'Романи', 'fiction-novels', NULL, 1, 'Художні романи', '{"seed":true,"segment":"books","parent":"fiction"}', 1, TRUE, NOW(), NOW(), FALSE, NULL),
+(12, 'Детективи', 'fiction-detectives', NULL, 1, 'Детективні романи', '{"seed":true,"segment":"books","parent":"fiction"}', 2, TRUE, NOW(), NOW(), FALSE, NULL),
+(13, 'Фентезі', 'fiction-fantasy', NULL, 1, 'Фентезійні романи', '{"seed":true,"segment":"books","parent":"fiction"}', 3, TRUE, NOW(), NOW(), FALSE, NULL),
+(14, 'Класика', 'fiction-classics', NULL, 1, 'Класична художня література', '{"seed":true,"segment":"books","parent":"fiction"}', 4, TRUE, NOW(), NOW(), FALSE, NULL),
+(15, 'Трилери', 'fiction-thrillers', NULL, 1, 'Психологічні та саспенс трилери', '{"seed":true,"segment":"books","parent":"fiction"}', 5, TRUE, NOW(), NOW(), FALSE, NULL),
+(16, 'Проза', 'fiction-prose', NULL, 1, 'Сучасна та класична проза', '{"seed":true,"segment":"books","parent":"fiction"}', 6, TRUE, NOW(), NOW(), FALSE, NULL),
+(17, 'Фантастика', 'fiction-sci-fi', NULL, 1, 'Наукова фантастика', '{"seed":true,"segment":"books","parent":"fiction"}', 7, TRUE, NOW(), NOW(), FALSE, NULL),
+(18, 'Містика і жахи', 'fiction-mystery-horror', NULL, 1, 'Містика, horror та dark fiction', '{"seed":true,"segment":"books","parent":"fiction"}', 8, TRUE, NOW(), NOW(), FALSE, NULL),
+(19, 'Пригоди', 'fiction-adventure', NULL, 1, 'Пригодницькі романи', '{"seed":true,"segment":"books","parent":"fiction"}', 9, TRUE, NOW(), NOW(), FALSE, NULL),
+(20, 'Колекційні і лімітовані видання', 'fiction-collectible', NULL, 1, 'Колекційні та лімітовані видання', '{"seed":true,"segment":"books","parent":"fiction"}', 10, TRUE, NOW(), NOW(), FALSE, NULL),
+
+(2, 'Документальна література', 'documentary', NULL, NULL, 'Біографії, історія, наука та нон-фікшн', '{"seed":true,"segment":"books","level":"root"}', 2, TRUE, NOW(), NOW(), FALSE, NULL),
+(21, 'Біографії та мемуари', 'documentary-biographies', NULL, 2, 'Біографії, автобіографії та мемуари', '{"seed":true,"segment":"books","parent":"documentary"}', 1, TRUE, NOW(), NOW(), FALSE, NULL),
+(22, 'Історія', 'documentary-history', NULL, 2, 'Історична документальна література', '{"seed":true,"segment":"books","parent":"documentary"}', 2, TRUE, NOW(), NOW(), FALSE, NULL),
+(23, 'Наука та популяризація', 'documentary-science', NULL, 2, 'Науково-популярні видання', '{"seed":true,"segment":"books","parent":"documentary"}', 3, TRUE, NOW(), NOW(), FALSE, NULL),
+(24, 'Психологія та саморозвиток', 'documentary-psychology', NULL, 2, 'Психологія, мотивація, soft skills', '{"seed":true,"segment":"books","parent":"documentary"}', 4, TRUE, NOW(), NOW(), FALSE, NULL),
+(25, 'Бізнес та економіка', 'documentary-business', NULL, 2, 'Бізнес, менеджмент, фінанси', '{"seed":true,"segment":"books","parent":"documentary"}', 5, TRUE, NOW(), NOW(), FALSE, NULL),
+(26, 'Політика та суспільство', 'documentary-politics', NULL, 2, 'Політика, соціологія, суспільні процеси', '{"seed":true,"segment":"books","parent":"documentary"}', 6, TRUE, NOW(), NOW(), FALSE, NULL),
+(27, 'Подорожі', 'documentary-travel', NULL, 2, 'Подорожі, країнознавство, репортажі', '{"seed":true,"segment":"books","parent":"documentary"}', 7, TRUE, NOW(), NOW(), FALSE, NULL),
+(28, 'True crime', 'documentary-true-crime', NULL, 2, 'Реальні злочини та розслідування', '{"seed":true,"segment":"books","parent":"documentary"}', 8, TRUE, NOW(), NOW(), FALSE, NULL),
+
+(3, 'Дитяча література', 'children', NULL, NULL, 'Книги для дітей та підлітків', '{"seed":true,"segment":"books","level":"root"}', 3, TRUE, NOW(), NOW(), FALSE, NULL),
+(31, 'Казки та малюки', 'children-fairy-tales', NULL, 3, 'Казки, малюки та bedtime stories', '{"seed":true,"segment":"books","parent":"children"}', 1, TRUE, NOW(), NOW(), FALSE, NULL),
+(32, 'Для дошкільнят', 'children-preschool', NULL, 3, 'Книги для дошкільного віку', '{"seed":true,"segment":"books","parent":"children"}', 2, TRUE, NOW(), NOW(), FALSE, NULL),
+(33, 'Для молодших школярів', 'children-elementary', NULL, 3, 'Книги для молодших школярів', '{"seed":true,"segment":"books","parent":"children"}', 3, TRUE, NOW(), NOW(), FALSE, NULL),
+(34, 'Підліткова література', 'children-ya', NULL, 3, 'Young adult та підліткова проза', '{"seed":true,"segment":"books","parent":"children"}', 4, TRUE, NOW(), NOW(), FALSE, NULL),
+(35, 'Розмальовки та активності', 'children-activity', NULL, 3, 'Розмальовки, наліпки, активності', '{"seed":true,"segment":"books","parent":"children"}', 5, TRUE, NOW(), NOW(), FALSE, NULL),
+(36, 'Навчальні книги для дітей', 'children-educational', NULL, 3, 'Розвиваючі та навчальні книги', '{"seed":true,"segment":"books","parent":"children"}', 6, TRUE, NOW(), NOW(), FALSE, NULL),
+(37, 'Комікси для дітей', 'children-comics', NULL, 3, 'Дитячі комікси та graphic novels', '{"seed":true,"segment":"books","parent":"children"}', 7, TRUE, NOW(), NOW(), FALSE, NULL),
+(38, 'Книги-м''якотики', 'children-soft-books', NULL, 3, 'М''які книжки для найменших', '{"seed":true,"segment":"books","parent":"children"}', 8, TRUE, NOW(), NOW(), FALSE, NULL),
+
+(4, 'Освітня література', 'education', NULL, NULL, 'Підручники, довідники та навчальні матеріали', '{"seed":true,"segment":"books","level":"root"}', 4, TRUE, NOW(), NOW(), FALSE, NULL),
+(41, 'Шкільні підручники', 'education-textbooks', NULL, 4, 'Підручники для школи', '{"seed":true,"segment":"books","parent":"education"}', 1, TRUE, NOW(), NOW(), FALSE, NULL),
+(42, 'Іноземні мови', 'education-languages', NULL, 4, 'Підручники та посібники з іноземних мов', '{"seed":true,"segment":"books","parent":"education"}', 2, TRUE, NOW(), NOW(), FALSE, NULL),
+(43, 'Математика та точні науки', 'education-stem', NULL, 4, 'Математика, фізика, хімія, біологія', '{"seed":true,"segment":"books","parent":"education"}', 3, TRUE, NOW(), NOW(), FALSE, NULL),
+(44, 'Гуманітарні дисципліни', 'education-humanities', NULL, 4, 'Історія, література, філософія для навчання', '{"seed":true,"segment":"books","parent":"education"}', 4, TRUE, NOW(), NOW(), FALSE, NULL),
+(45, 'IT та програмування', 'education-it', NULL, 4, 'Підручники з IT та програмування', '{"seed":true,"segment":"books","parent":"education"}', 5, TRUE, NOW(), NOW(), FALSE, NULL),
+(46, 'ЗНО/НМТ', 'education-exam-prep', NULL, 4, 'Підготовка до ЗНО та НМТ', '{"seed":true,"segment":"books","parent":"education"}', 6, TRUE, NOW(), NOW(), FALSE, NULL),
+(47, 'Методична література', 'education-methodology', NULL, 4, 'Методичні посібники для педагогів', '{"seed":true,"segment":"books","parent":"education"}', 7, TRUE, NOW(), NOW(), FALSE, NULL),
+(48, 'Словники та довідники', 'education-dictionaries', NULL, 4, 'Словники, енциклопедії та довідники', '{"seed":true,"segment":"books","parent":"education"}', 8, TRUE, NOW(), NOW(), FALSE, NULL);
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'categories_Id_seq') THEN
+        PERFORM setval('"categories_Id_seq"', (SELECT COALESCE(MAX("Id"), 1) FROM categories), TRUE);
+    END IF;
+END $$;
 
 -- 6) Companies (legacy bigint + current uuid)
 DO $$
@@ -604,54 +597,48 @@ DO $$
 DECLARE
     cid_type text;
     has_company_members boolean;
-    i int;
-    book_titles text[] := ARRAY[
-        'Кобзар', 'Лісова пісня', 'Тіні забутих предків', 'Intermezzo', 'Земля',
-        'Майстер і Маргарита', '1984', 'Старий і море', 'Великий Гетсбі', 'Гордість і упередження',
-        'Джейн Ейр', 'Війна і мир', 'Анна Кареніна', 'Злочин і кара', 'Ідіот',
-        'Брати Карамазови', 'Маленький принц', 'Гаррі Поттер і філософський камінь', 'Гаррі Поттер і таємна кімната', 'Гаррі Поттер і в''язень Азкабану',
-        'Хобіт', 'Володар перснів: Братство персня', 'Володар перснів: Дві вежі', 'Володар перснів: Повернення короля', 'Аліса в Країні чудес',
-        'Пригоди Тома Сойєра', 'Пригоди Гекльберрі Фінна', 'Етюд у багряних тонах', 'Знак чотирьох', 'Собака Баскервілів',
-        'І не лишилось жодного', 'Вбивство у Східному експресі', 'Вбивство Роджера Екройда', 'Довге прощання', 'Великий сон',
-        'Sapiens', 'Homo Deus', '21 урок для 21 століття', 'Коротка історія майже всього', 'Thinking, Fast and Slow',
-        'Atomic Habits', 'Deep Work', 'The Psychology of Money', 'Zero to One', 'Clean Code',
-        'The Pragmatic Programmer', 'Design Patterns', 'Refactoring', 'Domain-Driven Design', 'Мистецтво війни'
+    prod_id int;
+    si int;
+    j int;
+    subcat_ids int[] := ARRAY[
+        11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+        21, 22, 23, 24, 25, 26, 27, 28,
+        31, 32, 33, 34, 35, 36, 37, 38,
+        41, 42, 43, 44, 45, 46, 47, 48
     ];
-    book_authors text[] := ARRAY[
-        'Тарас Шевченко', 'Леся Українка', 'Михайло Коцюбинський', 'Михайло Коцюбинський', 'Ольга Кобилянська',
-        'Михайло Булгаков', 'Джордж Орвелл', 'Ернест Гемінгуей', 'Ф. Скотт Фіцджеральд', 'Джейн Остін',
-        'Шарлотта Бронте', 'Лев Толстой', 'Лев Толстой', 'Федір Достоєвський', 'Федір Достоєвський',
-        'Федір Достоєвський', 'Antoine de Saint-Exupéry', 'J.K. Rowling', 'J.K. Rowling', 'J.K. Rowling',
-        'J.R.R. Tolkien', 'J.R.R. Tolkien', 'J.R.R. Tolkien', 'J.R.R. Tolkien', 'Lewis Carroll',
-        'Mark Twain', 'Mark Twain', 'Arthur Conan Doyle', 'Arthur Conan Doyle', 'Arthur Conan Doyle',
-        'Agatha Christie', 'Agatha Christie', 'Agatha Christie', 'Raymond Chandler', 'Raymond Chandler',
-        'Yuval Noah Harari', 'Yuval Noah Harari', 'Yuval Noah Harari', 'Bill Bryson', 'Daniel Kahneman',
-        'James Clear', 'Cal Newport', 'Morgan Housel', 'Peter Thiel', 'Robert Martin',
-        'David Thomas', 'Gang of Four', 'Martin Fowler', 'Eric Evans', 'Sun Tzu'
+    subcat_slugs text[] := ARRAY[
+        'fiction-novels', 'fiction-detectives', 'fiction-fantasy', 'fiction-classics', 'fiction-thrillers', 'fiction-prose', 'fiction-sci-fi', 'fiction-mystery-horror', 'fiction-adventure', 'fiction-collectible',
+        'documentary-biographies', 'documentary-history', 'documentary-science', 'documentary-psychology', 'documentary-business', 'documentary-politics', 'documentary-travel', 'documentary-true-crime',
+        'children-fairy-tales', 'children-preschool', 'children-elementary', 'children-ya', 'children-activity', 'children-educational', 'children-comics', 'children-soft-books',
+        'education-textbooks', 'education-languages', 'education-stem', 'education-humanities', 'education-it', 'education-exam-prep', 'education-methodology', 'education-dictionaries'
     ];
-    book_categories int[] := ARRAY[
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-        2, 2, 2, 2, 2, 2, 2, 2,
-        3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3
+    subcat_names text[] := ARRAY[
+        'Романи', 'Детективи', 'Фентезі', 'Класика', 'Трилери', 'Проза', 'Фантастика', 'Містика і жахи', 'Пригоди', 'Колекційні і лімітовані видання',
+        'Біографії та мемуари', 'Історія', 'Наука та популяризація', 'Психологія та саморозвиток', 'Бізнес та економіка', 'Політика та суспільство', 'Подорожі', 'True crime',
+        'Казки та малюки', 'Для дошкільнят', 'Для молодших школярів', 'Підліткова література', 'Розмальовки та активності', 'Навчальні книги для дітей', 'Комікси для дітей', 'Книги-м''якотики',
+        'Шкільні підручники', 'Іноземні мови', 'Математика та точні науки', 'Гуманітарні дисципліни', 'IT та програмування', 'ЗНО/НМТ', 'Методична література', 'Словники та довідники'
     ];
-    book_prices numeric[] := ARRAY[
-        349, 299, 279, 249, 269, 459, 389, 319, 329, 349, 339, 599, 549, 429, 449, 499,
-        199, 399, 399, 419, 359, 449, 449, 449, 229, 259, 269,
-        289, 289, 309, 319, 329, 299, 349, 339,
-        499, 519, 459, 429, 479, 399, 369, 389, 419, 549, 579, 649, 599, 699, 279
+    book_pool text[] := ARRAY[
+        'Кобзар', 'Лісова пісня', 'Тіні забутих предків', 'Intermezzo', 'Земля', 'Майстер і Маргарита', '1984', 'Старий і море',
+        'Великий Гетсбі', 'Гордість і упередження', 'Джейн Ейр', 'Війна і мир', 'Анна Кареніна', 'Злочин і кара', 'Ідіот',
+        'Брати Карамазови', 'Маленький принц', 'Хобіт', 'Аліса в Країні чудес', 'Пригоди Тома Сойєра', 'Sapiens', 'Atomic Habits',
+        'Clean Code', 'Design Patterns', 'Коротка історія майже всього', 'Thinking, Fast and Slow', 'Deep Work', 'Zero to One'
     ];
-    book_company_is_second boolean[] := ARRAY[
-        FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
-        FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-        FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE,
-        FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE
+    author_pool text[] := ARRAY[
+        'Тарас Шевченко', 'Леся Українка', 'Михайло Коцюбинський', 'Ольга Кобилянська', 'Михайло Булгаков', 'Джордж Орвелл',
+        'Ернест Гемінгуей', 'Ф. Скотт Фіцджеральд', 'Джейн Остін', 'Лев Толстой', 'Федір Достоєвський', 'J.K. Rowling',
+        'J.R.R. Tolkien', 'Lewis Carroll', 'Mark Twain', 'Arthur Conan Doyle', 'Agatha Christie', 'Yuval Noah Harari',
+        'James Clear', 'Robert Martin', 'Bill Bryson', 'Daniel Kahneman', 'Cal Newport', 'Peter Thiel'
     ];
     book_company uuid;
     book_slug text;
     book_tag text;
     book_image text;
     book_thumb text;
+    book_title text;
+    book_author text;
+    book_price numeric;
+    book_category int;
 BEGIN
     SELECT c.data_type
       INTO cid_type
@@ -681,41 +668,62 @@ BEGIN
     ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '33333333-3333-3333-3333-333333333333', TRUE, 0, NULL, NOW(), NOW(), FALSE, NULL);
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'products') THEN
-        FOR i IN 1..50 LOOP
+        -- Stable anchor products for carts/orders E2E (ids 1..4)
+        FOR prod_id IN 1..4 LOOP
             book_company := CASE
-                WHEN book_company_is_second[i] THEN 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid
+                WHEN prod_id = 4 THEN 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid
                 ELSE 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid
             END;
-            book_slug := 'seed-book-' || lpad(i::text, 3, '0');
-            book_tag := CASE book_categories[i]
-                WHEN 1 THEN 'fiction'
-                WHEN 2 THEN 'detective'
-                WHEN 3 THEN 'non-fiction'
-                WHEN 4 THEN 'children'
-                ELSE 'book'
+            book_category := CASE prod_id
+                WHEN 1 THEN 14
+                WHEN 2 THEN 14
+                WHEN 3 THEN 11
+                WHEN 4 THEN 16
+                ELSE 11
             END;
-            book_image := 'https://picsum.photos/seed/marketplace-book-' || i || '/400/600';
-            book_thumb := 'https://picsum.photos/seed/marketplace-book-' || i || '/200/300';
+            book_title := CASE prod_id
+                WHEN 1 THEN 'Кобзар'
+                WHEN 2 THEN 'Лісова пісня'
+                WHEN 3 THEN 'Тіні забутих предків'
+                WHEN 4 THEN 'Intermezzo'
+                ELSE 'Seed book'
+            END;
+            book_author := CASE prod_id
+                WHEN 1 THEN 'Тарас Шевченко'
+                WHEN 2 THEN 'Леся Українка'
+                WHEN 3 THEN 'Михайло Коцюбинський'
+                WHEN 4 THEN 'Михайло Коцюбинський'
+                ELSE 'Seed Author'
+            END;
+            book_price := CASE prod_id
+                WHEN 1 THEN 349
+                WHEN 2 THEN 299
+                WHEN 3 THEN 279
+                WHEN 4 THEN 249
+                ELSE 299
+            END;
+            book_slug := 'seed-book-' || lpad(prod_id::text, 3, '0');
+            book_tag := subcat_slugs[array_position(subcat_ids, book_category)];
 
             INSERT INTO products (
                 "Id", "CompanyId", "Name", "Slug", "Description", "Price", "OldPrice", "Stock", "MinStock", "CategoryId", "Status",
                 "Rating", "ReviewCount", "ViewCount", "SalesCount", "HasVariants", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
             ) VALUES (
-                i,
+                prod_id,
                 book_company,
-                book_titles[i],
+                book_title,
                 book_slug,
-                book_authors[i] || '. Книга для книжкового маркетплейсу.',
-                book_prices[i],
-                CASE WHEN i % 3 = 0 THEN book_prices[i] + 50 ELSE NULL END,
+                book_author || '. Книга для книжкового маркетплейсу.',
+                book_price,
+                CASE WHEN prod_id % 3 = 0 THEN book_price + 50 ELSE NULL END,
                 0,
                 5,
-                book_categories[i],
+                book_category,
                 1,
-                round((3.8 + (i % 12) * 0.1)::numeric, 1),
-                3 + ((i * 7) % 40),
-                50 + i * 17,
-                i % 15,
+                round((3.8 + (prod_id % 12) * 0.1)::numeric, 1),
+                3 + ((prod_id * 7) % 40),
+                50 + prod_id * 17,
+                prod_id % 15,
                 FALSE,
                 NOW(),
                 NOW(),
@@ -727,16 +735,16 @@ BEGIN
                 "Id", "ProductId", "Slug", "AttributesRaw", "VariantsRaw", "SpecificationsRaw", "SeoRaw", "ContentBlocksRaw", "Tags", "Brands",
                 "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
             ) VALUES (
-                i,
-                i,
+                prod_id,
+                prod_id,
                 book_slug,
-                jsonb_build_object('seed', true, 'author', book_authors[i]),
+                jsonb_build_object('seed', true, 'author', book_author, 'subcategoryId', book_category),
                 '{}'::jsonb,
                 '{}'::jsonb,
                 '{}'::jsonb,
                 '{}'::jsonb,
                 ARRAY['seed', 'book', book_tag]::text[],
-                ARRAY[book_authors[i]]::text[],
+                ARRAY[book_author]::text[],
                 NOW(),
                 NOW(),
                 FALSE,
@@ -747,11 +755,11 @@ BEGIN
                 "Id", "ProductId", "ImageUrl", "ThumbnailUrl", "AltText", "SortOrder", "IsMain", "Width", "Height", "FileSize",
                 "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
             ) VALUES (
-                i,
-                i,
-                book_image,
-                book_thumb,
-                book_titles[i],
+                prod_id,
+                prod_id,
+                'https://picsum.photos/seed/marketplace-book-' || prod_id || '/400/600',
+                'https://picsum.photos/seed/marketplace-book-' || prod_id || '/200/300',
+                book_title,
                 0,
                 TRUE,
                 400,
@@ -764,6 +772,92 @@ BEGIN
             );
         END LOOP;
 
+        prod_id := 5;
+        FOR si IN 1..array_length(subcat_ids, 1) LOOP
+            FOR j IN 1..7 LOOP
+                book_category := subcat_ids[si];
+                book_tag := subcat_slugs[si];
+                book_company := CASE
+                    WHEN (prod_id + j) % 5 = 0 THEN 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid
+                    ELSE 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid
+                END;
+                book_title := subcat_names[si] || ': ' || book_pool[((si - 1 + j - 1) % array_length(book_pool, 1)) + 1];
+                book_author := author_pool[((prod_id + si + j - 1) % array_length(author_pool, 1)) + 1];
+                book_price := 219 + ((prod_id * 13 + si * 7 + j * 3) % 480);
+                book_slug := 'seed-book-' || lpad(prod_id::text, 3, '0');
+                book_image := 'https://picsum.photos/seed/marketplace-book-' || prod_id || '/400/600';
+                book_thumb := 'https://picsum.photos/seed/marketplace-book-' || prod_id || '/200/300';
+
+                INSERT INTO products (
+                    "Id", "CompanyId", "Name", "Slug", "Description", "Price", "OldPrice", "Stock", "MinStock", "CategoryId", "Status",
+                    "Rating", "ReviewCount", "ViewCount", "SalesCount", "HasVariants", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+                ) VALUES (
+                    prod_id,
+                    book_company,
+                    book_title,
+                    book_slug,
+                    book_author || '. Книга з розділу «' || subcat_names[si] || '».',
+                    book_price,
+                    CASE WHEN prod_id % 4 = 0 THEN book_price + 60 ELSE NULL END,
+                    0,
+                    5,
+                    book_category,
+                    1,
+                    round((3.7 + ((prod_id + si) % 12) * 0.1)::numeric, 1),
+                    2 + ((prod_id * 5 + si) % 35),
+                    40 + prod_id * 11,
+                    prod_id % 20,
+                    FALSE,
+                    NOW(),
+                    NOW(),
+                    FALSE,
+                    NULL
+                );
+
+                INSERT INTO product_details (
+                    "Id", "ProductId", "Slug", "AttributesRaw", "VariantsRaw", "SpecificationsRaw", "SeoRaw", "ContentBlocksRaw", "Tags", "Brands",
+                    "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+                ) VALUES (
+                    prod_id,
+                    prod_id,
+                    book_slug,
+                    jsonb_build_object('seed', true, 'author', book_author, 'subcategoryId', book_category, 'subcategory', subcat_names[si]),
+                    '{}'::jsonb,
+                    '{}'::jsonb,
+                    '{}'::jsonb,
+                    '{}'::jsonb,
+                    ARRAY['seed', 'book', book_tag]::text[],
+                    ARRAY[book_author]::text[],
+                    NOW(),
+                    NOW(),
+                    FALSE,
+                    NULL
+                );
+
+                INSERT INTO product_images (
+                    "Id", "ProductId", "ImageUrl", "ThumbnailUrl", "AltText", "SortOrder", "IsMain", "Width", "Height", "FileSize",
+                    "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
+                ) VALUES (
+                    prod_id,
+                    prod_id,
+                    book_image,
+                    book_thumb,
+                    book_title,
+                    0,
+                    TRUE,
+                    400,
+                    600,
+                    NULL,
+                    NOW(),
+                    NOW(),
+                    FALSE,
+                    NULL
+                );
+
+                prod_id := prod_id + 1;
+            END LOOP;
+        END LOOP;
+
         IF EXISTS (
             SELECT 1 FROM information_schema.columns
              WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'SubmittedByUserId'
@@ -773,53 +867,53 @@ BEGIN
                 "Rating", "ReviewCount", "ViewCount", "SalesCount", "HasVariants", "SubmittedByUserId", "ModerationRejectionReason",
                 "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
             ) VALUES
-            (51, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Книга на модерації', 'seed-book-pending',
-             'Рідкісне видання, очікує перевірки модератором.', 899.00, NULL, 0, 2, 2, 3, 0, 0, 0, 0, FALSE,
+            (243, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Книга на модерації', 'seed-book-pending',
+             'Рідкісне видання, очікує перевірки модератором.', 899.00, NULL, 0, 2, 12, 3, 0, 0, 0, 0, FALSE,
              '22222222-2222-2222-2222-222222222222', NULL, NOW(), NOW(), FALSE, NULL),
-            (52, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Відхилена книга', 'seed-book-rejected',
-             'Приклад відхиленого видання.', 749.00, NULL, 0, 2, 1, 0, 0, 0, 0, 0, FALSE,
+            (244, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Відхилена книга', 'seed-book-rejected',
+             'Приклад відхиленого видання.', 749.00, NULL, 0, 2, 14, 0, 0, 0, 0, 0, FALSE,
              '77777777-7777-7777-7777-777777777777', 'Обкладинка не відповідає опису книги.', NOW(), NOW(), FALSE, NULL);
 
             INSERT INTO product_details (
                 "Id", "ProductId", "Slug", "AttributesRaw", "VariantsRaw", "SpecificationsRaw", "SeoRaw", "ContentBlocksRaw", "Tags", "Brands",
                 "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
             ) VALUES
-            (51, 51, 'seed-book-pending', '{"seed":true,"moderation":"pending"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
+            (243, 243, 'seed-book-pending', '{"seed":true,"moderation":"pending"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
              ARRAY['book','moderation']::text[], ARRAY['Seed Press']::text[], NOW(), NOW(), FALSE, NULL),
-            (52, 52, 'seed-book-rejected', '{"seed":true,"moderation":"rejected"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
+            (244, 244, 'seed-book-rejected', '{"seed":true,"moderation":"rejected"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
              ARRAY['book','moderation']::text[], ARRAY['Seed Press']::text[], NOW(), NOW(), FALSE, NULL);
 
             INSERT INTO product_images (
                 "Id", "ProductId", "ImageUrl", "ThumbnailUrl", "AltText", "SortOrder", "IsMain", "Width", "Height", "FileSize",
                 "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
             ) VALUES
-            (51, 51, 'https://picsum.photos/seed/marketplace-book-pending/400/600', 'https://picsum.photos/seed/marketplace-book-pending/200/300', 'Книга на модерації', 0, TRUE, 400, 600, NULL, NOW(), NOW(), FALSE, NULL),
-            (52, 52, 'https://picsum.photos/seed/marketplace-book-rejected/400/600', 'https://picsum.photos/seed/marketplace-book-rejected/200/300', 'Відхилена книга', 0, TRUE, 400, 600, NULL, NOW(), NOW(), FALSE, NULL);
+            (243, 243, 'https://picsum.photos/seed/marketplace-book-pending/400/600', 'https://picsum.photos/seed/marketplace-book-pending/200/300', 'Книга на модерації', 0, TRUE, 400, 600, NULL, NOW(), NOW(), FALSE, NULL),
+            (244, 244, 'https://picsum.photos/seed/marketplace-book-rejected/400/600', 'https://picsum.photos/seed/marketplace-book-rejected/200/300', 'Відхилена книга', 0, TRUE, 400, 600, NULL, NOW(), NOW(), FALSE, NULL);
         ELSE
             INSERT INTO products (
                 "Id", "CompanyId", "Name", "Slug", "Description", "Price", "OldPrice", "Stock", "MinStock", "CategoryId", "Status",
                 "Rating", "ReviewCount", "ViewCount", "SalesCount", "HasVariants", "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
             ) VALUES
-            (51, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Книга на модерації', 'seed-book-pending',
-             'Рідкісне видання, очікує перевірки модератором.', 899.00, NULL, 0, 2, 2, 3, 0, 0, 0, 0, FALSE, NOW(), NOW(), FALSE, NULL),
-            (52, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Відхилена книга', 'seed-book-rejected',
-             'Приклад відхиленого видання.', 749.00, NULL, 0, 2, 1, 0, 0, 0, 0, 0, FALSE, NOW(), NOW(), FALSE, NULL);
+            (243, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Книга на модерації', 'seed-book-pending',
+             'Рідкісне видання, очікує перевірки модератором.', 899.00, NULL, 0, 2, 12, 3, 0, 0, 0, 0, FALSE, NOW(), NOW(), FALSE, NULL),
+            (244, 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Відхилена книга', 'seed-book-rejected',
+             'Приклад відхиленого видання.', 749.00, NULL, 0, 2, 14, 0, 0, 0, 0, 0, FALSE, NOW(), NOW(), FALSE, NULL);
 
             INSERT INTO product_details (
                 "Id", "ProductId", "Slug", "AttributesRaw", "VariantsRaw", "SpecificationsRaw", "SeoRaw", "ContentBlocksRaw", "Tags", "Brands",
                 "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
             ) VALUES
-            (51, 51, 'seed-book-pending', '{"seed":true,"moderation":"pending"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
+            (243, 243, 'seed-book-pending', '{"seed":true,"moderation":"pending"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
              ARRAY['book','moderation']::text[], ARRAY['Seed Press']::text[], NOW(), NOW(), FALSE, NULL),
-            (52, 52, 'seed-book-rejected', '{"seed":true,"moderation":"rejected"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
+            (244, 244, 'seed-book-rejected', '{"seed":true,"moderation":"rejected"}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb,
              ARRAY['book','moderation']::text[], ARRAY['Seed Press']::text[], NOW(), NOW(), FALSE, NULL);
 
             INSERT INTO product_images (
                 "Id", "ProductId", "ImageUrl", "ThumbnailUrl", "AltText", "SortOrder", "IsMain", "Width", "Height", "FileSize",
                 "CreatedAt", "UpdatedAt", "IsDeleted", "DeletedAt"
             ) VALUES
-            (51, 51, 'https://picsum.photos/seed/marketplace-book-pending/400/600', 'https://picsum.photos/seed/marketplace-book-pending/200/300', 'Книга на модерації', 0, TRUE, 400, 600, NULL, NOW(), NOW(), FALSE, NULL),
-            (52, 52, 'https://picsum.photos/seed/marketplace-book-rejected/400/600', 'https://picsum.photos/seed/marketplace-book-rejected/200/300', 'Відхилена книга', 0, TRUE, 400, 600, NULL, NOW(), NOW(), FALSE, NULL);
+            (243, 243, 'https://picsum.photos/seed/marketplace-book-pending/400/600', 'https://picsum.photos/seed/marketplace-book-pending/200/300', 'Книга на модерації', 0, TRUE, 400, 600, NULL, NOW(), NOW(), FALSE, NULL),
+            (244, 244, 'https://picsum.photos/seed/marketplace-book-rejected/400/600', 'https://picsum.photos/seed/marketplace-book-rejected/200/300', 'Відхилена книга', 0, TRUE, 400, 600, NULL, NOW(), NOW(), FALSE, NULL);
         END IF;
 
         IF EXISTS (
@@ -1237,21 +1331,21 @@ BEGIN
          'a1000001-0000-4000-8000-000000000001', NOW() - INTERVAL '5 days', NOW(), FALSE, NULL),
         (4, '44444444-4444-4444-4444-444444444444', 3, 'Товар на модерації',
          'Книга на модерації очікує перевірки.',
-         '{"templateKey":"AdminProductPendingReview","jobCorrelationId":"a1000002-0000-4000-8000-000000000002","productId":51}'::jsonb,
+         '{"templateKey":"AdminProductPendingReview","jobCorrelationId":"a1000002-0000-4000-8000-000000000002","productId":243}'::jsonb,
          '/admin/products/pending', FALSE, NULL, NOW() + INTERVAL '90 days',
-         '{"templateKey":"AdminProductPendingReview","productId":51}'::jsonb,
+         '{"templateKey":"AdminProductPendingReview","productId":243}'::jsonb,
          'a1000002-0000-4000-8000-000000000002', NOW() - INTERVAL '6 hours', NOW(), FALSE, NULL),
         (5, '22222222-2222-2222-2222-222222222222', 3, 'Товар схвалено',
          'Вашу книгу на модерації опубліковано.',
-         '{"templateKey":"UserProductApproved","jobCorrelationId":"a1000003-0000-4000-8000-000000000003","productId":51}'::jsonb,
-         '/companies/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/products/51', TRUE, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '90 days',
-         '{"templateKey":"UserProductApproved","productId":51}'::jsonb,
+         '{"templateKey":"UserProductApproved","jobCorrelationId":"a1000003-0000-4000-8000-000000000003","productId":243}'::jsonb,
+         '/companies/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/products/243', TRUE, NOW() - INTERVAL '1 hour', NOW() + INTERVAL '90 days',
+         '{"templateKey":"UserProductApproved","productId":243}'::jsonb,
          'a1000003-0000-4000-8000-000000000003', NOW() - INTERVAL '3 hours', NOW(), FALSE, NULL),
         (6, '77777777-7777-7777-7777-777777777777', 3, 'Товар відхилено',
          'Відхилена книга не пройшла модерацію.',
-         '{"templateKey":"UserProductRejected","jobCorrelationId":"a1000004-0000-4000-8000-000000000004","productId":52,"reason":"Обкладинка не відповідає опису книги."}'::jsonb,
+         '{"templateKey":"UserProductRejected","jobCorrelationId":"a1000004-0000-4000-8000-000000000004","productId":244,"reason":"Обкладинка не відповідає опису книги."}'::jsonb,
          NULL, FALSE, NULL, NOW() + INTERVAL '90 days',
-         '{"templateKey":"UserProductRejected","productId":52}'::jsonb,
+         '{"templateKey":"UserProductRejected","productId":244}'::jsonb,
          'a1000004-0000-4000-8000-000000000004', NOW() - INTERVAL '1 day', NOW(), FALSE, NULL),
         (7, '22222222-2222-2222-2222-222222222222', 0, 'Нове замовлення у вашій компанії',
          'Покупець оформив ORD-SEED-0002.',

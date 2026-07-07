@@ -177,13 +177,26 @@ app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.Health
     .WithName("HealthReady")
     .WithTags("Health");
 
+app.MapGet("/health/email", async (IEmailHealthProbe probe, CancellationToken ct) =>
+{
+    var status = await probe.CheckAsync(ct);
+    return status.IsHealthy
+        ? Results.Ok(status)
+        : Results.Problem(
+            title: "Email health check failed",
+            detail: status.Message,
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+})
+    .WithName("EmailHealthCheck")
+    .WithTags("Health");
+
 app.MapGet("/health/sendgrid", async (IEmailHealthProbe probe, CancellationToken ct) =>
 {
     var status = await probe.CheckAsync(ct);
     return status.IsHealthy
         ? Results.Ok(status)
         : Results.Problem(
-            title: "SendGrid health check failed",
+            title: "Email health check failed",
             detail: status.Message,
             statusCode: StatusCodes.Status503ServiceUnavailable);
 })

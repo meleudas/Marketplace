@@ -8,6 +8,7 @@ public sealed record ProductListItemDto(
     string Description,
     decimal Price,
     decimal? OldPrice,
+    decimal? DiscountPercent,
     long CategoryId,
     string Status,
     bool HasVariants,
@@ -16,4 +17,5 @@ public sealed record ProductListItemDto(
     int AvailableQty,
     string AvailabilityStatus,
     DateTime CreatedAt,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    IReadOnlyList<string> ImageUrls);

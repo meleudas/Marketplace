@@ -47,6 +47,8 @@ public sealed class IntegrationProductsModerationSqliteTests
         var searchHandler = new SearchCatalogProductsQueryHandler(
             new FailingSearchService(),
             products,
+            new ProductDetailRepository(db),
+            new ProductImageRepository(db),
             new WarehouseStockRepository(db),
             NullLogger<SearchCatalogProductsQueryHandler>.Instance);
 
@@ -67,11 +69,11 @@ public sealed class IntegrationProductsModerationSqliteTests
                 null),
             CancellationToken.None);
         var beforeApprove = await searchHandler.Handle(
-            new SearchCatalogProductsQuery("keyboard", null, null, null, null, null, null, null, 1, 20, null),
+            new SearchCatalogProductsQuery("keyboard", null, null, null, null, null, null, null, null, null, null, null, 1, 20, null),
             CancellationToken.None);
         var approve = await approveHandler.Handle(new ApproveProductCommand(create.Value!.Product.Id, Guid.NewGuid()), CancellationToken.None);
         var afterApprove = await searchHandler.Handle(
-            new SearchCatalogProductsQuery("keyboard", null, null, null, null, null, null, null, 1, 20, null),
+            new SearchCatalogProductsQuery("keyboard", null, null, null, null, null, null, null, null, null, null, null, 1, 20, null),
             CancellationToken.None);
 
         Assert.True(create.IsSuccess);
@@ -105,6 +107,8 @@ public sealed class IntegrationProductsModerationSqliteTests
         var searchHandler = new SearchCatalogProductsQueryHandler(
             new FailingSearchService(),
             products,
+            new ProductDetailRepository(db),
+            new ProductImageRepository(db),
             new WarehouseStockRepository(db),
             NullLogger<SearchCatalogProductsQueryHandler>.Instance);
 
@@ -129,7 +133,7 @@ public sealed class IntegrationProductsModerationSqliteTests
             new RejectProductCommand(create.Value!.Product.Id, Guid.NewGuid(), "quality issue"),
             CancellationToken.None);
         var search = await searchHandler.Handle(
-            new SearchCatalogProductsQuery("headset", null, null, null, null, null, null, null, 1, 20, null),
+            new SearchCatalogProductsQuery("headset", null, null, null, null, null, null, null, null, null, null, null, 1, 20, null),
             CancellationToken.None);
 
         Assert.True(create.IsSuccess);
@@ -178,16 +182,22 @@ public sealed class IntegrationProductsModerationSqliteTests
     private sealed class FailingSearchService : IProductSearchService
     {
         public Task<Result<ProductSearchResultDto>> SearchCatalogProductsAsync(
-            string? name,
-            IReadOnlyList<long>? categoryIds,
-            Guid? companyId,
-            decimal? minPrice,
-            decimal? maxPrice,
-            string? availabilityStatus,
-            string? sort,
-            int page,
-            int pageSize,
-            string? searchAfter,
+            CatalogProductSearchFilters filters,
+            CancellationToken ct = default)
+            => Task.FromResult(Result<ProductSearchResultDto>.Failure("search unavailable"));
+
+        public Task<Result<ProductSearchResultDto>> SearchCatalogOnSaleProductsAsync(
+            CatalogOnSaleProductFilters filters,
+            CancellationToken ct = default)
+            => Task.FromResult(Result<ProductSearchResultDto>.Failure("search unavailable"));
+
+        public Task<Result<ProductSearchResultDto>> SearchCatalogNewProductsAsync(
+            CatalogBrowsableProductFilters filters,
+            CancellationToken ct = default)
+            => Task.FromResult(Result<ProductSearchResultDto>.Failure("search unavailable"));
+
+        public Task<Result<ProductSearchResultDto>> SearchCatalogPopularProductsAsync(
+            CatalogBrowsableProductFilters filters,
             CancellationToken ct = default)
             => Task.FromResult(Result<ProductSearchResultDto>.Failure("search unavailable"));
     }

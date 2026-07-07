@@ -1,6 +1,8 @@
 using Hangfire;
 using Hangfire.MemoryStorage;
 using Hangfire.PostgreSql;
+using Amazon;
+using Amazon.SimpleEmailV2;
 using Elastic.Clients.Elasticsearch;
 using Marketplace.Application.Auth.Options;
 using Marketplace.Application.Auth.Ports;
@@ -94,6 +96,7 @@ public static class DependencyInjection
     {
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<SendGridOptions>(configuration.GetSection(SendGridOptions.SectionName));
+        services.Configure<AwsSesOptions>(configuration.GetSection(AwsSesOptions.SectionName));
         services.Configure<TelegramOptions>(configuration.GetSection(TelegramOptions.SectionName));
         services.Configure<FrontendOptions>(configuration.GetSection(FrontendOptions.SectionName));
         services.Configure<CacheTtlOptions>(configuration.GetSection(CacheTtlOptions.SectionName));
@@ -307,6 +310,7 @@ public static class DependencyInjection
         services.AddScoped<ProductSearchIndexManager>();
         services.AddScoped<IProductSearchService, ElasticsearchProductSearchService>();
         services.AddScoped<IProductSearchIndexer, ElasticsearchProductSearchService>();
+        services.AddScoped<SearchIndexBootstrapSync>();
         services.AddScoped<IProductSimilarityService, ElasticsearchProductSimilarityService>();
         services.AddScoped<IPersonalizedRecommendationService, MlNetPersonalizedRecommendationService>();
         services.AddSingleton<IRecommendationModelRegistry, ObjectStorageRecommendationModelRegistry>();
@@ -413,11 +417,28 @@ public static class DependencyInjection
             services.AddScoped<ITelegramPort>(sp => sp.GetRequiredService<LoggingTelegramSender>());
         }
 
+        var awsSesOptions = configuration.GetSection(AwsSesOptions.SectionName).Get<AwsSesOptions>() ?? new AwsSesOptions();
         var sendGridOptions = configuration.GetSection(SendGridOptions.SectionName).Get<SendGridOptions>() ?? new SendGridOptions();
+        var hasSes = awsSesOptions.IsConfigured();
         var hasSendGrid = !string.IsNullOrWhiteSpace(sendGridOptions.ApiKey) &&
                           !string.IsNullOrWhiteSpace(sendGridOptions.FromEmail);
 
-        if (hasSendGrid)
+        if (hasSes)
+        {
+            services.AddSingleton<IAmazonSimpleEmailServiceV2>(_ =>
+            {
+                var config = new AmazonSimpleEmailServiceV2Config
+                {
+                    RegionEndpoint = RegionEndpoint.GetBySystemName(awsSesOptions.Region)
+                };
+                return new AmazonSimpleEmailServiceV2Client(config);
+            });
+            services.AddScoped<AwsSesEmailSender>();
+            services.AddScoped<IEmailPort>(sp => sp.GetRequiredService<AwsSesEmailSender>());
+            services.AddScoped<IEmailSender>(sp => sp.GetRequiredService<AwsSesEmailSender>());
+            services.AddScoped<IEmailHealthProbe>(sp => sp.GetRequiredService<AwsSesEmailSender>());
+        }
+        else if (hasSendGrid)
         {
             services.AddScoped<SendGridEmailSender>();
             services.AddScoped<IEmailPort>(sp => sp.GetRequiredService<SendGridEmailSender>());
@@ -431,6 +452,9 @@ public static class DependencyInjection
             services.AddScoped<IEmailSender>(sp => sp.GetRequiredService<LoggingEmailSender>());
             services.AddScoped<IEmailHealthProbe>(sp => sp.GetRequiredService<LoggingEmailSender>());
         }
+
+        if (hasSendGrid && hasSes)
+            services.AddScoped<SendGridEmailSender>();
 
         services.AddScoped<LoggingSmsSender>();
         services.AddScoped<ISmsPort>(sp => sp.GetRequiredService<LoggingSmsSender>());
@@ -482,5 +506,8 @@ public static class DependencyInjection
 
         foreach (var seeder in seeders)
             await seeder.SeedAsync(db, sp, ct);
+
+        var searchSync = sp.GetRequiredService<SearchIndexBootstrapSync>();
+        await searchSync.SyncAfterDatabaseSeedAsync(ct);
     }
 }

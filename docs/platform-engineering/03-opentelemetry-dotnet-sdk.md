@@ -111,7 +111,7 @@ Build має проходити з новими пакетами; optional smoke
 
 ## 8. Верифікація
 
-1. Запустити `docker compose --profile observability up -d`.
+1. Запустити `docker compose -f docker-compose.dev.yml -f docker-compose.monitoring.yml --profile observability up -d`.
 2. Викликати API endpoints.
 3. Jaeger: service `marketplace-api`, spans `GET /api/...`.
 4. Prometheus: series `http_server_request_duration_*` через collector metric rename.

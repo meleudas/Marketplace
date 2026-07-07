@@ -1,56 +1,17 @@
-.categories {
-  display: flex;
-  gap: var(--space-8);
-  overflow-x: auto;
-  padding-bottom: var(--space-4);
-  scrollbar-width: none;
-}
-
-.categories::-webkit-scrollbar {
-  display: none;
-}
-
-.categoryChip {
-  flex-shrink: 0;
-  border: 1px solid var(--color-button-dark-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-neutral-800);
-  padding: var(--space-8) var(--space-12);
-  color: var(--color-text);
-  font-family: var(--font-primary);
-  font-size: var(--typography-body2-font-size);
-  line-height: var(--typography-body2-line-height);
-  cursor: pointer;
-  transition:
-    border-color var(--ui-transition-fast),
-    background-color var(--ui-transition-fast);
-}
-
-.categoryChip:hover {
-  border-color: var(--color-primary-light-blue);
-}
-
-.categoryChipActive {
-  border-color: var(--color-primary-light-blue);
-  background: var(--color-button-dark-hover-bg);
-}
-
-.toolbar {
+.promoBanner {
+  width: 100%;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-12);
-}
-
-.filterPanel {
-  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: var(--space-12);
   padding: var(--space-16);
-  border: 1px solid var(--color-button-dark-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-neutral-800);
+  border-radius: 8px;
+  background: linear-gradient(90deg, #535ddf 0%, #a3c2e0 100%);
+  box-shadow: 0 12px 24px rgb(0 0 0 / 0.16);
+  overflow: hidden;
 }
 
-.productGrid {
+.promoContent {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--product-card-width), var(--product-card-width)));
   justify-content: start;
@@ -80,7 +41,6 @@
   }
 }
 
-<<<<<<< Updated upstream
 .paginationWrap {
   display: flex;
   justify-content: center;
@@ -96,90 +56,34 @@
   min-width: 0;
 }
 
-.sortBackdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  cursor: default;
-}
-
-.sortPopover {
-  position: absolute;
-  top: calc(100% + var(--space-8));
-  right: 0;
-  z-index: 100;
-  width: max(100%, 16.5rem);
-  display: grid;
-  gap: var(--space-16);
-  padding: var(--space-20);
-  border: 1px solid var(--color-button-dark-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-neutral-800);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
-  transform-origin: top right;
-  animation: sortPopoverIn 180ms ease-out;
-}
-
-@keyframes sortPopoverIn {
-  from {
-    opacity: 0;
-    transform: scale(0.94) translate(6px, -8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1) translate(0, 0);
-  }
-}
-
-.modalHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-12);
-}
-
-.modalTitle {
-  margin: 0;
-  font-family: var(--font-primary);
-=======
-.feedSection {
-  margin-top: var(--space-32);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-20);
-  width: 100%;
-}
-
-.feedHeader {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-12);
-  width: 100%;
-}
-
-@media (min-width: 768px) {
-  .feedHeader {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
-}
-
-.feedTitle {
+.promoEyebrow {
   margin: 0;
   font-family: var(--font-primary), sans-serif;
->>>>>>> Stashed changes
+  font-size: clamp(20px, 5vw, 28px);
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--color-primary-pink);
+}
+
+.promoQuote {
+  margin: 0;
+  font-family: var(--font-primary), sans-serif;
+  font-size: clamp(14px, 3.2vw, 18px);
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.25;
+  color: var(--color-white);
+}
+
+.promoDate {
+  margin: 0;
+  font-family: var(--font-primary);
   font-size: var(--typography-h2-font-size);
   font-weight: var(--typography-h2-font-weight);
   line-height: var(--typography-h2-line-height);
   color: var(--color-text);
 }
 
-<<<<<<< Updated upstream
 .modalClose {
   display: inline-flex;
   align-items: center;
@@ -193,12 +97,15 @@
   cursor: pointer;
 }
 
-.modalClose:hover {
-  background: var(--color-button-dark-hover-bg);
-}
+@media (max-width: 480px) {
+  .promoBanner {
+    padding: var(--space-12);
+    gap: var(--space-8);
+  }
 
-.sortOptions {
-  width: 100%;
+  .promoDate {
+    white-space: normal;
+  }
 }
 =======
 .tagPillsList {
@@ -304,4 +211,3 @@
   height: 20px;
   width: 100%;
 }
->>>>>>> Stashed changes

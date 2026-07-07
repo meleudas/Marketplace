@@ -1,63 +1,55 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-<<<<<<< Updated upstream
-=======
-import {
-  searchCatalogProducts,
-  type CatalogSearchProductDto,
-} from "@/shared/api/catalog-search.api";
-import { useCartStore } from "@/features/cart/model/cart.store";
-import { useAuth } from "@/features/auth/model/auth.store";
->>>>>>> Stashed changes
+import { searchCatalogProducts, type CatalogSearchProductDto } from "@/shared/api/catalog-search.api";
 import { Container } from "./Container";
+import { Spinner } from "./Spinner";
 import { TextField } from "./TextField";
-import { BookTopLogo, CartIcon, MenuIcon, MicrophoneIcon, SearchIcon, UserIcon } from "./icons";
+import {
+  BookTopLogo,
+  CartIcon,
+  ChevronRightIcon,
+  CloseIcon,
+  FooterCatIllustration,
+  MenuIcon,
+  MicrophoneIcon,
+  SearchIcon,
+  UserIcon,
+} from "./icons";
 import iconStyles from "./icons/Icon.module.css";
 import styles from "./Header.module.css";
+
+interface SearchPreviewItem {
+  id: string;
+  slug: string;
+  title: string;
+  price: number | string;
+}
 
 interface HeaderProps {
   homeHref?: string;
   userHref?: string;
   cartHref?: string;
-  searchValue?: string;
   searchPlaceholder?: string;
-  onSearchChange?: (value: string) => void;
+  onSearchQueryChange?: (value: string) => void;
   onMenuClick?: () => void;
 }
 
 export function Header({
   homeHref = "/",
   userHref = "/auth",
-<<<<<<< Updated upstream
   cartHref = "#",
   searchValue,
-=======
-  cartHref = "/cart",
->>>>>>> Stashed changes
   searchPlaceholder = "Пошук",
-  onSearchChange,
+  onSearchQueryChange,
   onMenuClick,
 }: HeaderProps) {
-<<<<<<< Updated upstream
   return (
-    <header className={styles.header}>
-=======
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [searchResults, setSearchResults] = useState<SearchPreviewItem[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-
-  const { isAuthenticated, initialized: authInitialized } = useAuth();
-  const {
-    totalItems: cartCount,
-    loadCart,
-    initialized: cartInitialized,
-  } = useCartStore();
-
-  useEffect(() => {
-    if (authInitialized && isAuthenticated && !cartInitialized) {
-      loadCart();
-    }
-  }, [authInitialized, isAuthenticated, cartInitialized, loadCart]);
   const hasSearchQuery = Boolean(searchValue.trim());
 
   const handleOpenSearch = () => {
@@ -71,10 +63,7 @@ export function Header({
     onSearchQueryChange?.("");
   };
 
-  const previewItems = useMemo(
-    () => searchResults.slice(0, 4),
-    [searchResults],
-  );
+  const previewItems = useMemo(() => searchResults.slice(0, 4), [searchResults]);
 
   useEffect(() => {
     if (!isSearchExpanded) {
@@ -146,11 +135,7 @@ export function Header({
   }, [isSearchExpanded, searchValue]);
 
   return (
-    <header
-      className={styles.header}
-      data-search-open={isSearchExpanded ? "true" : "false"}
-    >
->>>>>>> Stashed changes
+    <header className={styles.header} data-search-open={isSearchExpanded ? "true" : "false"}>
       <Container className={styles.inner}>
         <div className={styles.topRow}>
           <button
@@ -205,18 +190,17 @@ export function Header({
           </div>
         </div>
 
-<<<<<<< Updated upstream
         <TextField
           kind="search"
-          className={styles.search}
+          className={`${styles.search} ${styles.primarySearch}`}
           value={searchValue}
           placeholder={searchPlaceholder}
           aria-label="Пошук"
           leadingIcon={<SearchIcon className={iconStyles.icon} />}
           trailingIcon={<MicrophoneIcon className={iconStyles.icon} />}
-          onChange={(event) => onSearchChange?.(event.target.value)}
+          onFocus={handleOpenSearch}
+          onChange={(event) => setSearchValue(event.target.value)}
         />
-=======
         <div className={styles.searchSheet}>
           <div className={styles.searchSheetInner}>
             <div className={styles.searchSheetHeader}>
@@ -293,7 +277,6 @@ export function Header({
 
           <FooterCatIllustration className={styles.cat} />
         </div>
->>>>>>> Stashed changes
       </Container>
     </header>
   );

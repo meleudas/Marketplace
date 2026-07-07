@@ -62,6 +62,77 @@ public sealed class ProductRepository : IProductRepository
         return rows.Select(ToDomain).ToList();
     }
 
+    public async Task<IReadOnlyList<Product>> ListActiveOnSaleAsync(
+        Guid? companyId = null,
+        IReadOnlyList<long>? categoryIds = null,
+        decimal? minPrice = null,
+        decimal? maxPrice = null,
+        decimal? minDiscountPercent = null,
+        CancellationToken ct = default)
+    {
+        var query = _context.Products.AsNoTracking()
+            .Where(x => x.Status == (short)ProductStatus.Active)
+            .Where(x => x.OldPrice != null && x.OldPrice > x.Price);
+
+        if (companyId.HasValue)
+            query = query.Where(x => x.CompanyId == companyId.Value);
+
+        if (categoryIds is { Count: > 0 })
+            query = query.Where(x => categoryIds.Contains(x.CategoryId));
+
+        if (minPrice.HasValue)
+            query = query.Where(x => x.Price >= minPrice.Value);
+
+        if (maxPrice.HasValue)
+            query = query.Where(x => x.Price <= maxPrice.Value);
+
+        if (minDiscountPercent.HasValue)
+        {
+            var threshold = minDiscountPercent.Value;
+            query = query.Where(x => ((x.OldPrice!.Value - x.Price) / x.OldPrice!.Value * 100m) >= threshold);
+        }
+
+        var rows = await query
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(ct);
+
+        return rows.Select(ToDomain).ToList();
+    }
+
+    public async Task<IReadOnlyList<Product>> ListActiveNewestAsync(
+        Guid? companyId = null,
+        IReadOnlyList<long>? categoryIds = null,
+        decimal? minPrice = null,
+        decimal? maxPrice = null,
+        CancellationToken ct = default)
+    {
+        var query = ApplyActiveBrowseFilters(_context.Products.AsNoTracking(), companyId, categoryIds, minPrice, maxPrice);
+        var rows = await query
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
+            .ToListAsync(ct);
+
+        return rows.Select(ToDomain).ToList();
+    }
+
+    public async Task<IReadOnlyList<Product>> ListActivePopularAsync(
+        Guid? companyId = null,
+        IReadOnlyList<long>? categoryIds = null,
+        decimal? minPrice = null,
+        decimal? maxPrice = null,
+        CancellationToken ct = default)
+    {
+        var query = ApplyActiveBrowseFilters(_context.Products.AsNoTracking(), companyId, categoryIds, minPrice, maxPrice);
+        var rows = await query
+            .OrderByDescending(x => x.SalesCount)
+            .ThenByDescending(x => x.ViewCount)
+            .ThenByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
+            .ToListAsync(ct);
+
+        return rows.Select(ToDomain).ToList();
+    }
+
     public async Task<IReadOnlyList<Product>> ListPendingReviewAsync(CancellationToken ct = default)
     {
         var rows = await _context.Products.AsNoTracking()
@@ -156,4 +227,28 @@ public sealed class ProductRepository : IProductRepository
             IsDeleted = p.IsDeleted,
             DeletedAt = p.DeletedAt
         };
+
+    private static IQueryable<ProductRecord> ApplyActiveBrowseFilters(
+        IQueryable<ProductRecord> query,
+        Guid? companyId,
+        IReadOnlyList<long>? categoryIds,
+        decimal? minPrice,
+        decimal? maxPrice)
+    {
+        query = query.Where(x => x.Status == (short)ProductStatus.Active);
+
+        if (companyId.HasValue)
+            query = query.Where(x => x.CompanyId == companyId.Value);
+
+        if (categoryIds is { Count: > 0 })
+            query = query.Where(x => categoryIds.Contains(x.CategoryId));
+
+        if (minPrice.HasValue)
+            query = query.Where(x => x.Price >= minPrice.Value);
+
+        if (maxPrice.HasValue)
+            query = query.Where(x => x.Price <= maxPrice.Value);
+
+        return query;
+    }
 }

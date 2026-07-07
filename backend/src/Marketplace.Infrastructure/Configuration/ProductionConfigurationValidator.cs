@@ -45,7 +45,7 @@ public static class ProductionConfigurationValidator
         ValidateJwt(configuration, errors);
         ValidateLiqPay(configuration, errors);
         ValidateGoogleAuth(configuration, errors);
-        ValidateSendGrid(configuration, errors);
+        ValidateEmailProvider(configuration, errors);
         ValidateWebPush(configuration, errors);
         ValidateStorage(configuration, errors);
         ValidateShipping(configuration, errors);
@@ -100,16 +100,25 @@ public static class ProductionConfigurationValidator
             errors.Add($"{section}:ClientId must not use development placeholder values.");
     }
 
-    private static void ValidateSendGrid(IConfiguration configuration, List<string> errors)
+    private static void ValidateEmailProvider(IConfiguration configuration, List<string> errors)
     {
         var emailEnabled = configuration.GetValue<bool?>($"{AppNotificationOptions.SectionName}:EmailEnabled") ?? true;
         if (!emailEnabled)
             return;
 
+        var sesOptions = configuration.GetSection(AwsSesOptions.SectionName).Get<AwsSesOptions>() ?? new AwsSesOptions();
+        if (sesOptions.IsConfigured())
+            return;
+
         var apiKey = configuration[$"{SendGridOptions.SectionName}:ApiKey"];
         if (string.IsNullOrWhiteSpace(apiKey))
-            errors.Add($"{SendGridOptions.SectionName}:ApiKey is required when {AppNotificationOptions.SectionName}:EmailEnabled=true.");
-        else if (!apiKey.StartsWith("SG.", StringComparison.Ordinal))
+        {
+            errors.Add(
+                $"Either {AwsSesOptions.SectionName} (Enabled, Region, FromEmail) or {SendGridOptions.SectionName}:ApiKey is required when {AppNotificationOptions.SectionName}:EmailEnabled=true.");
+            return;
+        }
+
+        if (!apiKey.StartsWith("SG.", StringComparison.Ordinal))
             errors.Add($"{SendGridOptions.SectionName}:ApiKey must be a valid SendGrid key (starts with SG.).");
     }
 

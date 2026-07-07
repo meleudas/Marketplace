@@ -112,11 +112,13 @@ public sealed class IntegrationCatalogCategoriesSqliteTests
         var handler = new SearchCatalogProductsQueryHandler(
             new FailingSearchService(),
             productRepo,
+            new ProductDetailRepository(db),
+            new ProductImageRepository(db),
             stockRepo,
             NullLogger<SearchCatalogProductsQueryHandler>.Instance);
 
         var result = await handler.Handle(
-            new SearchCatalogProductsQuery("keyboard", null, [categoryId], companyId, 100, 500, "in_stock", "price_asc", 1, 20, null),
+            new SearchCatalogProductsQuery("keyboard", null, [categoryId], companyId, 100, 500, "in_stock", null, null, null, null, "price_asc", 1, 20, null),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -192,7 +194,24 @@ public sealed class IntegrationCatalogCategoriesSqliteTests
 
     private sealed class FailingSearchService : IProductSearchService
     {
-        public Task<Result<ProductSearchResultDto>> SearchCatalogProductsAsync(string? name, IReadOnlyList<long>? categoryIds, Guid? companyId, decimal? minPrice, decimal? maxPrice, string? availabilityStatus, string? sort, int page, int pageSize, string? searchAfter, CancellationToken ct = default)
+        public Task<Result<ProductSearchResultDto>> SearchCatalogProductsAsync(
+            CatalogProductSearchFilters filters,
+            CancellationToken ct = default)
+            => Task.FromResult(Result<ProductSearchResultDto>.Failure("Elasticsearch unavailable"));
+
+        public Task<Result<ProductSearchResultDto>> SearchCatalogOnSaleProductsAsync(
+            CatalogOnSaleProductFilters filters,
+            CancellationToken ct = default)
+            => Task.FromResult(Result<ProductSearchResultDto>.Failure("Elasticsearch unavailable"));
+
+        public Task<Result<ProductSearchResultDto>> SearchCatalogNewProductsAsync(
+            CatalogBrowsableProductFilters filters,
+            CancellationToken ct = default)
+            => Task.FromResult(Result<ProductSearchResultDto>.Failure("Elasticsearch unavailable"));
+
+        public Task<Result<ProductSearchResultDto>> SearchCatalogPopularProductsAsync(
+            CatalogBrowsableProductFilters filters,
+            CancellationToken ct = default)
             => Task.FromResult(Result<ProductSearchResultDto>.Failure("Elasticsearch unavailable"));
     }
 

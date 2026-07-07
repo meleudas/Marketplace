@@ -8,6 +8,8 @@ export interface ProductCardData {
   title: string;
   author?: string;
   price: number;
+  oldPrice?: number | null;
+  discountPercent?: number | null;
   imageUrl?: string;
   inStock?: boolean;
 }
@@ -17,11 +19,35 @@ interface ProductCardProps {
   onAddToCart?: (productId: string) => void;
 }
 
+interface ProductSaleInfo {
+  discountPercent: number;
+  oldPrice: number;
+}
+
 const formatPrice = (value: number): string =>
   `${new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 0 }).format(value)} грн`;
 
+const getSaleInfo = (product: ProductCardData): ProductSaleInfo | null => {
+  const { price, oldPrice, discountPercent } = product;
+
+  if (typeof oldPrice === "number" && oldPrice > price) {
+    const resolvedDiscount =
+      typeof discountPercent === "number" && discountPercent > 0
+        ? Math.round(discountPercent)
+        : Math.round(((oldPrice - price) / oldPrice) * 100);
+
+    return {
+      discountPercent: resolvedDiscount,
+      oldPrice,
+    };
+  }
+
+  return null;
+};
+
 export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const isInStock = product.inStock ?? true;
+  const sale = getSaleInfo(product);
 
   return (
     <article className={styles.card}>
@@ -30,6 +56,11 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         {product.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img className={styles.image} src={product.imageUrl} alt={product.title} />
+        ) : null}
+        {sale ? (
+          <span className={styles.discountBadge} aria-label={`Знижка ${sale.discountPercent}%`}>
+            -{sale.discountPercent}%
+          </span>
         ) : null}
       </div>
 
@@ -43,7 +74,16 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         </p>
 
         <div className={styles.footer}>
-          <span className={styles.price}>{formatPrice(product.price)}</span>
+          <div className={styles.priceGroup}>
+            {sale ? (
+              <>
+                <span className={styles.oldPrice}>{formatPrice(sale.oldPrice)}</span>
+                <span className={styles.priceSale}>{formatPrice(product.price)}</span>
+              </>
+            ) : (
+              <span className={styles.price}>{formatPrice(product.price)}</span>
+            )}
+          </div>
           <Button
             variant="primary"
             size="icon"

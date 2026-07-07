@@ -1,26 +1,15 @@
 .header {
-<<<<<<< Updated upstream
   position: sticky;
   top: 0;
   z-index: 10;
   background: var(--header-bg);
-=======
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: var(--header-bg);
-    overflow: visible;
+  overflow: visible;
 }
 
 .header[data-search-open="true"] {
-    background:
-        radial-gradient(
-            circle at 18% 18%,
-            rgb(83 93 223 / 0.24) 0,
-            transparent 32%
-        ),
-        linear-gradient(180deg, #131417 0%, #0b0f22 40%, #08083d 100%);
->>>>>>> Stashed changes
+  background:
+    radial-gradient(circle at 18% 18%, rgb(83 93 223 / 0.24) 0, transparent 32%),
+    linear-gradient(180deg, #131417 0%, #0b0f22 40%, #08083d 100%);
 }
 
 .inner {
@@ -117,19 +106,13 @@
     outline-offset: 2px;
 }
 
-<<<<<<< Updated upstream
 .search input {
   height: var(--header-search-height);
-  border-color: var(--color-white);
+  border-color: rgb(124 144 224 / 0.85);
   border-radius: var(--header-search-radius);
   background: var(--header-bg);
-=======
-/* ── Search field ── */
-.primarySearch {
-    order: 3;
-    flex: 1 1 100%;
-    min-width: 0;
->>>>>>> Stashed changes
+  background: #050508;
+  box-shadow: 0 0 0 1px rgb(83 93 223 / 0.18);
 }
 
 .primarySearch input {
@@ -144,13 +127,8 @@
     color: var(--color-neutral-600);
 }
 
-<<<<<<< Updated upstream
 .search input:focus {
   border-color: var(--color-primary-blue);
-=======
-.primarySearch input:hover:not(:focus):not(:disabled) {
-    border-color: var(--color-primary-light-blue);
->>>>>>> Stashed changes
 }
 
 .primarySearch input:focus {
@@ -159,141 +137,6 @@
         0 0 0 1px rgb(83 93 223 / 0.32),
         0 0 0 3px rgb(83 93 223 / 0.12);
 }
-<<<<<<< Updated upstream
-=======
-
-.primarySearch svg {
-    color: var(--color-white);
-}
-
-/* ── Logo order on mobile ── */
-.menuBtn {
-    order: 0;
-}
-
-.logo {
-    order: 1;
-    flex: 1;
-    justify-content: center;
-}
-
-.actions {
-    order: 2;
-}
-
-/* ── Search sheet (full-screen on mobile) ── */
-.searchSheet {
-    position: fixed;
-    inset: 0;
-    z-index: 20;
-    display: none;
-    overflow: hidden;
-    overscroll-behavior: none;
-    touch-action: none;
-    color: var(--color-text);
-    background:
-        radial-gradient(
-            circle at 20% 14%,
-            rgb(83 93 223 / 0.28) 0,
-            transparent 28%
-        ),
-        linear-gradient(180deg, #171622 0%, #0b1026 38%, #08083d 100%);
-}
-
-.searchSheetInner {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    align-content: start;
-    gap: var(--space-4);
-    height: 100%;
-    max-height: 100dvh;
-    overflow: hidden;
-    padding: 30px 20px 24px;
-}
-
-.searchSheetHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-8);
-}
-
-.searchTitle {
-    margin: 0;
-    font-family: var(--font-primary), sans-serif;
-    font-size: 20px;
-    font-weight: 600;
-    line-height: 1.1;
-    color: var(--color-white);
-}
-
-.closeButton {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--header-icon-action-size);
-    height: var(--header-icon-action-size);
-    padding: 0;
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--color-white);
-    cursor: pointer;
-}
-
-.closeButton:hover {
-    opacity: 0.8;
-}
-
-.closeButton:focus-visible {
-    outline: 2px solid var(--color-primary-blue);
-    outline-offset: 2px;
-}
-
-/* Sheet search field (inside sheet) */
-.sheetSearchField {
-    display: block;
-}
-
-.previewCard {
-    display: grid;
-    gap: var(--space-12);
-    margin-top: 4px;
-    padding: var(--space-12);
-    border-radius: var(--radius-sm);
-    background: #050508;
-}
-
-.previewHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-8);
-    color: var(--color-white);
-}
-
-.previewTitle {
-    font-size: 16px;
-    font-weight: 500;
-    line-height: var(--typography-body1-line-height);
-}
-
-.previewList {
-    list-style: none;
-    display: grid;
-    gap: var(--space-8);
-    margin: 0;
-    padding: 0;
-}
-
-.emptyState {
-    margin: 0;
-    font-size: 16px;
-    line-height: 1.4;
-    color: #c0c1c6;
-    font-family: var(--font-primary), sans-serif;
-    font-style: italic;
 }
 
 .loadingState {
@@ -567,4 +410,196 @@
         touch-action: auto;
     }
 }
->>>>>>> Stashed changes
+.searchSheet {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: none;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  color: var(--color-text);
+  background:
+    radial-gradient(circle at 20% 14%, rgb(83 93 223 / 0.28) 0, transparent 28%),
+    linear-gradient(180deg, #171622 0%, #0b1026 38%, #08083d 100%);
+}
+
+.searchSheetInner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden;
+  padding: 30px 20px 24px;
+}
+
+.searchSheetHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.searchTitle {
+  margin: 0;
+  font-family: var(--font-primary), sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--color-white);
+}
+
+.closeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--header-icon-action-size);
+  height: var(--header-icon-action-size);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-white);
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  opacity: 0.8;
+}
+
+.closeButton:focus-visible {
+  outline: 2px solid var(--color-primary-blue);
+  outline-offset: 2px;
+}
+
+.previewCard {
+  display: grid;
+  gap: var(--space-12);
+  margin-top: 4px;
+  padding: var(--space-12);
+  border-radius: var(--radius-sm);
+  background: #050508;
+}
+
+.previewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  color: var(--color-white);
+}
+
+.previewTitle {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: var(--typography-body1-line-height);
+}
+
+.previewList {
+  list-style: none;
+  display: grid;
+  gap: var(--space-8);
+  margin: 0;
+  padding: 0;
+}
+
+.emptyState {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.4;
+  color: #c0c1c6;
+  font-family: var(--font-primary), sans-serif;
+  font-style: italic;
+}
+
+.loadingState {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding-block: var(--space-4);
+}
+
+.loadingText {
+  font-size: 16px;
+  line-height: 1.4;
+  color: #c0c1c6;
+  font-family: var(--font-primary), sans-serif;
+  font-style: italic;
+}
+
+.previewItem {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-12);
+  width: 100%;
+  font-size: var(--typography-body2-font-size);
+  line-height: 1.4;
+  color: #c0c1c6;
+  text-decoration: none;
+  transition: opacity var(--ui-transition-fast);
+}
+
+.previewItem:hover {
+  opacity: 0.8;
+}
+
+.previewName {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 16px;
+  color: #c0c1c6;
+  font-family: var(--font-primary), sans-serif;
+  font-style: italic;
+}
+
+.previewPrice {
+  flex-shrink: 0;
+  font-size: 16px;
+  color: #c0c1c6;
+  font-family: var(--font-primary), sans-serif;
+  font-style: italic;
+}
+
+.cat {
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  width: 124px;
+  height: auto;
+  transform: translateY(-50%);
+  pointer-events: none;
+  filter: drop-shadow(0 12px 24px rgb(0 0 0 / 0.28));
+}
+
+.header[data-search-open="true"] .topRow {
+  display: none;
+}
+
+.header[data-search-open="true"] .primarySearch {
+  display: none;
+}
+
+.header[data-search-open="true"] .searchSheet {
+  display: grid;
+  touch-action: auto;
+}
+
+.header[data-search-open="true"] .searchSheetInner {
+  touch-action: manipulation;
+}
+
+@media (max-width: 767px) {
+  .header[data-search-open="true"] .search {
+    width: 100%;
+  }
+
+  .header[data-search-open="true"] .sheetSearchField {
+    margin-top: 12px;
+  }
+}

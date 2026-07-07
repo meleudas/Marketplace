@@ -6,15 +6,18 @@ namespace Marketplace.Application.Products.Ports;
 public interface IProductSearchService
 {
     Task<Result<ProductSearchResultDto>> SearchCatalogProductsAsync(
-        string? name,
-        IReadOnlyList<long>? categoryIds,
-        Guid? companyId,
-        decimal? minPrice,
-        decimal? maxPrice,
-        string? availabilityStatus,
-        string? sort,
-        int page,
-        int pageSize,
-        string? searchAfter,
+        CatalogProductSearchFilters filters,
+        CancellationToken ct = default);
+
+    Task<Result<ProductSearchResultDto>> SearchCatalogOnSaleProductsAsync(
+        CatalogOnSaleProductFilters filters,
+        CancellationToken ct = default);
+
+    Task<Result<ProductSearchResultDto>> SearchCatalogNewProductsAsync(
+        CatalogBrowsableProductFilters filters,
+        CancellationToken ct = default);
+
+    Task<Result<ProductSearchResultDto>> SearchCatalogPopularProductsAsync(
+        CatalogBrowsableProductFilters filters,
         CancellationToken ct = default);
 }

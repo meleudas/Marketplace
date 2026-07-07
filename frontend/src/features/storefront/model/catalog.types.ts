@@ -55,6 +55,7 @@ export interface CatalogProductListItemDto {
   description: string;
   price: number;
   oldPrice: number | null;
+  discountPercent: number | null;
   categoryId: number;
   status: string;
   hasVariants: boolean;
@@ -64,6 +65,7 @@ export interface CatalogProductListItemDto {
   availabilityStatus: AvailabilityStatus;
   createdAt: string;
   updatedAt: string;
+  imageUrls: string[];
 }
 
 export interface ProductSearchResultDto {
@@ -72,6 +74,13 @@ export interface ProductSearchResultDto {
   page: number;
   pageSize: number;
   nextSearchAfter?: string | null;
+}
+
+export interface PersonalizedRecommendationsResultDto {
+  userId: string;
+  modelVersion: string;
+  usedFallback: boolean;
+  items: CatalogProductListItemDto[];
 }
 
 export interface CatalogProductImageDto {

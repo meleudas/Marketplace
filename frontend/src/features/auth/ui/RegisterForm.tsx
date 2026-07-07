@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { registerFormSchema, type RegisterFormValues } from "@/features/auth/model/auth.form-schemas";
 import { useAuth } from "@/features/auth/model/auth.store";
+import { Button, TextField } from "@/shared/ui";
 import styles from "./RegisterForm.module.css";
 
 interface RegisterFormProps {
@@ -57,78 +58,80 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
-      <h2 className={styles.title}>Register</h2>
-
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="register-userName">
-          Username
-        </label>
-        <input
-          id="register-userName"
-          type="text"
-          {...registerField("userName")}
-          className={styles.input}
-          placeholder="john"
-        />
-        {errors.userName ? <p className={styles.fieldError}>{errors.userName.message}</p> : null}
+      <div className={styles.header}>
+        <h2 className={styles.title}>Створіть акаунт</h2>
+        <p className={styles.description}>
+          Використайте електронну пошту, ім&apos;я користувача та пароль, щоб почати. За бажанням
+          можна додати номер телефону.
+        </p>
       </div>
 
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="register-email">
-          Email
-        </label>
-        <input
-          id="register-email"
-          type="email"
-          {...registerField("email")}
-          className={styles.input}
-          placeholder="you@example.com"
-        />
-        {errors.email ? <p className={styles.fieldError}>{errors.email.message}</p> : null}
-      </div>
+      <TextField
+        id="register-userName"
+        label="Ім&apos;я користувача"
+        kind="text"
+        placeholder="іван"
+        autoComplete="username"
+        disabled={loading}
+        error={errors.userName?.message}
+        {...registerField("userName")}
+      />
 
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="register-phoneNumber">
-          Phone number (optional)
-        </label>
-        <input
-          id="register-phoneNumber"
-          type="tel"
-          {...registerField("phoneNumber")}
-          className={styles.input}
-          placeholder="+380..."
-        />
-      </div>
+      <TextField
+        id="register-email"
+        label="Ел. пошта"
+        kind="email"
+        placeholder="ваша@пошта.укр"
+        autoComplete="email"
+        disabled={loading}
+        error={errors.email?.message}
+        {...registerField("email")}
+      />
 
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="register-password">
-          Password
-        </label>
-        <input
-          id="register-password"
-          type="password"
-          {...registerField("password")}
-          className={styles.input}
-          placeholder="********"
-        />
-        {errors.password ? <p className={styles.fieldError}>{errors.password.message}</p> : null}
-      </div>
+      <TextField
+        id="register-phoneNumber"
+        label="Номер телефону"
+        hint="Необов&apos;язково"
+        kind="tel"
+        placeholder="+380 67 123 45 67"
+        autoComplete="tel"
+        disabled={loading}
+        error={errors.phoneNumber?.message}
+        {...registerField("phoneNumber")}
+      />
 
-      {error ? <p className={styles.errorMessage}>{error}</p> : null}
-      {success ? <p className={styles.successMessage}>{success}</p> : null}
+      <TextField
+        id="register-password"
+        label="Пароль"
+        kind="password"
+        placeholder="••••••••"
+        autoComplete="new-password"
+        disabled={loading}
+        error={errors.password?.message}
+        {...registerField("password")}
+      />
 
-      <button
+      {error ? (
+        <div className={styles.errorMessage} role="alert">
+          {error}
+        </div>
+      ) : null}
+      {success ? <div className={styles.successMessage}>{success}</div> : null}
+
+      <Button
         type="submit"
+        variant="gradient"
+        fullWidth
         disabled={loading}
         className={styles.submitButton}
       >
-        {loading ? "Registering..." : "Register"}
-      </button>
+        {loading ? "Створюємо акаунт..." : "Створити акаунт"}
+      </Button>
 
       <p className={styles.switchText}>
-        Already have an account?{" "}
+        Уже маєте акаунт?{" "}
         <button type="button" onClick={onSwitchToLogin} className={styles.linkButton}>
-          Login
+          Увійти
         </button>
       </p>
     </form>
