@@ -45,6 +45,10 @@
   margin-left: auto;
 }
 
+.nav {
+  display: none;
+}
+
 .iconAction {
   display: inline-flex;
   align-items: center;
@@ -279,6 +283,7 @@
     gap: 4px;
     height: 40px;
     padding: 0 12px;
+    border: 0;
     border-radius: 8px;
     font-family: var(--font-primary), sans-serif;
     font-size: 14px;
@@ -286,6 +291,8 @@
     line-height: 1;
     color: #d0d2d6;
     text-decoration: none;
+    background: transparent;
+    cursor: pointer;
     transition:
       background 0.15s,
       color 0.15s;

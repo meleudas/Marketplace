@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/shared/ui/Button";
 import { Container } from "@/shared/ui/Container";
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from "@/shared/ui/icons";
@@ -100,10 +101,6 @@ export function CatalogMenu({
     };
   }, [activeRootCategory, handleClose, open]);
 
-  if (!open) {
-    return null;
-  }
-
   const handleFormatSelect = (format: CatalogFormatFilter) => {
     setSelectedFormat(format);
   };
@@ -142,62 +139,62 @@ export function CatalogMenu({
     setActiveRootCategory(null);
   };
 
-  if (activeRootCategory) {
-    return (
-      <div
-        className={styles.overlay}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="catalog-menu-title"
-      >
-        <PageBackground />
-
-        <Container className={styles.content}>
-          <header className={styles.header}>
-            <h1 id="catalog-menu-title">
-              <Typography variant="h2" as="span">
-                {activeRootCategory.name}
-              </Typography>
-            </h1>
-            <button type="button" className={styles.closeButton} aria-label="Закрити" onClick={handleClose}>
-              <CloseIcon className={iconStyles.icon} />
-            </button>
-          </header>
-
-          <button type="button" className={styles.backButton} onClick={handleBackToCatalog}>
-            <ChevronLeftIcon className={`${iconStyles.icon} ${styles.backButtonIcon}`.trim()} />
-            <span>До каталогу</span>
-          </button>
-
-          <nav className={styles.categoryList} aria-label="Підкатегорії">
-            {activeSubcategories.map((category) => (
-              <button
-                key={category.id}
-                type="button"
-                className={styles.subcategoryItem}
-                onClick={() => handleSubcategoryClick(category.slug)}
-              >
-                {category.name}
-              </button>
-            ))}
-          </nav>
-
-          <Button
-            type="button"
-            variant="primary"
-            size="lg"
-            fullWidth
-            className={styles.showAllButton}
-            onClick={handleShowSection}
-          >
-            Усе в розділі
-          </Button>
-        </Container>
-      </div>
-    );
+  if (!open || typeof document === "undefined") {
+    return null;
   }
 
-  return (
+  const menuContent = activeRootCategory ? (
+    <div
+      className={styles.overlay}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="catalog-menu-title"
+    >
+      <PageBackground />
+
+      <Container className={styles.content}>
+        <header className={styles.header}>
+          <h1 id="catalog-menu-title">
+            <Typography variant="h2" as="span">
+              {activeRootCategory.name}
+            </Typography>
+          </h1>
+          <button type="button" className={styles.closeButton} aria-label="Закрити" onClick={handleClose}>
+            <CloseIcon className={iconStyles.icon} />
+          </button>
+        </header>
+
+        <button type="button" className={styles.backButton} onClick={handleBackToCatalog}>
+          <ChevronLeftIcon className={`${iconStyles.icon} ${styles.backButtonIcon}`.trim()} />
+          <span>До каталогу</span>
+        </button>
+
+        <nav className={styles.categoryList} aria-label="Підкатегорії">
+          {activeSubcategories.map((category) => (
+            <button
+              key={category.id}
+              type="button"
+              className={styles.subcategoryItem}
+              onClick={() => handleSubcategoryClick(category.slug)}
+            >
+              {category.name}
+            </button>
+          ))}
+        </nav>
+
+        <Button
+          type="button"
+          variant="primary"
+          size="lg"
+          fullWidth
+          className={styles.showAllButton}
+          onClick={handleShowSection}
+        >
+          Усе в розділі
+        </Button>
+      </Container>
+    </div>
+  ) : (
     <div
       className={styles.overlay}
       role="dialog"
@@ -264,4 +261,6 @@ export function CatalogMenu({
       </Container>
     </div>
   );
+
+  return createPortal(menuContent, document.body);
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   searchCatalogProducts,
   type CatalogSearchProductDto,
@@ -51,6 +52,9 @@ export function Header({
   onSearchChange,
   onMenuClick,
 }: HeaderProps) {
+  const pathname = usePathname();
+  const isCatalogRoute = pathname === "/catalog" || pathname.startsWith("/catalog/");
+
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchValue, setSearchValue] = useState(controlledSearchValue ?? "");
   const [searchResults, setSearchResults] = useState<SearchPreviewItem[]>([]);
@@ -163,14 +167,16 @@ export function Header({
     >
       <Container className={styles.inner}>
         <div className={styles.topRow}>
-          <button
-            type="button"
-            className={`${styles.iconAction} ${styles.menuBtn}`}
-            aria-label="Відкрити меню"
-            onClick={onMenuClick}
-          >
-            <MenuIcon className={iconStyles.icon} />
-          </button>
+          {onMenuClick ? (
+            <button
+              type="button"
+              className={`${styles.iconAction} ${styles.menuBtn}`}
+              aria-label="Відкрити каталог"
+              onClick={onMenuClick}
+            >
+              <MenuIcon className={iconStyles.icon} />
+            </button>
+          ) : null}
 
           <Link
             href={homeHref}
@@ -179,6 +185,26 @@ export function Header({
           >
             <BookTopLogo className={styles.logoImage} />
           </Link>
+
+          {onMenuClick ? (
+            <nav className={styles.nav} aria-label="Головна навігація">
+              <button
+                type="button"
+                className={`${styles.navLink} ${isCatalogRoute ? styles.navLinkActive : ""}`.trim()}
+                aria-current={isCatalogRoute ? "page" : undefined}
+                onClick={onMenuClick}
+              >
+                Каталог
+              </button>
+              <Link
+                href="/about"
+                className={`${styles.navLink} ${pathname === "/about" ? styles.navLinkActive : ""}`.trim()}
+                aria-current={pathname === "/about" ? "page" : undefined}
+              >
+                Про нас
+              </Link>
+            </nav>
+          ) : null}
 
           <TextField
             kind="search"

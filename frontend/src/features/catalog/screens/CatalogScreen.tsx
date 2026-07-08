@@ -246,7 +246,7 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
         homeHref: "/",
         userHref: "/me",
         searchPlaceholder: "Пошук книг",
-        onSearchQueryChange: setSearchInput,
+        onSearchChange: setSearchInput,
         onMenuClick: () => setCatalogOpen(true),
       }}
       footerProps={{ homeHref: "/" }}
