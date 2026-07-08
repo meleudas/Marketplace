@@ -13,7 +13,46 @@
 
 .promoContent {
   display: grid;
-  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(var(--product-card-width), var(--product-card-width)));
+  justify-content: start;
+  gap: var(--space-12);
+}
+
+.cardLink {
+  display: block;
+  width: var(--product-card-width);
+  max-width: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+
+.cardLink article {
+  max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  .productGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cardLink,
+  .cardLink article {
+    width: 100%;
+  }
+}
+
+.paginationWrap {
+  display: flex;
+  justify-content: center;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+  padding-block: var(--space-8);
+}
+
+.sortAnchor {
+  position: relative;
+  width: 100%;
   min-width: 0;
 }
 
@@ -38,22 +77,24 @@
 
 .promoDate {
   margin: 0;
-  font-family: var(--font-primary), sans-serif;
-  font-size: clamp(12px, 3vw, 16px);
-  font-weight: 400;
-  line-height: 1.25;
-  color: var(--color-white);
+  font-family: var(--font-primary);
+  font-size: var(--typography-h2-font-size);
+  font-weight: var(--typography-h2-font-weight);
+  line-height: var(--typography-h2-line-height);
+  color: var(--color-text);
 }
 
-.promoCat {
-  display: block;
-  width: clamp(72px, 22vw, 85px);
-  height: auto;
-  flex-shrink: 0;
-  align-self: end;
-  justify-self: end;
-  pointer-events: none;
-  user-select: none;
+.modalClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
 }
 
 @media (max-width: 480px) {
@@ -65,4 +106,108 @@
   .promoDate {
     white-space: normal;
   }
+}
+
+.tagPillsList {
+  display: flex;
+  gap: var(--space-8);
+  overflow-x: auto;
+  padding-bottom: var(--space-4);
+  scrollbar-width: none;
+}
+
+.tagPillsList::-webkit-scrollbar {
+  display: none;
+}
+
+.tagPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  color: var(--color-neutral-600);
+  font-family: var(--font-primary), sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.tagPill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-white);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.tagPillActive {
+  background: var(--color-primary-pink);
+  border-color: var(--color-primary-pink);
+  color: var(--color-white);
+  box-shadow: 0 0 12px rgb(238 2 144 / 0.4);
+}
+
+.feedGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.feedGrid article {
+  width: 100% !important;
+  max-width: 100%;
+}
+
+@media (min-width: 600px) {
+  .feedGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .feedGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1200px) {
+  .feedGrid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+.feedCardLink {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.feedCardLink:hover {
+  transform: translateY(-4px);
+}
+
+.feedEmpty {
+  text-align: center;
+  padding: var(--space-32) 0;
+  color: var(--color-neutral-600);
+  font-family: var(--font-primary), sans-serif;
+  font-size: 14px;
+}
+
+.feedLoading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-24) 0;
+  width: 100%;
+}
+
+.scrollTrigger {
+  height: 20px;
+  width: 100%;
 }

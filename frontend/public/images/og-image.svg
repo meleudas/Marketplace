@@ -1,0 +1,33 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Booktop — книжковий маркетплейс">
+  <rect width="1200" height="630" fill="#0f0f23"/>
+  <!-- Decorative gradient shapes -->
+  <circle cx="200" cy="100" r="300" fill="#535DDF" opacity="0.08"/>
+  <circle cx="1000" cy="500" r="350" fill="#535DDF" opacity="0.06"/>
+  <circle cx="600" cy="315" r="200" fill="#535DDF" opacity="0.04"/>
+  <!-- Brand logo area -->
+  <g transform="translate(100, 215)">
+    <!-- Book icon abstract -->
+    <rect x="0" y="0" width="80" height="100" rx="4" fill="#535DDF" opacity="0.3"/>
+    <rect x="10" y="20" width="60" height="4" rx="2" fill="#535DDF" opacity="0.8"/>
+    <rect x="10" y="35" width="60" height="4" rx="2" fill="#535DDF" opacity="0.8"/>
+    <rect x="10" y="50" width="60" height="4" rx="2" fill="#535DDF" opacity="0.5"/>
+    <rect x="10" y="65" width="40" height="4" rx="2" fill="#535DDF" opacity="0.5"/>
+  </g>
+  <!-- Brand name -->
+  <text x="200" y="270" font-family="Inter, Helvetica, Arial, sans-serif" font-size="72" font-weight="700" fill="#535DDF" letter-spacing="-1">BOOKTOP</text>
+  <!-- Tagline -->
+  <text x="200" y="340" font-family="Inter, Helvetica, Arial, sans-serif" font-size="32" font-weight="400" fill="#a0a0b8" letter-spacing="0">Купуй та продавай книги легко</text>
+  <!-- Features -->
+  <g transform="translate(200, 390)">
+    <circle cx="8" cy="8" r="4" fill="#535DDF"/>
+    <text x="24" y="13" font-family="Inter, Helvetica, Arial, sans-serif" font-size="18" fill="#808090">Тисячі книг</text>
+    <circle cx="180" cy="8" r="4" fill="#535DDF"/>
+    <text x="196" y="13" font-family="Inter, Helvetica, Arial, sans-serif" font-size="18" fill="#808090">Швидка доставка</text>
+    <circle cx="380" cy="8" r="4" fill="#535DDF"/>
+    <text x="396" y="13" font-family="Inter, Helvetica, Arial, sans-serif" font-size="18" fill="#808090">Вигідні ціни</text>
+  </g>
+  <!-- Bottom bar -->
+  <rect x="0" y="600" width="1200" height="30" fill="#535DDF" opacity="0.15"/>
+  <!-- URL -->
+  <text x="1070" y="620" font-family="Inter, Helvetica, Arial, sans-serif" font-size="14" fill="#535DDF" text-anchor="end" opacity="0.6">booktop.ua</text>
+</svg>

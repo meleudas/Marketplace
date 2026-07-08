@@ -103,6 +103,18 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     }
   }, [searchParams, setAppliedFormat]);
 
+  useEffect(() => {
+    const sortParam = searchParams.get("sort");
+    if (
+      sortParam === "relevance" ||
+      sortParam === "newest" ||
+      sortParam === "price_asc" ||
+      sortParam === "price_desc"
+    ) {
+      setSelectedSort(sortParam);
+    }
+  }, [searchParams]);
+
   const paginationKey = useMemo(() => {
     return JSON.stringify({
       appliedAuthors,
@@ -231,13 +243,13 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
   return (
     <PageLayout
       headerProps={{
-        homeHref: "/home",
+        homeHref: "/",
         userHref: "/me",
         searchPlaceholder: "Пошук книг",
         onSearchQueryChange: setSearchInput,
         onMenuClick: () => setCatalogOpen(true),
       }}
-      footerProps={{ homeHref: "/home" }}
+      footerProps={{ homeHref: "/" }}
     >
       <h1 className={styles.pageTitle}>Каталог</h1>
 

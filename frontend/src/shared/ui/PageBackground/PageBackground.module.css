@@ -1,27 +1,23 @@
 .background {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
-
+  background-color: #131417;
   --page-glow-spread: calc(var(--page-glow-size) / 2 + var(--page-glow-blur));
 
   background-image:
-    radial-gradient(
-      circle var(--page-glow-spread) at calc(var(--page-glow-offset-x) * -1) calc(var(--page-glow-size) / 2),
+    radial-gradient(circle var(--page-glow-spread) at calc(var(--page-glow-offset-x) * -1) calc(var(--page-glow-size) / 2),
       var(--page-glow-color) 0%,
       rgb(83 93 223 / 0.2) 36%,
       rgb(83 93 223 / 0.06) 56%,
-      transparent 72%
-    ),
-    radial-gradient(
-      circle var(--page-glow-spread) at calc(100% + var(--page-glow-offset-x)) calc(var(--page-glow-step) + var(--page-glow-size) / 2),
+      transparent 72%),
+    radial-gradient(circle var(--page-glow-spread) at calc(100% + var(--page-glow-offset-x)) calc(var(--page-glow-step) + var(--page-glow-size) / 2),
       var(--page-glow-color) 0%,
       rgb(83 93 223 / 0.2) 36%,
       rgb(83 93 223 / 0.06) 56%,
-      transparent 72%
-    );
+      transparent 72%);
   background-size: 100% calc(var(--page-glow-step) * 2);
   background-repeat: repeat-y;
 }

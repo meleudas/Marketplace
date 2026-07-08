@@ -1,0 +1,204 @@
+.root {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 200px);
+  padding: 24px 16px;
+  color: #ffffff;
+}
+
+.card {
+  width: 100%;
+  max-width: 480px;
+  background: rgba(26, 27, 32, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 40px 24px;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── Icon wrappers ── */
+.iconWrap {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.successIconWrap {
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+  border: 2px solid rgba(46, 204, 113, 0.3);
+}
+
+.failedIconWrap {
+  background: rgba(231, 76, 60, 0.15);
+  color: #e74c3c;
+  border: 2px solid rgba(231, 76, 60, 0.3);
+}
+
+.pendingIconWrap {
+  background: rgba(241, 196, 15, 0.15);
+  color: #f1c40f;
+  border: 2px solid rgba(241, 196, 15, 0.3);
+}
+
+/* ── Typography ── */
+.title {
+  font-family: 'Montserrat', var(--font-secondary, sans-serif);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0 0 12px 0;
+  color: #ffffff;
+}
+
+.subtitle {
+  font-family: 'Inter', var(--font-primary, sans-serif);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #a0a5b5;
+  margin: 0 0 32px 0;
+}
+
+/* ── Order info box ── */
+.infoBox {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-sizing: border-box;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Inter', var(--font-primary, sans-serif);
+  font-size: 14px;
+  padding: 8px 0;
+}
+
+.infoRow:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.infoLabel {
+  color: #80838d;
+}
+
+.infoValue {
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.orderNum {
+  font-family: monospace;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+}
+
+/* Status Badges */
+.statusBadge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.statusBadgeSuccess {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+}
+
+.statusBadgeFailed {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+}
+
+.statusBadgePending {
+  background: rgba(241, 196, 15, 0.2);
+  color: #f1c40f;
+}
+
+/* ── Actions ── */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.btnPrimary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #ff007a;
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-family: 'Inter', var(--font-primary, sans-serif);
+  font-size: 16px;
+  font-weight: 600;
+  height: 48px;
+  width: 100%;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-decoration: none;
+}
+
+.btnPrimary:hover {
+  background: #e6006f;
+}
+
+.btnSecondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  color: #ffffff;
+  font-family: 'Inter', var(--font-primary, sans-serif);
+  font-size: 16px;
+  font-weight: 500;
+  height: 48px;
+  width: 100%;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.btnSecondary:hover {
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ── Checking / Spinner State ── */
+.spinnerWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 0;
+}
+
+.spinnerText {
+  margin-top: 24px;
+  color: #a0a5b5;
+  font-size: 16px;
+  font-family: 'Inter', sans-serif;
+}

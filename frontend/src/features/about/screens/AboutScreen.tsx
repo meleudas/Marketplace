@@ -12,11 +12,11 @@ export function AboutScreen() {
   return (
     <PageLayout
       headerProps={{
-        homeHref: "/home",
+        homeHref: "/",
         userHref: "/me",
         searchPlaceholder: "Пошук книг",
       }}
-      footerProps={{ homeHref: "/home" }}
+      footerProps={{ homeHref: "/" }}
     >
       <div className={styles.aboutMain}>
         <div className={styles.topRow}>

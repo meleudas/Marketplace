@@ -4,6 +4,9 @@ export interface UserDto {
   id: string;
   firstName: string;
   lastName: string;
+  patronymic: string | null;
+  email: string | null;
+  phoneNumber: string | null;
   role: UserRole;
   birthday: string | null;
   avatar: string | null;

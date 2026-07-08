@@ -26,7 +26,7 @@ export function GoogleAuthCallbackScreen() {
         return;
       }
 
-      router.replace("/home");
+      router.replace("/");
     };
 
     void run();
