@@ -128,7 +128,6 @@ export function CartScreen() {
   }, [setTotalItems]);
 
   const totalAmount = cart?.totalAmount ?? 0;
-  const totalItems = cart?.totalItems ?? 0;
 
   if (loading) {
     return (

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/model/auth.store";
 import { PageLayout } from "@/shared/ui/PageLayout";
 import {
@@ -25,6 +24,11 @@ import {
   UserAddress,
   OrderListItem,
 } from "../api/me.api";
+import {
+  getNormalizedStatus,
+  getStatusClass,
+  getStatusLabel,
+} from "../lib/order-status";
 import styles from "./MeScreen.module.css";
 
 
@@ -67,6 +71,16 @@ const MOCK_CERTIFICATES: Certificate[] = [
 
 type OrderTab = "all" | "active" | "completed";
 
+interface ProfileState {
+  firstName: string;
+  lastName: string;
+  middleName: string;
+  birthday: string;
+  gender: string;
+  phone: string;
+  email: string;
+}
+
 function BackNav() {
   return (
     <Link href="/" className={styles.backNav}>
@@ -81,11 +95,10 @@ interface PersonalDataProps {
   lastName: string;
   middleName: string;
   birthday: string;
-  gender: string;
   onEdit: () => void;
 }
 
-function PersonalDataSection({ firstName, lastName, middleName, birthday, gender, onEdit }: PersonalDataProps) {
+function PersonalDataSection({ firstName, lastName, middleName, birthday, onEdit }: PersonalDataProps) {
   const birthdayStr = birthday
     ? new Date(birthday).toLocaleDateString("uk-UA", {
       day: "numeric",
@@ -194,22 +207,6 @@ function OrdersSection({ apiOrders }: OrdersSectionProps) {
       },
     ];
 
-  const getNormalizedStatus = (status: any): string => {
-    if (status === null || status === undefined) return "";
-    if (typeof status === "number") {
-      switch (status) {
-        case 0: return "pending";
-        case 1: return "processing";
-        case 2: return "shipped";
-        case 3: return "delivered";
-        case 4: return "cancelled";
-        case 5: return "refunded";
-        default: return String(status).toLowerCase();
-      }
-    }
-    return String(status).toLowerCase();
-  };
-
   const filteredOrders = displayOrdersList.filter((order) => {
     if (activeTab === "all") return true;
     const normalized = getNormalizedStatus(order.status);
@@ -217,32 +214,6 @@ function OrdersSection({ apiOrders }: OrdersSectionProps) {
     const isCompleted = ["delivered", "cancelled", "refunded"].includes(normalized);
     return activeTab === "active" ? isActive : isCompleted;
   });
-
-  const getStatusLabel = (status: any) => {
-    const normalized = getNormalizedStatus(status);
-    switch (normalized) {
-      case "pending": return "Очікує оплати";
-      case "processing": return "Обробляється";
-      case "shipped": return "Відправлено";
-      case "delivered": return "Доставлено";
-      case "cancelled": return "Скасовано";
-      case "refunded": return "Повернено";
-      default: return String(status);
-    }
-  };
-
-  const getStatusClass = (status: any) => {
-    const normalized = getNormalizedStatus(status);
-    switch (normalized) {
-      case "pending": return styles.statusPending;
-      case "processing": return styles.statusProcessing;
-      case "shipped": return styles.statusShipped;
-      case "delivered": return styles.statusDelivered;
-      case "cancelled": return styles.statusCancelled;
-      case "refunded": return styles.statusRefunded;
-      default: return "";
-    }
-  };
 
   return (
     <section className={`${styles.card} ${styles.ordersCard}`}>
@@ -291,7 +262,7 @@ function OrdersSection({ apiOrders }: OrdersSectionProps) {
               </div>
               <div className={styles.orderButtonRight}>
                 <span className={styles.orderButtonPrice}>{order.totalPrice} грн.</span>
-                <span className={`${styles.orderStatusBadge} ${getStatusClass(order.status)}`}>
+                <span className={`${styles.orderStatusBadge} ${getStatusClass(order.status, styles)}`}>
                   {getStatusLabel(order.status)}
                 </span>
               </div>
@@ -476,7 +447,6 @@ function CertificatesSection() {
 
 
 export function MeScreen() {
-  const router = useRouter();
   const user = useAuth((state) => state.user);
   const isAuthenticated = useAuth((state) => state.isAuthenticated);
   const initialized = useAuth((state) => state.initialized);
@@ -487,10 +457,10 @@ export function MeScreen() {
   const [orders, setOrders] = useState<OrderListItem[]>([]);
 
   // Local storage profile state
-  const [profile, setProfile] = useState(() => {
+  const [profile, setProfile] = useState<ProfileState>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("booktop_profile_overrides");
-      if (stored) return JSON.parse(stored);
+      if (stored) return JSON.parse(stored) as ProfileState;
     }
     return {
       firstName: "",
@@ -505,10 +475,14 @@ export function MeScreen() {
 
   // Sync profile values when backend user loaded and there are no overrides yet
   useEffect(() => {
-    if (user) {
-      setProfile((prev: any) => {
+    if (!user) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      setProfile((prev) => {
         const stored = localStorage.getItem("booktop_profile_overrides");
-        if (stored) return JSON.parse(stored);
+        if (stored) return JSON.parse(stored) as ProfileState;
 
         return {
           firstName: user.firstName || prev.firstName || MOCK_PROFILE.firstName,
@@ -520,7 +494,11 @@ export function MeScreen() {
           email: prev.email || MOCK_PROFILE.email,
         };
       });
-    }
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
   }, [user]);
 
   // Local storage recipients state
@@ -576,9 +554,17 @@ export function MeScreen() {
   }, [loadMe]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      void loadApiData();
+    if (!isAuthenticated) {
+      return;
     }
+
+    const frameId = window.requestAnimationFrame(() => {
+      void loadApiData();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
   }, [isAuthenticated, loadApiData]);
 
   // Open Modals preloaded with current data
@@ -724,7 +710,6 @@ export function MeScreen() {
                 lastName={profile.lastName}
                 middleName={profile.middleName}
                 birthday={profile.birthday}
-                gender={profile.gender}
                 onEdit={handleOpenPersonalModal}
               />
               <ContactsSection

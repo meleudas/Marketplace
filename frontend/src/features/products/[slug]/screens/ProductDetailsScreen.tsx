@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { isAxiosError } from "axios";
 import { useEffect, useMemo, useState } from "react";
 import {
   getCatalogProductBySlug,
@@ -52,9 +53,9 @@ export function ProductDetailsScreen({ slug }: ProductDetailsScreenProps) {
       });
       setCartSuccess(true);
       loadCart();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      if (err.response?.status === 401) {
+      if (isAxiosError(err) && err.response?.status === 401) {
         setCartError("Будь ласка, увійдіть у свій акаунт, щоб додати книгу до кошика.");
       } else {
         setCartError("Помилка при додаванні до кошика. Спробуйте ще раз.");

@@ -12,6 +12,11 @@ import {
   fetchOrders,
   OrderListItem,
 } from "../api/me.api";
+import {
+  getNormalizedStatus,
+  getStatusClass,
+  getStatusLabel,
+} from "../lib/order-status";
 import styles from "./MeScreen.module.css";
 
 type OrderTab = "all" | "active" | "completed";
@@ -40,9 +45,17 @@ export function MeOrdersScreen() {
   }, [loadMe]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      void loadOrdersData();
+    if (!isAuthenticated) {
+      return;
     }
+
+    const frameId = window.requestAnimationFrame(() => {
+      void loadOrdersData();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
   }, [isAuthenticated, loadOrdersData]);
 
   const hasApiOrders = orders && orders.length > 0;
@@ -74,22 +87,6 @@ export function MeOrdersScreen() {
         },
       ];
 
-  const getNormalizedStatus = (status: any): string => {
-    if (status === null || status === undefined) return "";
-    if (typeof status === "number") {
-      switch (status) {
-        case 0: return "pending";
-        case 1: return "processing";
-        case 2: return "shipped";
-        case 3: return "delivered";
-        case 4: return "cancelled";
-        case 5: return "refunded";
-        default: return String(status).toLowerCase();
-      }
-    }
-    return String(status).toLowerCase();
-  };
-
   const filteredOrders = displayOrdersList.filter((order) => {
     if (activeTab === "all") return true;
     const normalized = getNormalizedStatus(order.status);
@@ -97,32 +94,6 @@ export function MeOrdersScreen() {
     const isCompleted = ["delivered", "cancelled", "refunded"].includes(normalized);
     return activeTab === "active" ? isActive : isCompleted;
   });
-
-  const getStatusLabel = (status: any) => {
-    const normalized = getNormalizedStatus(status);
-    switch (normalized) {
-      case "pending": return "Очікує оплати";
-      case "processing": return "Обробляється";
-      case "shipped": return "Відправлено";
-      case "delivered": return "Доставлено";
-      case "cancelled": return "Скасовано";
-      case "refunded": return "Повернено";
-      default: return String(status);
-    }
-  };
-
-  const getStatusClass = (status: any) => {
-    const normalized = getNormalizedStatus(status);
-    switch (normalized) {
-      case "pending": return styles.statusPending;
-      case "processing": return styles.statusProcessing;
-      case "shipped": return styles.statusShipped;
-      case "delivered": return styles.statusDelivered;
-      case "cancelled": return styles.statusCancelled;
-      case "refunded": return styles.statusRefunded;
-      default: return "";
-    }
-  };
 
   if (!initialized || loading) {
     return (
@@ -209,7 +180,7 @@ export function MeOrdersScreen() {
                     </div>
                     <div className={styles.orderButtonRight}>
                       <span className={styles.orderButtonPrice}>{order.totalPrice} грн.</span>
-                      <span className={`${styles.orderStatusBadge} ${getStatusClass(order.status)}`}>
+                      <span className={`${styles.orderStatusBadge} ${getStatusClass(order.status, styles)}`}>
                         {getStatusLabel(order.status)}
                       </span>
                     </div>

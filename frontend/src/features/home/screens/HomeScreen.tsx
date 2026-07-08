@@ -1,23 +1,23 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   getCatalogCategories,
   getCatalogNewProducts,
   getCatalogOnSaleProducts,
   getCatalogPopularProducts,
   getPersonalizedRecommendations,
-  searchCatalogProducts,
+  // searchCatalogProducts,
 } from "@/features/storefront/api/catalog.api";
 import type { CatalogCategoryDto } from "@/features/storefront/model/catalog.types";
 import {
   mapProductToRailCard,
   type ProductRailCard,
 } from "@/features/home/lib/map-product-to-rail-card";
-import { CatalogMenu, PageLayout, ProductCard, Spinner } from "@/shared/ui";
+import { useAuth } from "@/features/auth/model/auth.store";
+import { CatalogMenu, PageLayout } from "@/shared/ui";
 import { ProductRailItems } from "../ui/ProductRailItems";
 import { RecommendationsRail } from "../ui/RecommendationsRail";
 import styles from "./HomeScreen.module.css";
@@ -26,17 +26,21 @@ const HOME_RAIL_PAGE_SIZE = 12;
 
 export function HomeScreen() {
   const router = useRouter();
+  const isAuthenticated = useAuth((state) => state.isAuthenticated);
+  const authInitialized = useAuth((state) => state.initialized);
+  const loadMe = useAuth((state) => state.loadMe);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [categories, setCategories] = useState<CatalogCategoryDto[]>([]);
   const [recommendations, setRecommendations] = useState<ProductRailCard[]>([]);
   const [popular, setPopular] = useState<ProductRailCard[]>([]);
   const [newProducts, setNewProducts] = useState<ProductRailCard[]>([]);
   const [onSale, setOnSale] = useState<ProductRailCard[]>([]);
-  const [recommendationsLoading, setRecommendationsLoading] = useState(true);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [popularLoading, setPopularLoading] = useState(true);
   const [newProductsLoading, setNewProductsLoading] = useState(true);
   const [onSaleLoading, setOnSaleLoading] = useState(true);
 
+  /* TODO: restore "Спеціально для вас" feed section when needed.
   const [feedItems, setFeedItems] = useState<ProductRailCard[]>([]);
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedPage, setFeedPage] = useState(1);
@@ -64,6 +68,7 @@ export function HomeScreen() {
     },
     [],
   );
+  */
 
   useEffect(() => {
     const load = async () => {
@@ -78,6 +83,11 @@ export function HomeScreen() {
     void load();
   }, []);
 
+  useEffect(() => {
+    void loadMe();
+  }, [loadMe]);
+
+  /* TODO: restore "Спеціально для вас" feed section when needed.
   useEffect(() => {
     setFeedPage(1);
     setHasMore(true);
@@ -102,8 +112,15 @@ export function HomeScreen() {
     },
     [feedLoading, hasMore, feedPage, selectedCategory, loadFeed],
   );
+  */
 
   useEffect(() => {
+    if (!authInitialized || !isAuthenticated) {
+      setRecommendations([]);
+      setRecommendationsLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     const loadRecommendations = async () => {
@@ -132,7 +149,7 @@ export function HomeScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [authInitialized, isAuthenticated]);
 
   useEffect(() => {
     let cancelled = false;
@@ -183,6 +200,7 @@ export function HomeScreen() {
 
   return (
     <PageLayout
+      className={styles.homeMain}
       headerProps={{
         homeHref: "/",
         userHref: "/me",
@@ -211,13 +229,15 @@ export function HomeScreen() {
         />
       </section>
 
-      <RecommendationsRail
-        title="Рекомендовані"
-        loading={recommendationsLoading}
-        viewAllHref="/catalog"
-      >
-        <ProductRailItems items={recommendations} />
-      </RecommendationsRail>
+      {authInitialized && isAuthenticated ? (
+        <RecommendationsRail
+          title="Рекомендовані"
+          loading={recommendationsLoading}
+          viewAllHref="/catalog"
+        >
+          <ProductRailItems items={recommendations} />
+        </RecommendationsRail>
+      ) : null}
 
       <RecommendationsRail
         title="Популярні"
@@ -243,6 +263,18 @@ export function HomeScreen() {
         <ProductRailItems items={onSale} />
       </RecommendationsRail>
 
+      <section className={styles.discountPromo} aria-label="Знижка на перше замовлення">
+        <Image
+          src="/first-order-discount.png"
+          alt="Отримай -15% на перше замовлення. Реєструйся та отримуй більше оновлення від придбання книг."
+          className={styles.discountPromoImage}
+          width={353}
+          height={212}
+          sizes="(max-width: 353px) 100vw, 353px"
+        />
+      </section>
+
+      {/* TODO: restore "Спеціально для вас" feed section when needed.
       <section className={styles.feedSection}>
         <div className={styles.feedHeader}>
           <h2 className={styles.feedTitle}>Спеціально для вас</h2>
@@ -298,6 +330,7 @@ export function HomeScreen() {
 
         {hasMore && <div ref={triggerRef} className={styles.scrollTrigger} />}
       </section>
+      */}
 
       <CatalogMenu
         open={catalogOpen}
