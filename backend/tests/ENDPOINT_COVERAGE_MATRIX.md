@@ -37,7 +37,7 @@ Legend: **U** = Unit.Api, **L** = Integration.Light, **C** = Integration.Contain
 | `GET /me/orders/{id}` | U | L | | | |
 | `POST /orders/{id}/status` | U | L | C | | Outbox + notification schedule |
 | `GET /me/in-app-notifications` | | L | C | E | After status / direct insert |
-| `GET /catalog/products/search` | U | L | | E | |
+| `GET /catalog/products/search` | U | L | C | E | ApplicationProductSearchQueryTests + CatalogSearchFilterCombinationContainersTests + CatalogSearchFilterCombinationE2ETests |
 | `GET /catalog/products/{slug}` | U | | | | |
 | `GET /me/push-subscriptions/vapid-public-key` | | | C | E | PushSubscriptionPostgresTests |
 | `POST /me/push-subscriptions` | | | C | | PushSubscriptionPostgresTests |

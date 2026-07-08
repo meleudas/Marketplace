@@ -115,6 +115,7 @@ public sealed class IntegrationCatalogCategoriesSqliteTests
             new ProductDetailRepository(db),
             new ProductImageRepository(db),
             stockRepo,
+            new CategoryRepository(db),
             NullLogger<SearchCatalogProductsQueryHandler>.Instance);
 
         var result = await handler.Handle(

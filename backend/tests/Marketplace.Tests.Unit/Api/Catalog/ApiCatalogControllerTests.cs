@@ -4,6 +4,7 @@ using Marketplace.Application.Companies.DTOs;
 using Marketplace.Application.Companies.Queries.GetCatalogCompanyByIdOrSlug;
 using Marketplace.Application.Inventory.DTOs;
 using Marketplace.Application.Products.DTOs;
+using Marketplace.Application.Products.Queries.GetCatalogAuthors;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -92,6 +93,45 @@ public class ApiCatalogControllerTests
 
         var objectResult = Assert.IsType<ObjectResult>(response);
         Assert.Equal(404, objectResult.StatusCode);
+    }
+
+    [Fact]
+    [Trait("Suite", "API")]
+    [Trait("Suite", "CatalogCategories")]
+    public async Task GetProductFacets_Returns_Ok_When_Query_Succeeds()
+    {
+        var sender = new RecordingSender
+        {
+            NextResult = Result<CatalogProductFacetsDto>.Success(
+                new CatalogProductFacetsDto(
+                    [new CatalogFacetOptionDto("tolkien", "Tolkien", 2)],
+                    [new CatalogFacetOptionDto("fantasy", "fantasy", 1)],
+                    [new CatalogFacetOptionDto("паперова", "Паперова", 1)],
+                    []))
+        };
+
+        var controller = new CatalogController(sender, NullLogger<CatalogController>.Instance);
+        var response = await controller.GetProductFacets(new ListCatalogProductFacetsRequest(null, null), CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(response);
+    }
+
+    [Fact]
+    [Trait("Suite", "API")]
+    [Trait("Suite", "CatalogCategories")]
+    public async Task GetAuthors_Returns_Ok_When_Query_Succeeds()
+    {
+        var sender = new RecordingSender
+        {
+            NextResult = Result<IReadOnlyList<CatalogFacetOptionDto>>.Success(
+                [new CatalogFacetOptionDto("tolkien", "Tolkien", 2)])
+        };
+
+        var controller = new CatalogController(sender, NullLogger<CatalogController>.Instance);
+        var response = await controller.GetAuthors(new ListCatalogProductFacetsRequest([11], null), CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(response);
+        Assert.IsType<GetCatalogAuthorsQuery>(sender.LastRequest);
     }
 
     [Fact]

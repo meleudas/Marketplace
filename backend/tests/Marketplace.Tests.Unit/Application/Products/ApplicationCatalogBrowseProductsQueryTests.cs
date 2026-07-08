@@ -5,6 +5,8 @@ using Marketplace.Application.Products.Queries.ListCatalogPopularProducts;
 using Marketplace.Domain.Catalog.Entities;
 using Marketplace.Domain.Catalog.Enums;
 using Marketplace.Domain.Catalog.Repositories;
+using Marketplace.Domain.Categories.Entities;
+using Marketplace.Domain.Categories.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Inventory.Entities;
 using Marketplace.Domain.Inventory.Repositories;
@@ -52,13 +54,22 @@ public sealed class ApplicationCatalogBrowseProductsQueryTests
         IProductSearchService searchService,
         InMemoryProductRepository productRepository,
         InMemoryWarehouseStockRepository stockRepository) =>
-        new(searchService, productRepository, new InMemoryProductImageRepository(), stockRepository, NullLogger<ListCatalogNewProductsQueryHandler>.Instance);
+        new(searchService, productRepository, new InMemoryProductImageRepository(), stockRepository, new EmptyCategoryRepository(), NullLogger<ListCatalogNewProductsQueryHandler>.Instance);
 
     private static ListCatalogPopularProductsQueryHandler CreatePopularHandler(
         IProductSearchService searchService,
         InMemoryProductRepository productRepository,
         InMemoryWarehouseStockRepository stockRepository) =>
-        new(searchService, productRepository, new InMemoryProductImageRepository(), stockRepository, NullLogger<ListCatalogPopularProductsQueryHandler>.Instance);
+        new(searchService, productRepository, new InMemoryProductImageRepository(), stockRepository, new EmptyCategoryRepository(), NullLogger<ListCatalogPopularProductsQueryHandler>.Instance);
+
+    private sealed class EmptyCategoryRepository : ICategoryRepository
+    {
+        public Task<Category?> GetByIdAsync(CategoryId id, CancellationToken ct = default) => Task.FromResult<Category?>(null);
+        public Task<IReadOnlyList<Category>> GetAllAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Category>>([]);
+        public Task<IReadOnlyList<Category>> GetActiveAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Category>>([]);
+        public Task<Category> AddAsync(Category category, CancellationToken ct = default) => Task.FromResult(category);
+        public Task UpdateAsync(Category category, CancellationToken ct = default) => Task.CompletedTask;
+    }
 
     private static Product CreateProduct(
         long id,
