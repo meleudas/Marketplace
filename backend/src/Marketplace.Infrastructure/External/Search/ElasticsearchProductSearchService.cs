@@ -308,7 +308,12 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
 
     private static void ConfigureSearchBoolQuery(BoolQueryDescriptor<ProductSearchDocument> b, CatalogProductSearchFilters filters)
     {
-        b.Filter(f => f.Term(t => t.Field(x => x.Status).Value("active")));
+        // Repeated .Filter(...) calls on BoolQueryDescriptor overwrite each other,
+        // so all filter clauses are collected and applied in a single call.
+        var filterClauses = new List<Action<QueryDescriptor<ProductSearchDocument>>>
+        {
+            f => f.Term(t => t.Field(x => x.Status).Value("active"))
+        };
 
         if (!string.IsNullOrWhiteSpace(filters.Name))
         {
@@ -339,21 +344,23 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
 
         if (filters.CategoryIds is { Count: > 0 })
         {
-            b.Filter(f => f.Terms(t => t
+            var categoryValues = filters.CategoryIds.Select(FieldValue.Long).ToArray();
+            filterClauses.Add(f => f.Terms(t => t
                 .Field(field => field.CategoryId)
-                .Terms(new TermsQueryField(filters.CategoryIds.Select(FieldValue.Long).ToArray()))));
+                .Terms(new TermsQueryField(categoryValues))));
         }
 
         if (filters.CompanyId.HasValue)
         {
-            b.Filter(f => f.Term(t => t
+            var companyId = filters.CompanyId.Value.ToString();
+            filterClauses.Add(f => f.Term(t => t
                 .Field(field => field.CompanyId)
-                .Value(filters.CompanyId.Value.ToString())));
+                .Value(companyId)));
         }
 
         if (filters.MinPrice.HasValue || filters.MaxPrice.HasValue)
         {
-            b.Filter(f => f.Range(r => r.Number(nr =>
+            filterClauses.Add(f => f.Range(r => r.Number(nr =>
             {
                 nr.Field(field => field.Price);
                 if (filters.MinPrice.HasValue)
@@ -365,9 +372,10 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
 
         if (!string.IsNullOrWhiteSpace(filters.AvailabilityStatus))
         {
-            b.Filter(f => f.Term(t => t
+            var availability = filters.AvailabilityStatus.Trim().ToLowerInvariant();
+            filterClauses.Add(f => f.Term(t => t
                 .Field(field => field.AvailabilityStatus)
-                .Value(filters.AvailabilityStatus.Trim().ToLowerInvariant())));
+                .Value(availability)));
         }
 
         if (filters.Authors is { Count: > 0 })
@@ -377,7 +385,7 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
                 .ToArray();
             if (authorValues.Length > 0)
             {
-                b.Filter(f => f.Bool(bb => bb
+                filterClauses.Add(f => f.Bool(bb => bb
                     .Should(
                         s => s.Terms(t => t
                             .Field(field => field.Author)
@@ -391,9 +399,10 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
 
         if (!string.IsNullOrWhiteSpace(filters.Format))
         {
-            b.Filter(f => f.Term(t => t
+            var format = ProductCatalogFormats.Canonicalize(filters.Format) ?? ProductCatalogFacetReader.Normalize(filters.Format);
+            filterClauses.Add(f => f.Term(t => t
                 .Field(field => field.Format)
-                .Value(ProductCatalogFacetReader.Normalize(filters.Format))));
+                .Value(format)));
         }
 
         if (filters.Genres is { Count: > 0 })
@@ -403,7 +412,7 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
                 .ToArray();
             if (genreValues.Length > 0)
             {
-                b.Filter(f => f.Bool(bb => bb
+                filterClauses.Add(f => f.Bool(bb => bb
                     .Should(
                         s => s.Terms(t => t
                             .Field(field => field.Genres)
@@ -419,11 +428,14 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
         {
             foreach (var tag in filters.Tags.Where(x => !string.IsNullOrWhiteSpace(x)))
             {
-                b.Filter(f => f.Term(t => t
+                var normalizedTag = ProductCatalogFacetReader.Normalize(tag);
+                filterClauses.Add(f => f.Term(t => t
                     .Field(field => field.Tags)
-                    .Value(ProductCatalogFacetReader.Normalize(tag))));
+                    .Value(normalizedTag)));
             }
         }
+
+        b.Filter(filterClauses.ToArray());
 
         if (string.IsNullOrWhiteSpace(filters.Name))
             b.Must(m => m.MatchAll(_ => { }));
@@ -458,26 +470,33 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
 
     private static void ConfigureOnSaleBoolQuery(BoolQueryDescriptor<ProductSearchDocument> b, CatalogOnSaleProductFilters filters)
     {
-        b.Filter(f => f.Term(t => t.Field(x => x.Status).Value("active")));
-        b.Filter(f => f.Term(t => t.Field(x => x.IsOnSale).Value(true)));
+        // Repeated .Filter(...) calls on BoolQueryDescriptor overwrite each other,
+        // so all filter clauses are collected and applied in a single call.
+        var filterClauses = new List<Action<QueryDescriptor<ProductSearchDocument>>>
+        {
+            f => f.Term(t => t.Field(x => x.Status).Value("active")),
+            f => f.Term(t => t.Field(x => x.IsOnSale).Value(true))
+        };
 
         if (filters.CategoryIds is { Count: > 0 })
         {
-            b.Filter(f => f.Terms(t => t
+            var categoryValues = filters.CategoryIds.Select(FieldValue.Long).ToArray();
+            filterClauses.Add(f => f.Terms(t => t
                 .Field(field => field.CategoryId)
-                .Terms(new TermsQueryField(filters.CategoryIds.Select(FieldValue.Long).ToArray()))));
+                .Terms(new TermsQueryField(categoryValues))));
         }
 
         if (filters.CompanyId.HasValue)
         {
-            b.Filter(f => f.Term(t => t
+            var companyId = filters.CompanyId.Value.ToString();
+            filterClauses.Add(f => f.Term(t => t
                 .Field(field => field.CompanyId)
-                .Value(filters.CompanyId.Value.ToString())));
+                .Value(companyId)));
         }
 
         if (filters.MinPrice.HasValue || filters.MaxPrice.HasValue)
         {
-            b.Filter(f => f.Range(r => r.Number(nr =>
+            filterClauses.Add(f => f.Range(r => r.Number(nr =>
             {
                 nr.Field(field => field.Price);
                 if (filters.MinPrice.HasValue)
@@ -489,18 +508,20 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
 
         if (filters.MinDiscountPercent.HasValue)
         {
-            b.Filter(f => f.Range(r => r.Number(nr => nr
+            filterClauses.Add(f => f.Range(r => r.Number(nr => nr
                 .Field(field => field.DiscountPercent)
                 .Gte((double)filters.MinDiscountPercent.Value))));
         }
 
         if (!string.IsNullOrWhiteSpace(filters.AvailabilityStatus))
         {
-            b.Filter(f => f.Term(t => t
+            var availability = filters.AvailabilityStatus.Trim().ToLowerInvariant();
+            filterClauses.Add(f => f.Term(t => t
                 .Field(field => field.AvailabilityStatus)
-                .Value(filters.AvailabilityStatus.Trim().ToLowerInvariant())));
+                .Value(availability)));
         }
 
+        b.Filter(filterClauses.ToArray());
         b.Must(m => m.MatchAll(_ => { }));
     }
 
@@ -594,25 +615,32 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
 
     private static void ConfigureBrowsableBoolQuery(BoolQueryDescriptor<ProductSearchDocument> b, CatalogBrowsableProductFilters filters)
     {
-        b.Filter(f => f.Term(t => t.Field(x => x.Status).Value("active")));
+        // Repeated .Filter(...) calls on BoolQueryDescriptor overwrite each other,
+        // so all filter clauses are collected and applied in a single call.
+        var filterClauses = new List<Action<QueryDescriptor<ProductSearchDocument>>>
+        {
+            f => f.Term(t => t.Field(x => x.Status).Value("active"))
+        };
 
         if (filters.CategoryIds is { Count: > 0 })
         {
-            b.Filter(f => f.Terms(t => t
+            var categoryValues = filters.CategoryIds.Select(FieldValue.Long).ToArray();
+            filterClauses.Add(f => f.Terms(t => t
                 .Field(field => field.CategoryId)
-                .Terms(new TermsQueryField(filters.CategoryIds.Select(FieldValue.Long).ToArray()))));
+                .Terms(new TermsQueryField(categoryValues))));
         }
 
         if (filters.CompanyId.HasValue)
         {
-            b.Filter(f => f.Term(t => t
+            var companyId = filters.CompanyId.Value.ToString();
+            filterClauses.Add(f => f.Term(t => t
                 .Field(field => field.CompanyId)
-                .Value(filters.CompanyId.Value.ToString())));
+                .Value(companyId)));
         }
 
         if (filters.MinPrice.HasValue || filters.MaxPrice.HasValue)
         {
-            b.Filter(f => f.Range(r => r.Number(nr =>
+            filterClauses.Add(f => f.Range(r => r.Number(nr =>
             {
                 nr.Field(field => field.Price);
                 if (filters.MinPrice.HasValue)
@@ -624,11 +652,13 @@ public sealed class ElasticsearchProductSearchService : IProductSearchService, I
 
         if (!string.IsNullOrWhiteSpace(filters.AvailabilityStatus))
         {
-            b.Filter(f => f.Term(t => t
+            var availability = filters.AvailabilityStatus.Trim().ToLowerInvariant();
+            filterClauses.Add(f => f.Term(t => t
                 .Field(field => field.AvailabilityStatus)
-                .Value(filters.AvailabilityStatus.Trim().ToLowerInvariant())));
+                .Value(availability)));
         }
 
+        b.Filter(filterClauses.ToArray());
         b.Must(m => m.MatchAll(_ => { }));
     }
 
