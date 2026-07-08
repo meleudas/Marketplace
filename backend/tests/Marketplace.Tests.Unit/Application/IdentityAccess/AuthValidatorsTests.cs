@@ -5,6 +5,7 @@ using Marketplace.Application.Auth.Commands.TwoFactor.EnableTelegramTwoFactor;
 using Marketplace.Application.Auth.Commands.TwoFactor.LinkTelegramAccount;
 using Marketplace.Application.Users.Commands.RequestPasswordReset;
 using Marketplace.Application.Users.Commands.ResetPassword;
+using Marketplace.Application.Users.Commands.UpdateMyProfile;
 using Marketplace.Application.Users.Commands.VerifyEmail;
 
 namespace Marketplace.Tests;
@@ -147,6 +148,19 @@ public class AuthValidatorsTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == "NewPassword");
+    }
+
+    [Fact]
+    public void UpdateMyProfileValidator_Rejects_Invalid_UserName_And_Phone()
+    {
+        var validator = new UpdateMyProfileCommandValidator();
+        var command = new UpdateMyProfileCommand(Guid.NewGuid(), "ab", "0");
+
+        var result = validator.Validate(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == "UserName" || e.PropertyName == "Username");
+        Assert.Contains(result.Errors, e => e.PropertyName == "PhoneNumber");
     }
 }
 

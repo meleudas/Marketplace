@@ -474,6 +474,25 @@ public class IdentityAuthService : IAuthenticationPort
         return Result.Success();
     }
 
+    public async Task<Result> UpdateProfileAsync(
+        IdentityUserId userId,
+        UserName userName,
+        string? phoneNumber,
+        CancellationToken ct = default)
+    {
+        var appUser = await _userManager.FindByIdAsync(userId.Value.ToString());
+        if (appUser is null || appUser.IsDeleted)
+            return Result.Failure("User no longer exists.");
+
+        appUser.UserName = userName.Value;
+        appUser.PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber.Trim();
+        var update = await _userManager.UpdateAsync(appUser);
+        if (!update.Succeeded)
+            return Result.Failure(string.Join(" ", update.Errors.Select(e => e.Description)));
+
+        return Result.Success();
+    }
+
     private async Task<Result<AuthTokens>> IssueTokensAsync(ApplicationUser appUser, CancellationToken ct)
     {
         var roles = await _userManager.GetRolesAsync(appUser);

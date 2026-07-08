@@ -6,6 +6,7 @@ using Marketplace.Application.Auth.DTOs;
 using Marketplace.Application.Auth.Ports;
 using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Users.Commands.AssignUserRole;
+using Marketplace.Application.Users.Commands.UpdateMyProfile;
 using Marketplace.Domain.Auth.ValueObjects;
 using Marketplace.Domain.Shared.Kernel;
 using Marketplace.Domain.Users.Entities;
@@ -79,10 +80,52 @@ public class ApplicationIdentityAccessHandlersTests
         Assert.Contains(cache.RemovedKeys, x => x.Contains(userId.ToString(), StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task UpdateMyProfileHandler_Updates_User_And_Invalidates_Profile_Cache()
+    {
+        var auth = new FakeAuthenticationPort();
+        var cache = new SpyCachePort();
+        var users = new InMemoryUserRepository();
+        var identityUserId = Guid.NewGuid();
+        users.Seed(User.Reconstitute(
+            UserId.From(identityUserId),
+            "Old",
+            "Name",
+            UserRole.Buyer,
+            null,
+            null,
+            false,
+            null,
+            null,
+            DateTime.UtcNow,
+            DateTime.UtcNow,
+            false,
+            null));
+        var sut = new UpdateMyProfileCommandHandler(users, auth, cache);
+
+        var result = await sut.Handle(new UpdateMyProfileCommand(identityUserId, "new_user_name", "+380501234567"), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, auth.UpdateProfileCalls);
+        Assert.Contains(cache.RemovedKeys, x => x.Contains(identityUserId.ToString(), StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task UpdateMyProfileHandler_Returns_Failure_When_User_Not_Found()
+    {
+        var sut = new UpdateMyProfileCommandHandler(new InMemoryUserRepository(), new FakeAuthenticationPort(), new SpyCachePort());
+
+        var result = await sut.Handle(new UpdateMyProfileCommand(Guid.NewGuid(), "new_user_name", null), CancellationToken.None);
+
+        Assert.True(result.IsFailure);
+        Assert.Contains("not found", result.Error ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
     private sealed class FakeAuthenticationPort : IAuthenticationPort
     {
         public bool RequireConfirmedEmail => false;
         public int LogoutCalls { get; private set; }
+        public int UpdateProfileCalls { get; private set; }
 
         public Task<Result<AuthTokens>> RegisterAsync(IdentityUserId identityId, Email email, UserName userName, string password, string? phoneNumber = null, CancellationToken ct = default)
             => Task.FromResult(Result<AuthTokens>.Success(BuildTokens()));
@@ -113,6 +156,11 @@ public class ApplicationIdentityAccessHandlersTests
         public Task<Result> DisableTelegramTwoFactorAsync(IdentityUserId userId, CancellationToken ct = default) => Task.FromResult(Result.Success());
         public Task<Result<TwoFactorStatusDto>> GetTwoFactorStatusAsync(IdentityUserId userId, CancellationToken ct = default) => Task.FromResult(Result<TwoFactorStatusDto>.Success(new TwoFactorStatusDto(false, false, false)));
         public Task<Result> AssignUserRoleAsync(IdentityUserId userId, UserRole role, CancellationToken ct = default) => Task.FromResult(Result.Success());
+        public Task<Result> UpdateProfileAsync(IdentityUserId userId, UserName userName, string? phoneNumber, CancellationToken ct = default)
+        {
+            UpdateProfileCalls++;
+            return Task.FromResult(Result.Success());
+        }
 
         private static AuthTokens BuildTokens()
             => AuthTokens.Create(AuthToken.Create("access", TimeSpan.FromMinutes(10)), RefreshToken.Create("refresh", 30));
@@ -121,9 +169,17 @@ public class ApplicationIdentityAccessHandlersTests
     private sealed class InMemoryUserRepository : IUserRepository
     {
         public List<User> AddedUsers { get; } = [];
+        public List<User> UpdatedUsers { get; } = [];
+        private readonly Dictionary<Guid, User> _usersByIdentityId = new();
+
+        public void Seed(User user)
+        {
+            _usersByIdentityId[user.Id.Value] = user;
+        }
 
         public Task<User?> GetByIdAsync(UserId id, CancellationToken ct = default) => Task.FromResult<User?>(null);
-        public Task<User?> GetByIdentityIdAsync(IdentityUserId identityId, CancellationToken ct = default) => Task.FromResult<User?>(null);
+        public Task<User?> GetByIdentityIdAsync(IdentityUserId identityId, CancellationToken ct = default)
+            => Task.FromResult(_usersByIdentityId.GetValueOrDefault(identityId.Value));
         public Task<IReadOnlyList<User>> GetAllAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>([]);
         public Task<IReadOnlyList<User>> SearchByUserNameAsync(string userName, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<User>>([]);
         public Task AddAsync(User user, CancellationToken ct = default)
@@ -131,7 +187,12 @@ public class ApplicationIdentityAccessHandlersTests
             AddedUsers.Add(user);
             return Task.CompletedTask;
         }
-        public Task UpdateAsync(User user, CancellationToken ct = default) => Task.CompletedTask;
+        public Task UpdateAsync(User user, CancellationToken ct = default)
+        {
+            UpdatedUsers.Add(user);
+            _usersByIdentityId[user.Id.Value] = user;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class NoopEmailPort : IEmailPort

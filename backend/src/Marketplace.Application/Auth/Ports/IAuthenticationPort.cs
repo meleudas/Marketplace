@@ -61,5 +61,11 @@ namespace Marketplace.Application.Auth.Ports
         Task<Result<TwoFactorStatusDto>> GetTwoFactorStatusAsync(IdentityUserId userId, CancellationToken ct = default);
 
         Task<Result> AssignUserRoleAsync(IdentityUserId userId, UserRole role, CancellationToken ct = default);
+
+        Task<Result> UpdateProfileAsync(
+            IdentityUserId userId,
+            UserName userName,
+            string? phoneNumber,
+            CancellationToken ct = default);
     }
 }

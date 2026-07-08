@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Marketplace.API.Controllers;
 using Marketplace.Application.Auth.DTOs;
 using Marketplace.Application.Users.Commands.AssignUserRole;
+using Marketplace.Application.Users.Commands.UpdateMyProfile;
 using Marketplace.Application.Users.Services;
 using Marketplace.Domain.Shared.Kernel;
 using MediatR;
@@ -46,6 +47,29 @@ public class ApiUsersControllerTests
 
         Assert.IsType<OkResult>(response);
         Assert.IsType<AssignUserRoleCommand>(sender.LastRequest);
+    }
+
+    [Fact]
+    public async Task UpdateMyProfile_Returns_Unauthorized_Without_Sub()
+    {
+        var controller = BuildController(new StubUserReadService(), new StubUserManagementService(), new RecordingSender());
+        controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity());
+
+        var response = await controller.UpdateMyProfile(new UpdateMyProfileRequest("new_user_name", "+380501234567"), CancellationToken.None);
+
+        Assert.IsType<UnauthorizedResult>(response);
+    }
+
+    [Fact]
+    public async Task UpdateMyProfile_Sends_Command_For_Valid_Request()
+    {
+        var sender = new RecordingSender { NextResult = Result.Success() };
+        var controller = BuildController(new StubUserReadService(), new StubUserManagementService(), sender);
+
+        var response = await controller.UpdateMyProfile(new UpdateMyProfileRequest("new_user_name", "+380501234567"), CancellationToken.None);
+
+        Assert.IsType<OkResult>(response);
+        Assert.IsType<UpdateMyProfileCommand>(sender.LastRequest);
     }
 
     private static UsersController BuildController(IUserReadService readService, IUserManagementService managementService, ISender sender)

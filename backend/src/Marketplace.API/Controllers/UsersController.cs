@@ -1,5 +1,6 @@
 using Marketplace.API.Extensions;
 using Marketplace.Application.Users.Commands.AssignUserRole;
+using Marketplace.Application.Users.Commands.UpdateMyProfile;
 using Marketplace.Application.Users.Services;
 using Marketplace.Domain.Users.Enums;
 using MediatR;
@@ -65,6 +66,18 @@ public class UsersController : ControllerBase
         return result.ToActionResult();
     }
 
+    [HttpPatch("me")]
+    public async Task<IActionResult> UpdateMyProfile([FromBody] UpdateMyProfileRequest request, CancellationToken ct)
+    {
+        if (!User.TryGetUserId(out var identityUserId))
+            return Unauthorized();
+
+        var result = await _sender.Send(
+            new UpdateMyProfileCommand(identityUserId, request.UserName, request.PhoneNumber),
+            ct);
+        return result.ToActionResult();
+    }
+
     [HttpPatch("{id:guid}/role")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AssignRole(Guid id, [FromBody] AssignUserRoleRequest request, CancellationToken ct)
@@ -83,3 +96,4 @@ public class UsersController : ControllerBase
 }
 
 public sealed record AssignUserRoleRequest(string Role);
+public sealed record UpdateMyProfileRequest(string UserName, string? PhoneNumber);
