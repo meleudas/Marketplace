@@ -115,9 +115,11 @@ public sealed class ApplicationCouponsCommandTests
 
         public Task<CartItem?> GetByIdAsync(CartItemId id, CancellationToken ct = default) => Task.FromResult<CartItem?>(_item);
         public Task<CartItem?> GetByCartAndProductAsync(CartId cartId, ProductId productId, CancellationToken ct = default) => Task.FromResult<CartItem?>(_item);
+        public Task<CartItem?> GetByCartAndProductIncludingDeletedAsync(CartId cartId, ProductId productId, CancellationToken ct = default) => Task.FromResult<CartItem?>(_item);
         public Task<IReadOnlyList<CartItem>> ListByCartIdAsync(CartId cartId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<CartItem>>([_item]);
         public Task<CartItem> AddAsync(CartItem item, CancellationToken ct = default) => Task.FromResult(item);
         public Task UpdateAsync(CartItem item, CancellationToken ct = default) => Task.CompletedTask;
+        public Task ReactivateAsync(CartItemId id, int quantity, Money priceAtMoment, DateTime utcNow, CancellationToken ct = default) => Task.CompletedTask;
         public Task SoftDeleteAsync(CartItemId id, DateTime utcNow, CancellationToken ct = default) => Task.CompletedTask;
         public Task SoftDeleteByCartIdAsync(CartId cartId, DateTime utcNow, CancellationToken ct = default) => Task.CompletedTask;
     }

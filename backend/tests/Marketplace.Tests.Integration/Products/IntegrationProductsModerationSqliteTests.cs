@@ -50,6 +50,7 @@ public sealed class IntegrationProductsModerationSqliteTests
             new ProductDetailRepository(db),
             new ProductImageRepository(db),
             new WarehouseStockRepository(db),
+            new CategoryRepository(db),
             NullLogger<SearchCatalogProductsQueryHandler>.Instance);
 
         var create = await createHandler.Handle(
@@ -110,6 +111,7 @@ public sealed class IntegrationProductsModerationSqliteTests
             new ProductDetailRepository(db),
             new ProductImageRepository(db),
             new WarehouseStockRepository(db),
+            new CategoryRepository(db),
             NullLogger<SearchCatalogProductsQueryHandler>.Instance);
 
         var create = await createHandler.Handle(

@@ -229,6 +229,9 @@ public sealed class ApplicationRestockNotificationsTests
         public Task<CartItem?> GetByCartAndProductAsync(CartId cartId, ProductId productId, CancellationToken ct = default) =>
             Task.FromResult(_items.Values.FirstOrDefault(x => x.CartId == cartId && x.ProductId == productId && !x.IsDeleted));
 
+        public Task<CartItem?> GetByCartAndProductIncludingDeletedAsync(CartId cartId, ProductId productId, CancellationToken ct = default) =>
+            Task.FromResult(_items.Values.FirstOrDefault(x => x.CartId == cartId && x.ProductId == productId));
+
         public Task<IReadOnlyList<CartItem>> ListByCartIdAsync(CartId cartId, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<CartItem>>(_items.Values.Where(x => x.CartId == cartId && !x.IsDeleted).ToList());
 
@@ -243,6 +246,8 @@ public sealed class ApplicationRestockNotificationsTests
             _items[item.Id.Value] = item;
             return Task.CompletedTask;
         }
+
+        public Task ReactivateAsync(CartItemId id, int quantity, Money priceAtMoment, DateTime utcNow, CancellationToken ct = default) => Task.CompletedTask;
 
         public Task SoftDeleteAsync(CartItemId id, DateTime utcNow, CancellationToken ct = default) => Task.CompletedTask;
         public Task SoftDeleteByCartIdAsync(CartId cartId, DateTime utcNow, CancellationToken ct = default) => Task.CompletedTask;
