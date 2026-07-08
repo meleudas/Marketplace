@@ -109,6 +109,38 @@ public class ApplicationCartFavoriteHandlersTests
     }
 
     [Fact]
+    public async Task AddCartItem_After_Checkout_Restores_Soft_Deleted_Item()
+    {
+        var cartRepo = new InMemoryCartRepository();
+        var itemRepo = new InMemoryCartItemRepository();
+        var productRepo = new InMemoryProductRepository();
+        var cache = new SpyCachePort();
+        productRepo.Seed(CreateActiveProduct(2001));
+
+        var userId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var cart = await cartRepo.AddAsync(
+            Cart.Reconstitute(CartId.From(0), userId, CartStatus.Active, now, now, now, false, null),
+            CancellationToken.None);
+        _ = await itemRepo.AddAsync(
+            CartItem.Reconstitute(CartItemId.From(0), cart.Id, ProductId.From(2001), 2, new Money(100), Money.Zero, now, now, false, null),
+            CancellationToken.None);
+        await itemRepo.SoftDeleteByCartIdAsync(cart.Id, now, CancellationToken.None);
+
+        var watchRepo = new NoopCartStockWatchRepository();
+        var stockRepo = new CartTestWarehouseStockRepository();
+        var sync = new CartStockWatchSyncService(itemRepo, watchRepo, productRepo, stockRepo);
+        var handler = new AddCartItemCommandHandler(cartRepo, itemRepo, productRepo, cache, sync);
+
+        var result = await handler.Handle(new AddCartItemCommand(userId, 2001, 1), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(result.Value!.Items);
+        Assert.Equal(1, result.Value.Items[0].Quantity);
+        Assert.Equal(2001, result.Value.Items[0].ProductId);
+    }
+
+    [Fact]
     public async Task AddCartItem_Fails_For_NonPositive_Quantity()
     {
         var cartRepo = new InMemoryCartRepository();
@@ -283,6 +315,9 @@ public class ApplicationCartFavoriteHandlersTests
         public Task<CartItem?> GetByCartAndProductAsync(CartId cartId, ProductId productId, CancellationToken ct = default)
             => Task.FromResult(_items.Values.FirstOrDefault(x => x.CartId == cartId && x.ProductId == productId && !x.IsDeleted));
 
+        public Task<CartItem?> GetByCartAndProductIncludingDeletedAsync(CartId cartId, ProductId productId, CancellationToken ct = default)
+            => Task.FromResult(_items.Values.FirstOrDefault(x => x.CartId == cartId && x.ProductId == productId));
+
         public Task<IReadOnlyList<CartItem>> ListByCartIdAsync(CartId cartId, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<CartItem>>(_items.Values.Where(x => x.CartId == cartId && !x.IsDeleted).ToList());
 
@@ -307,6 +342,25 @@ public class ApplicationCartFavoriteHandlersTests
         public Task UpdateAsync(CartItem item, CancellationToken ct = default)
         {
             _items[item.Id.Value] = item;
+            return Task.CompletedTask;
+        }
+
+        public Task ReactivateAsync(CartItemId id, int quantity, Money priceAtMoment, DateTime utcNow, CancellationToken ct = default)
+        {
+            if (!_items.TryGetValue(id.Value, out var item))
+                return Task.CompletedTask;
+
+            _items[id.Value] = CartItem.Reconstitute(
+                item.Id,
+                item.CartId,
+                item.ProductId,
+                quantity,
+                priceAtMoment,
+                Money.Zero,
+                item.CreatedAt,
+                utcNow,
+                false,
+                null);
             return Task.CompletedTask;
         }
 

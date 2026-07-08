@@ -26,6 +26,15 @@ public sealed class CartItemRepository : ICartItemRepository
         return row is null ? null : ToDomain(row);
     }
 
+    public async Task<CartItem?> GetByCartAndProductIncludingDeletedAsync(CartId cartId, ProductId productId, CancellationToken ct = default)
+    {
+        var row = await _context.CartItems
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.CartId == cartId.Value && x.ProductId == productId.Value, ct);
+        return row is null ? null : ToDomain(row);
+    }
+
     public async Task<IReadOnlyList<CartItem>> ListByCartIdAsync(CartId cartId, CancellationToken ct = default)
     {
         var rows = await _context.CartItems
@@ -54,6 +63,23 @@ public sealed class CartItemRepository : ICartItemRepository
         row.UpdatedAt = item.UpdatedAt;
         row.IsDeleted = item.IsDeleted;
         row.DeletedAt = item.DeletedAt;
+        await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task ReactivateAsync(CartItemId id, int quantity, Money priceAtMoment, DateTime utcNow, CancellationToken ct = default)
+    {
+        var row = await _context.CartItems
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == id.Value, ct);
+        if (row is null)
+            return;
+
+        row.Quantity = quantity;
+        row.PriceAtMoment = priceAtMoment.Amount;
+        row.Discount = 0;
+        row.IsDeleted = false;
+        row.DeletedAt = null;
+        row.UpdatedAt = utcNow;
         await _context.SaveChangesAsync(ct);
     }
 

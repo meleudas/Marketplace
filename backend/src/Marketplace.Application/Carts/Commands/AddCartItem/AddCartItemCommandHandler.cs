@@ -66,22 +66,7 @@ public sealed class AddCartItemCommandHandler : IRequestHandler<AddCartItemComma
             }
 
             var existingItem = await _cartItemRepository.GetByCartAndProductAsync(cart.Id, product.Id, ct);
-            if (existingItem is null)
-            {
-                var newItem = CartItem.Reconstitute(
-                    CartItemId.From(0),
-                    cart.Id,
-                    product.Id,
-                    request.Quantity,
-                    product.Price,
-                    Money.Zero,
-                    now,
-                    now,
-                    false,
-                    null);
-                _ = await _cartItemRepository.AddAsync(newItem, ct);
-            }
-            else
+            if (existingItem is not null)
             {
                 if (existingItem.Quantity > int.MaxValue - request.Quantity)
                     return Result<CartDto>.Failure("Quantity overflow");
@@ -97,6 +82,29 @@ public sealed class AddCartItemCommandHandler : IRequestHandler<AddCartItemComma
                     existingItem.IsDeleted,
                     existingItem.DeletedAt);
                 await _cartItemRepository.UpdateAsync(updated, ct);
+            }
+            else
+            {
+                var deletedItem = await _cartItemRepository.GetByCartAndProductIncludingDeletedAsync(cart.Id, product.Id, ct);
+                if (deletedItem is not null && deletedItem.IsDeleted)
+                {
+                    await _cartItemRepository.ReactivateAsync(deletedItem.Id, request.Quantity, product.Price, now, ct);
+                }
+                else
+                {
+                    var newItem = CartItem.Reconstitute(
+                        CartItemId.From(0),
+                        cart.Id,
+                        product.Id,
+                        request.Quantity,
+                        product.Price,
+                        Money.Zero,
+                        now,
+                        now,
+                        false,
+                        null);
+                    _ = await _cartItemRepository.AddAsync(newItem, ct);
+                }
             }
 
             cart = Cart.Reconstitute(cart.Id, cart.UserId, cart.Status, now, cart.CreatedAt, now, cart.IsDeleted, cart.DeletedAt);

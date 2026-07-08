@@ -344,6 +344,7 @@ public class ApplicationCheckoutCartCommandTests
 
         public Task<CartItem?> GetByIdAsync(CartItemId id, CancellationToken ct = default) => Task.FromResult(_items.GetValueOrDefault(id.Value));
         public Task<CartItem?> GetByCartAndProductAsync(CartId cartId, ProductId productId, CancellationToken ct = default) => Task.FromResult(_items.Values.FirstOrDefault(x => x.CartId == cartId && x.ProductId == productId && !x.IsDeleted));
+        public Task<CartItem?> GetByCartAndProductIncludingDeletedAsync(CartId cartId, ProductId productId, CancellationToken ct = default) => Task.FromResult(_items.Values.FirstOrDefault(x => x.CartId == cartId && x.ProductId == productId));
         public Task<IReadOnlyList<CartItem>> ListByCartIdAsync(CartId cartId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<CartItem>>(_items.Values.Where(x => x.CartId == cartId && !x.IsDeleted).ToList());
 
         public Task<CartItem> AddAsync(CartItem item, CancellationToken ct = default)
@@ -357,6 +358,13 @@ public class ApplicationCheckoutCartCommandTests
         public Task UpdateAsync(CartItem item, CancellationToken ct = default)
         {
             _items[item.Id.Value] = item;
+            return Task.CompletedTask;
+        }
+
+        public Task ReactivateAsync(CartItemId id, int quantity, Money priceAtMoment, DateTime utcNow, CancellationToken ct = default)
+        {
+            if (_items.TryGetValue(id.Value, out var item))
+                _items[id.Value] = CartItem.Reconstitute(item.Id, item.CartId, item.ProductId, quantity, priceAtMoment, Money.Zero, item.CreatedAt, utcNow, false, null);
             return Task.CompletedTask;
         }
 
