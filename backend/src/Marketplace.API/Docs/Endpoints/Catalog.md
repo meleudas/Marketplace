@@ -131,6 +131,35 @@
   - Статус: `implemented`
 - **Повертає:** масив `ProductListItemDto` (у т.ч. `availableQty`, `availabilityStatus`).
 
+## `GET /catalog/products/facets`
+
+- **Summary (1 рядок):** Унікальні значення фільтрів каталогу (authors, genres, formats, tags).
+- **Призначення:** зібрати facet-опції для меню фільтрації на фронті з активних товарів.
+- **Хто може викликати:**
+  - JWT: не потрібна
+  - Глобальні ролі: —
+  - Компанійні ролі: —
+- **Бізнес-логіка:**
+  1. Завантажити активні товари + `product_details`
+  2. Розпарсити facets через `ProductCatalogFacetReader`
+  3. Повернути distinct значення з `value`, `label`, `count`
+- **Side effects (синхронно):** read-through кеш `catalog:products:facets:*`, TTL **10 хв**
+- **Приймає (query):**
+  - `categoryIds` (repeatable long, опційно)
+  - `companyId` (guid, опційно)
+- **Повертає:** `CatalogProductFacetsDto`:
+  - `authors`, `genres`, `formats`, `tags` — масиви `{ value, label, count }`
+- **Примітки:** `value` — нормалізоване значення для `/catalog/products/search` (`authors`, `genres`, `format`, `tags`).
+
+## `GET /catalog/authors`
+
+- **Summary (1 рядок):** Список авторів для фільтра каталогу (alias facets).
+- **Призначення:** повернути лише `authors` з тієї ж агрегації, що й `/catalog/products/facets`.
+- **Хто може викликати:**
+  - JWT: не потрібна
+- **Приймає (query):** `categoryIds`, `companyId` (як у facets)
+- **Повертає:** масив `CatalogFacetOptionDto` (`value`, `label`, `count`).
+
 ## `GET /catalog/products/search`
 
 - **Summary (1 рядок):** Пошук товарів через Elasticsearch з fallback на БД.
@@ -152,10 +181,14 @@
 - **Приймає (query):**
   - `name` (string, опційно) — пошук **по назві товару** (пріоритетний параметр)
   - `query` (string, опційно) — текст запиту
-  - `categoryIds` (repeatable long, опційно)
+  - `categoryIds` (repeatable long, опційно) — root або leaf; бекенд розгортає дочірні категорії
   - `companyId` (guid, опційно)
   - `minPrice` / `maxPrice` (decimal, опційно)
   - `availabilityStatus` (`out_of_stock` / `low_stock` / `in_stock`, опційно)
+  - `authors` (repeatable string, опційно, OR); alias: `author`
+  - `format` (string, опційно)
+  - `genres` (repeatable string, опційно, OR); alias: `genre`
+  - `tags` (repeatable string, опційно, AND)
   - `sort` (`relevance` / `newest` / `price_asc` / `price_desc`)
   - `page` (int, default 1), `pageSize` (int, default 20)
   - `searchAfter` (base64 cursor, опційно) — cursor для наступної сторінки
@@ -164,7 +197,7 @@
   - запит не падає одразу на 5xx через ES-деградацію;
   - результат формується через `ListActiveAsync` + фільтрацію/сортування в застосунку;
   - в observability фіксуються `catalog_operations_total`, `catalog_errors_total`, `catalog_latency_ms`, `catalog_search_fallback_total`.
-- **Примітки:** `name` комбінується з `categoryIds` як AND-фільтр (пошук по назві всередині вибраних категорій).
+- **Примітки:** `name` комбінується з `categoryIds` як AND-фільтр (пошук по назві всередині вибраних категорій). Між різними параметрами (`categoryIds`, `authors`, `genres`, `format`, price…) — AND; кілька значень в одному параметрі (`authors`, `genres`, `categoryIds`) — OR; кілька `tags` — AND.
 
 ## `GET /catalog/products/{slug}`
 

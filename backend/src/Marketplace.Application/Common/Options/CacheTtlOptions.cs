@@ -14,6 +14,7 @@ public sealed class CacheTtlOptions
     public int CatalogApprovedCompaniesMinutes { get; set; } = 5;
     public int CatalogActiveCategoriesMinutes { get; set; } = 10;
     public int CatalogProductListMinutes { get; set; } = 5;
+    public int CatalogProductFacetsMinutes { get; set; } = 10;
     public int CatalogProductDetailMinutes { get; set; } = 5;
     public int CatalogSimilarProductsMinutes { get; set; } = 15;
     public int CatalogProductReviewsMinutes { get; set; } = 5;
@@ -35,6 +36,7 @@ public sealed class CacheTtlOptions
     public TimeSpan CatalogApprovedCompanies => TimeSpan.FromMinutes(Math.Clamp(CatalogApprovedCompaniesMinutes, 1, 240));
     public TimeSpan CatalogActiveCategories => TimeSpan.FromMinutes(Math.Clamp(CatalogActiveCategoriesMinutes, 1, 240));
     public TimeSpan CatalogProductList => TimeSpan.FromMinutes(Math.Clamp(CatalogProductListMinutes, 1, 240));
+    public TimeSpan CatalogProductFacets => TimeSpan.FromMinutes(Math.Clamp(CatalogProductFacetsMinutes, 1, 240));
     public TimeSpan CatalogProductDetail => TimeSpan.FromMinutes(Math.Clamp(CatalogProductDetailMinutes, 1, 240));
     public TimeSpan CatalogSimilarProducts => TimeSpan.FromMinutes(Math.Clamp(CatalogSimilarProductsMinutes, 1, 240));
     public TimeSpan CatalogProductReviews => TimeSpan.FromMinutes(Math.Clamp(CatalogProductReviewsMinutes, 1, 240));

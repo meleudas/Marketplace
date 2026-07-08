@@ -2,6 +2,7 @@ using FluentValidation;
 using Marketplace.Application.Common.Behaviors;
 using Marketplace.Application.Inventory.Authorization;
 using Marketplace.Application.Products.Authorization;
+using Marketplace.Application.Products.Catalog;
 using Marketplace.Application.Orders.Cache;
 using Marketplace.Application.Orders.Authorization;
 using Marketplace.Application.Orders.Options;
@@ -52,6 +53,8 @@ public static class DependencyInjection
         services.AddScoped<IUserManagementService, UserManagementService>();
         services.AddScoped<IInventoryAccessService, InventoryAccessService>();
         services.AddScoped<IProductAccessService, ProductAccessService>();
+        services.AddScoped<CatalogFacetAggregator>();
+        services.AddScoped<ICatalogFacetReadService, CatalogFacetReadService>();
         services.AddScoped<IOrderAccessService, OrderAccessService>();
         services.AddScoped<OrderCancellationPolicy>();
         services.AddScoped<IOrderCacheInvalidationService, OrderCacheInvalidationService>();

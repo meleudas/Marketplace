@@ -3,6 +3,7 @@ using Marketplace.Application.Products.DTOs;
 using Marketplace.Application.Products.Mappings;
 using Marketplace.Application.Products.Ports;
 using Marketplace.Domain.Catalog.Repositories;
+using Marketplace.Domain.Categories.Repositories;
 using Marketplace.Domain.Common.ValueObjects;
 using Marketplace.Domain.Inventory.Repositories;
 using Marketplace.Domain.Shared.Kernel;
@@ -18,6 +19,7 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
     private readonly IProductDetailRepository _productDetailRepository;
     private readonly IProductImageRepository _productImageRepository;
     private readonly IWarehouseStockRepository _stockRepository;
+    private readonly ICategoryRepository _categoryRepository;
     private readonly ILogger<SearchCatalogProductsQueryHandler> _logger;
 
     public SearchCatalogProductsQueryHandler(
@@ -26,6 +28,7 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
         IProductDetailRepository productDetailRepository,
         IProductImageRepository productImageRepository,
         IWarehouseStockRepository stockRepository,
+        ICategoryRepository categoryRepository,
         ILogger<SearchCatalogProductsQueryHandler> logger)
     {
         _searchService = searchService;
@@ -33,21 +36,23 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
         _productDetailRepository = productDetailRepository;
         _productImageRepository = productImageRepository;
         _stockRepository = stockRepository;
+        _categoryRepository = categoryRepository;
         _logger = logger;
     }
 
     public async Task<Result<ProductSearchResultDto>> Handle(SearchCatalogProductsQuery request, CancellationToken ct)
     {
         var searchTerm = string.IsNullOrWhiteSpace(request.Name) ? request.Query : request.Name;
-        var hasSearchTerm = !string.IsNullOrWhiteSpace(searchTerm);
         var hasFacetFilters = ProductCatalogFacetReader.HasFacetFilters(
             request.Authors,
             request.Format,
             request.Genres,
             request.Tags);
+        var hasActiveFilters = CatalogSearchFilterDetection.HasActiveCatalogFilters(request);
+        var categoryIds = await CatalogCategoryFilterExpander.ExpandAsync(_categoryRepository, request.CategoryIds, ct);
         var filters = new CatalogProductSearchFilters(
             searchTerm,
-            request.CategoryIds,
+            categoryIds,
             request.CompanyId,
             request.MinPrice,
             request.MaxPrice,
@@ -66,7 +71,7 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
             var esResult = await _searchService.SearchCatalogProductsAsync(filters, ct);
             if (esResult.IsSuccess)
             {
-                if (esResult.Value!.Total > 0 || (!hasFacetFilters && !hasSearchTerm))
+                if (esResult.Value!.Total > 0 || !hasActiveFilters)
                     return Result<ProductSearchResultDto>.Success(await EnrichAsync(esResult.Value, ct));
 
                 _logger.LogInformation(
@@ -86,7 +91,7 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
 
         try
         {
-            return Result<ProductSearchResultDto>.Success(await SearchInDatabaseAsync(request, searchTerm, hasFacetFilters, ct));
+            return Result<ProductSearchResultDto>.Success(await SearchInDatabaseAsync(request, categoryIds, searchTerm, hasFacetFilters, ct));
         }
         catch (Exception ex)
         {
@@ -97,6 +102,7 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
 
     private async Task<ProductSearchResultDto> SearchInDatabaseAsync(
         SearchCatalogProductsQuery request,
+        IReadOnlyList<long>? categoryIds,
         string? searchTerm,
         bool hasFacetFilters,
         CancellationToken ct)
@@ -111,7 +117,7 @@ public sealed class SearchCatalogProductsQueryHandler : IRequestHandler<SearchCa
             var availability = available <= 0 ? "out_of_stock" : available <= 5 ? "low_stock" : "in_stock";
             var dto = ProductMapper.ToListItemDto(p, available, availability);
 
-            if (request.CategoryIds is { Count: > 0 } && !request.CategoryIds.Contains(dto.CategoryId))
+            if (categoryIds is { Count: > 0 } && !categoryIds.Contains(dto.CategoryId))
                 continue;
             if (request.CompanyId.HasValue && dto.CompanyId != request.CompanyId.Value)
                 continue;

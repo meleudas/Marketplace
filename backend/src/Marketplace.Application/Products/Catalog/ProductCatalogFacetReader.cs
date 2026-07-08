@@ -24,7 +24,11 @@ public static class ProductCatalogFacetReader
             if (TryParsePrefixedTag(tag, "genre:", out var genreFromTag))
                 genres.Add(Normalize(genreFromTag));
             else if (TryParsePrefixedTag(tag, "format:", out var formatFromTag))
-                formatFromTags.Add(Normalize(formatFromTag));
+            {
+                var canonicalFormat = ProductCatalogFormats.Canonicalize(formatFromTag);
+                if (canonicalFormat is not null)
+                    formatFromTags.Add(canonicalFormat);
+            }
             else if (TryParsePrefixedTag(tag, "author:", out var authorFromTag))
                 authorCandidates.Add(Normalize(authorFromTag));
             else
@@ -54,7 +58,7 @@ public static class ProductCatalogFacetReader
         return new ProductCatalogFacets(
             authorValues.Length > 0 ? authorValues[0] : null,
             authorValues,
-            string.IsNullOrWhiteSpace(format) ? null : Normalize(format),
+            ProductCatalogFormats.Canonicalize(format),
             genres.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
             normalizedTags.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
     }
@@ -69,8 +73,9 @@ public static class ProductCatalogFacetReader
         if (!MatchesAnyAuthor(facets, authors))
             return false;
 
-        if (!string.IsNullOrWhiteSpace(format) &&
-            !string.Equals(facets.Format, Normalize(format), StringComparison.OrdinalIgnoreCase))
+        var canonicalFormat = ProductCatalogFormats.Canonicalize(format);
+        if (!string.IsNullOrWhiteSpace(canonicalFormat) &&
+            !string.Equals(facets.Format, canonicalFormat, StringComparison.OrdinalIgnoreCase))
             return false;
 
         if (!MatchesAnyGenre(facets, genres))

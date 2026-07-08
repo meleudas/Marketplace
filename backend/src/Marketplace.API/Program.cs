@@ -30,7 +30,18 @@ var app = builder.Build();
 ProductionConfigurationValidator.Validate(app.Configuration, app.Environment);
 
 if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Database:AutoMigrate"))
-    await InitializeDevelopmentDatabaseWithRetriesAsync(app.Services, app.Logger);
+{
+    try
+    {
+        await InitializeDevelopmentDatabaseWithRetriesAsync(app.Services, app.Logger);
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(
+            ex,
+            "Database migration/seed failed. API will continue; reset the postgres volume for a clean dev seed.");
+    }
+}
 
 app.MapOpenApi("/openapi/{documentName}.json");
 app.MapScalarApiReference(options =>

@@ -3,6 +3,8 @@ using Marketplace.Application.Inventory.Queries.GetProductAvailability;
 using Marketplace.Application.Behavior.Commands.TrackProductView;
 using Marketplace.Application.Behavior.Commands.TrackSearchQuery;
 using Marketplace.Application.Behavior.Options;
+using Marketplace.Application.Products.Queries.GetCatalogAuthors;
+using Marketplace.Application.Products.Queries.GetCatalogProductFacets;
 using Marketplace.Application.Products.Queries.GetCatalogProductBySlug;
 using Marketplace.Application.Products.Queries.GetCatalogProducts;
 using Marketplace.Application.Products.Queries.ListCatalogNewProducts;
@@ -195,6 +197,57 @@ public sealed class CatalogController : ControllerBase
         return result.ToActionResult();
     }
 
+    [HttpGet("products/facets")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetProductFacets([FromQuery] ListCatalogProductFacetsRequest request, CancellationToken ct)
+    {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CatalogLatencyMs, new KeyValuePair<string, object?>("operation", "get_product_facets"));
+        var result = await _sender.Send(new GetCatalogProductFacetsQuery(request.CategoryIds, request.CompanyId), ct);
+        RecordCatalogResult("get_product_facets", result.IsSuccess, result.Error);
+        return result.ToActionResult();
+    }
+
+    [HttpGet("authors")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetAuthors([FromQuery] ListCatalogProductFacetsRequest request, CancellationToken ct)
+    {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CatalogLatencyMs, new KeyValuePair<string, object?>("operation", "get_authors"));
+        var result = await _sender.Send(new GetCatalogAuthorsQuery(request.CategoryIds, request.CompanyId), ct);
+        RecordCatalogResult("get_authors", result.IsSuccess, result.Error);
+        return result.ToActionResult();
+    }
+
+    [HttpGet("products/search")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SearchProducts([FromQuery] SearchCatalogProductsRequest request, CancellationToken ct)
+    {
+        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CatalogLatencyMs, new KeyValuePair<string, object?>("operation", "search_products"));
+        var searchName = string.IsNullOrWhiteSpace(request.Name) ? request.Query : request.Name;
+        var authors = MergeQueryValues(request.Authors, Request.Query["author"]);
+        var genres = MergeQueryValues(request.Genres, Request.Query["genre"]);
+        var result = await _sender.Send(new SearchCatalogProductsQuery(
+            searchName,
+            request.Query,
+            request.CategoryIds,
+            request.CompanyId,
+            request.MinPrice,
+            request.MaxPrice,
+            request.AvailabilityStatus,
+            authors,
+            request.Format,
+            genres,
+            request.Tags,
+            request.Sort,
+            request.Page ?? 1,
+            request.PageSize ?? 20,
+            request.SearchAfter), ct);
+        RecordCatalogResult("search_products", result.IsSuccess, result.Error);
+        if (result.IsSuccess && string.IsNullOrWhiteSpace(result.Value?.NextSearchAfter) && !string.IsNullOrWhiteSpace(searchName))
+            MarketplaceMetrics.CatalogSearchFallbacks.Add(1, [new KeyValuePair<string, object?>("reason", "possible_db_fallback")]);
+        await TryTrackSearchQueryAsync(searchName ?? string.Empty, request, ct);
+        return result.ToActionResult();
+    }
+
     [HttpGet("products/{slug}")]
     [AllowAnonymous]
     public async Task<IActionResult> GetProductBySlug(string slug, CancellationToken ct)
@@ -206,33 +259,19 @@ public sealed class CatalogController : ControllerBase
         return result.ToActionResult();
     }
 
-    [HttpGet("products/search")]
-    [AllowAnonymous]
-    public async Task<IActionResult> SearchProducts([FromQuery] SearchCatalogProductsRequest request, CancellationToken ct)
+    private static IReadOnlyList<string>? MergeQueryValues(IReadOnlyList<string>? primary, Microsoft.Extensions.Primitives.StringValues alias)
     {
-        using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.CatalogLatencyMs, new KeyValuePair<string, object?>("operation", "search_products"));
-        var searchName = string.IsNullOrWhiteSpace(request.Name) ? request.Query : request.Name;
-        var result = await _sender.Send(new SearchCatalogProductsQuery(
-            searchName,
-            request.Query,
-            request.CategoryIds,
-            request.CompanyId,
-            request.MinPrice,
-            request.MaxPrice,
-            request.AvailabilityStatus,
-            request.Authors,
-            request.Format,
-            request.Genres,
-            request.Tags,
-            request.Sort,
-            request.Page ?? 1,
-            request.PageSize ?? 20,
-            request.SearchAfter), ct);
-        RecordCatalogResult("search_products", result.IsSuccess, result.Error);
-        if (result.IsSuccess && string.IsNullOrWhiteSpace(result.Value?.NextSearchAfter) && !string.IsNullOrWhiteSpace(searchName))
-            MarketplaceMetrics.CatalogSearchFallbacks.Add(1, [new KeyValuePair<string, object?>("reason", "possible_db_fallback")]);
-        await TryTrackSearchQueryAsync(searchName ?? string.Empty, request, ct);
-        return result.ToActionResult();
+        var values = new List<string>();
+        if (primary is { Count: > 0 })
+            values.AddRange(primary.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()));
+
+        foreach (var value in alias)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                values.Add(value.Trim());
+        }
+
+        return values.Count == 0 ? null : values;
     }
 
     private void RecordCatalogResult(string operation, bool success, string? error)
@@ -291,6 +330,10 @@ public sealed class CatalogController : ControllerBase
             _logger.LogDebug("Search tracking skipped: {Error}", track.Error);
     }
 }
+
+public sealed record ListCatalogProductFacetsRequest(
+    List<long>? CategoryIds,
+    Guid? CompanyId);
 
 public sealed record ListCatalogBrowsableProductsRequest(
     List<long>? CategoryIds,
