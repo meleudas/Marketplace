@@ -1,15 +1,42 @@
 using System.Text.Json;
+using Marketplace.Application.Products.Catalog;
 using Marketplace.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Marketplace.Infrastructure.Persistence.Seeders;
 
-record BookDef(string Title, string Author, long CatId, decimal Price);
+record BookDef(
+    string Title,
+    string Author,
+    long CatId,
+    string ParentSlug,
+    string SubcategorySlug,
+    string SubcategoryName,
+    decimal Price,
+    string? Genre = null);
 
 public class ProductSeeder : IDbSeeder
 {
-    private const string FormatElectronic = "електронний";
-    private const string FormatPaper = "паперовий";
+    private const string FormatPaper = ProductCatalogFormats.Paper;
+    private const string FormatElectronic = ProductCatalogFormats.Electronic;
+    private const int BooksPerSubcategory = 7;
+
+    private static readonly string[] BookPool =
+    [
+        "Кобзар", "Лісова пісня", "Тіні забутих предків", "Intermezzo", "Земля", "Майстер і Маргарита", "1984",
+        "Старий і море", "Великий Гетсбі", "Гордість і упередження", "Джейн Ейр", "Війна і мир", "Анна Кареніна",
+        "Злочин і кара", "Ідіот", "Брати Карамазови", "Маленький принц", "Хобіт", "Аліса в Країні чудес",
+        "Пригоди Тома Сойєра", "Sapiens", "Atomic Habits", "Clean Code", "Design Patterns",
+        "Коротка історія майже всього", "Thinking, Fast and Slow", "Deep Work", "Zero to One",
+    ];
+
+    private static readonly string[] AuthorPool =
+    [
+        "Тарас Шевченко", "Леся Українка", "Михайло Коцюбинський", "Ольга Кобилянська", "Михайло Булгаков", "Джордж Орвелл",
+        "Ернест Гемінгуей", "Ф. Скотт Фіцджеральд", "Джейн Остін", "Лев Толстой", "Федір Достоєвський", "J.K. Rowling",
+        "J.R.R. Tolkien", "Lewis Carroll", "Mark Twain", "Arthur Conan Doyle", "Agatha Christie", "Yuval Noah Harari",
+        "James Clear", "Robert Martin", "Bill Bryson", "Daniel Kahneman", "Cal Newport", "Peter Thiel",
+    ];
 
     public async Task SeedAsync(ApplicationDbContext context, IServiceProvider sp, CancellationToken ct = default)
     {
@@ -19,97 +46,9 @@ public class ProductSeeder : IDbSeeder
         var companies = await context.Companies.ToListAsync(ct);
         var now = DateTime.UtcNow;
         var rng = Random.Shared;
+        var bookDefs = BuildBookDefs();
 
-        var bookDefs = new List<BookDef>
-        {
-            new("Солодка Даруся", "Марія Матіос", 11, 320),
-            new("Записки українського самашедшого", "Ліна Костенко", 11, 280),
-            new("Місто", "Валер'ян Підмогильний", 11, 250),
-            new("Танго смерті", "Юрій Винничук", 11, 350),
-            new("Музей покинутих секретів", "Оксана Забужко", 11, 380),
-            new("1984", "Джордж Орвелл", 11, 250),
-            new("Чорний ворон", "Василь Шкляр", 12, 350),
-            new("Століття Якова", "Володимир Лис", 12, 320),
-            new("Мазепа", "Богдан Лепкий", 12, 400),
-            new("Тигролови", "Іван Багряний", 12, 290),
-            new("Ніч на полонині", "Марко Черемшина", 13, 220),
-            new("The Notebook", "Ніколас Спаркс", 13, 280),
-            new("Гордість і упередження", "Джейн Остін", 13, 260),
-            new("Кобзар (кишеньковий)", "Тарас Шевченко", 14, 180),
-            new("На крилах пісень", "Леся Українка", 14, 200),
-            new("Поезії", "Ліна Костенко", 14, 280),
-            new("Котигорошко", "Народна казка", 21, 150),
-            new("Червона шапочка", "Шарль Перро", 21, 140),
-            new("Абетка", "Збірка", 22, 180),
-            new("Сорока-ворона", "Народні потішки", 22, 120),
-            new("Гаррі Поттер і філософський камінь", "Дж. Ролінґ", 23, 380),
-            new("Голодні ігри", "Сюзанна Коллінз", 23, 280),
-            new("7 звичок надзвичайно ефективних людей", "Стівен Кові", 31, 450),
-            new("Від хорошого до великого", "Джим Коллінз", 31, 420),
-            new("Start with Why", "Саймон Сінек", 31, 340),
-            new("Сила звички", "Чарльз Дахіґґ", 32, 380),
-            new("Атомні звички", "Джеймс Клір", 32, 350),
-            new("Багатий тато, бідний тато", "Роберт Кійосакі", 33, 320),
-            new("Розумний інвестор", "Бенджамін Грем", 33, 520),
-            new("Думай і багатій", "Наполеон Гілл", 33, 280),
-            new("Clean Code", "Роберт Мартін", 41, 550),
-            new("Pragmatic Programmer", "Ендрю Гант", 41, 480),
-            new("Design Patterns", "Банда чотирьох", 41, 520),
-            new("C# та .NET", "Марк Прайс", 41, 490),
-            new("The DevOps Handbook", "Джин Кім", 42, 450),
-            new("Docker: Up & Running", "Шон Кейн", 42, 420),
-            new("Kubernetes: Up and Running", "Брендан Бернс", 42, 480),
-            new("Python для аналізу даних", "Вес МакКінні", 43, 480),
-            new("Hands-On Machine Learning", "Аурельєн Жерон", 43, 550),
-            new("Deep Learning", "Ян Ґудфеллоу", 43, 620),
-            new("The Hacker Playbook 3", "Пітер Кім", 44, 480),
-            new("Web Application Security", "Ендрю Гоффман", 44, 420),
-            new("English Grammar in Use", "Реймонд Мерфі", 51, 350),
-            new("Deutsch für Anfänger", "Збірник", 51, 320),
-            new("Польська мова для українців", "Збірник", 51, 260),
-            new("Sapiens", "Ювал Ной Харарі", 52, 420),
-            new("Космос", "Карл Саган", 52, 360),
-            new("Homo Deus", "Ювал Ной Харарі", 53, 420),
-            new("Критика чистого розуму", "Іммануїл Кант", 53, 380),
-            new("Кобзар (повне зібрання)", "Тарас Шевченко", 61, 450),
-            new("Лісова пісня", "Леся Українка", 61, 220),
-            new("Тіні забутих предків", "Михайло Коцюбинський", 61, 200),
-            new("Кайдашева сім'я", "Іван Нечуй-Левицький", 61, 250),
-            new("Хіба ревуть воли, як ясла повні?", "Панас Мирний", 61, 280),
-            new("Енеїда", "Іван Котляревський", 61, 250),
-            new("Війна і мир", "Лев Толстой", 62, 550),
-            new("Злочин і кара", "Федір Достоєвський", 62, 420),
-            new("Майстер і Маргарита", "Михайло Булгаков", 62, 380),
-            new("Анна Кареніна", "Лев Толстой", 62, 480),
-            new("Великий Гетсбі", "Френсіс Фіцджеральд", 62, 280),
-            new("Сто років самотності", "Ґабрієль Ґарсія Маркес", 62, 380),
-            new("Іліада", "Гомер", 63, 320),
-            new("Одіссея", "Гомер", 63, 300),
-            new("Медитації", "Марк Аврелій", 63, 250),
-            new("Володар перснів: Братство персня", "Дж. Толкін", 71, 450),
-            new("Володар перснів: Дві вежі", "Дж. Толкін", 71, 420),
-            new("Володар перснів: Повернення короля", "Дж. Толкін", 71, 450),
-            new("Гра престолів", "Джордж Мартін", 71, 480),
-            new("Відьмак: Останнє бажання", "Анджей Сапковський", 71, 350),
-            new("Дюна", "Френк Герберт", 72, 450),
-            new("Фундація", "Айзек Азімов", 72, 350),
-            new("Нейромант", "Вільям Ґібсон", 72, 340),
-            new("Марсіянин", "Енді Вейр", 72, 360),
-            new("Соляріс", "Станіслав Лем", 72, 300),
-            new("Американські боги", "Ніл Ґейман", 73, 380),
-            new("Небудьде", "Ніл Ґейман", 73, 320),
-            new("Вбивство у «Східному експресі»", "Агата Крісті", 81, 280),
-            new("Собака Баскервілів", "Артур Конан Дойл", 81, 260),
-            new("Пригоди Шерлока Холмса", "Артур Конан Дойл", 81, 340),
-            new("Дівчина з тату дракона", " Стіґ Ларссон", 82, 350),
-            new("Зникла", "Ґіліан Флінн", 82, 320),
-            new("Мовчазний пацієнт", "Алекс Міхаелідес", 82, 310),
-            new("Хрещений батько", "Маріо П'юзо", 83, 380),
-            new("Мовчання ягнят", "Томас Гарріс", 83, 320),
-            new("Код да Вінчі", "Ден Браун", 83, 340),
-        };
-
-        var index = 0;
+        var usedSlugs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var products = new List<ProductRecord>();
         var details = new List<ProductDetailRecord>();
         var images = new List<ProductImageRecord>();
@@ -120,16 +59,16 @@ public class ProductSeeder : IDbSeeder
             var formats = ResolveFormats(bookIndex, rng);
             var numEditions = rng.Next(3, Math.Min(8, companies.Count + 1));
             var assignedCompanies = companies.OrderBy(_ => rng.Next()).Take(numEditions).ToList();
-            var genre = ResolveGenre(book.CatId);
-            var titleSlug = Slugify(book.Title);
+            var genre = book.Genre ?? ResolveGenre(book.CatId);
+            var titleSlug = SeedSlugHelper.ToSlug(book.Title);
 
             foreach (var company in assignedCompanies)
             {
                 foreach (var format in formats)
                 {
-                    index++;
                     var formatSlug = FormatSlug(format);
-                    var slug = $"{titleSlug}-{formatSlug}-{index}";
+                    var companySlug = ResolveCompanySlug(company);
+                    var slug = ResolveUniqueSlug(titleSlug, formatSlug, companySlug, usedSlugs);
                     var stock = format == FormatElectronic
                         ? rng.Next(50, 500)
                         : rng.Next(5, 200);
@@ -140,7 +79,7 @@ public class ProductSeeder : IDbSeeder
                         CompanyId = company.Id,
                         Name = $"{book.Title} ({FormatLabel(format)})",
                         Slug = slug,
-                        Description = $"Книга «{book.Title}» — {book.Author}. Формат: {FormatLabel(format)}. Українською мовою.",
+                        Description = $"{book.Author}. Книга з розділу «{book.SubcategoryName}».",
                         Price = price,
                         OldPrice = rng.Next(3) == 0 ? Math.Max(50, price + rng.Next(50, 200)) : null,
                         Stock = stock,
@@ -157,14 +96,21 @@ public class ProductSeeder : IDbSeeder
                     details.Add(new ProductDetailRecord
                     {
                         Slug = slug,
-                        AttributesRaw = JsonSerializer.Serialize(new { author = book.Author, genre, format }),
-                        Tags = [genre, $"format:{format}", "українська", "популярне"],
+                        AttributesRaw = JsonSerializer.Serialize(new
+                        {
+                            seed = true,
+                            author = book.Author,
+                            genre,
+                            format,
+                            subcategoryId = book.CatId,
+                            subcategory = book.SubcategoryName,
+                            parent = book.ParentSlug,
+                        }),
+                        Tags = ["seed", "book", book.SubcategorySlug, genre, $"format:{format}", "українська", "популярне"],
                         Brands = [book.Author],
                         SpecificationsRaw = JsonSerializer.Serialize(new
                         {
-                            isbn = format == FormatElectronic
-                                ? $"978-{rng.Next(100, 999)}-{rng.Next(1000, 9999)}-{rng.Next(10, 99)}-{rng.Next(1, 10)}"
-                                : $"978-{rng.Next(100, 999)}-{rng.Next(1000, 9999)}-{rng.Next(10, 99)}-{rng.Next(1, 10)}",
+                            isbn = $"978-{rng.Next(100, 999)}-{rng.Next(1000, 9999)}-{rng.Next(10, 99)}-{rng.Next(1, 10)}",
                             pages = format == FormatElectronic ? (int?)null : rng.Next(100, 800),
                             year = 2020 + rng.Next(0, 6),
                             language = "Українська",
@@ -204,6 +150,48 @@ public class ProductSeeder : IDbSeeder
         await context.SaveChangesAsync(ct);
     }
 
+    private static List<BookDef> BuildBookDefs()
+    {
+        var rootsById = BookCatalogCategorySeedData.All
+            .Where(category => category.ParentId is null)
+            .ToDictionary(category => category.Id);
+
+        var subcategories = BookCatalogCategorySeedData.All
+            .Where(category => category.ParentId is not null)
+            .OrderBy(category => category.ParentId)
+            .ThenBy(category => category.SortOrder)
+            .ThenBy(category => category.Id)
+            .ToList();
+
+        var bookDefs = new List<BookDef>(subcategories.Count * BooksPerSubcategory);
+        var productIndex = 0;
+
+        for (var subcategoryIndex = 0; subcategoryIndex < subcategories.Count; subcategoryIndex++)
+        {
+            var subcategory = subcategories[subcategoryIndex];
+            var parent = rootsById[subcategory.ParentId!.Value];
+
+            for (var editionIndex = 0; editionIndex < BooksPerSubcategory; editionIndex++)
+            {
+                productIndex++;
+                var poolIndex = (subcategoryIndex + editionIndex) % BookPool.Length;
+                var authorIndex = (productIndex + subcategoryIndex + editionIndex) % AuthorPool.Length;
+                var price = 219m + (productIndex * 13 + subcategoryIndex * 7 + editionIndex * 3) % 480;
+
+                bookDefs.Add(new BookDef(
+                    $"{subcategory.Name}: {BookPool[poolIndex]}",
+                    AuthorPool[authorIndex],
+                    subcategory.Id,
+                    parent.Slug,
+                    subcategory.Slug,
+                    subcategory.Name,
+                    price));
+            }
+        }
+
+        return bookDefs;
+    }
+
     private static IReadOnlyList<string> ResolveFormats(int bookIndex, Random rng)
     {
         return (bookIndex % 3, rng.Next(4)) switch
@@ -226,40 +214,60 @@ public class ProductSeeder : IDbSeeder
         return Math.Max(format == FormatElectronic ? 29 : 50, adjusted);
     }
 
-    private static string FormatLabel(string format) =>
-        format switch
-        {
-            FormatElectronic => "Електронна",
-            FormatPaper => "Паперова",
-            _ => format,
-        };
+    private static string FormatLabel(string format) => ProductCatalogFormats.GetLabel(format);
 
     private static string FormatSlug(string format) =>
         format switch
         {
-            FormatElectronic => "elektronna",
-            FormatPaper => "paperova",
-            _ => Slugify(format),
+            FormatElectronic => "electronic",
+            FormatPaper => "paper",
+            _ => SeedSlugHelper.ToSlug(format),
         };
 
-    private static string Slugify(string value) =>
-        value.ToLowerInvariant()
-            .Replace(' ', '-')
-            .Replace("«", "")
-            .Replace("»", "")
-            .Replace(":", "")
-            .Replace("'", "")
-            .Replace(",", "");
+    private static string ResolveCompanySlug(CompanyRecord company) =>
+        SeedSlugHelper.ToSlug(string.IsNullOrWhiteSpace(company.Slug) ? company.Name : company.Slug);
+
+    private static string ResolveUniqueSlug(
+        string titleSlug,
+        string formatSlug,
+        string companySlug,
+        HashSet<string> usedSlugs)
+    {
+        var baseSlug = $"{titleSlug}-{formatSlug}";
+        if (usedSlugs.Add(baseSlug))
+            return baseSlug;
+
+        var withCompany = $"{baseSlug}-{companySlug}";
+        if (usedSlugs.Add(withCompany))
+            return withCompany;
+
+        for (var suffix = 2; suffix < 1000; suffix++)
+        {
+            var slug = $"{withCompany}-{suffix}";
+            if (usedSlugs.Add(slug))
+                return slug;
+        }
+
+        throw new InvalidOperationException($"Could not generate unique slug for '{baseSlug}'.");
+    }
 
     private static string ResolveGenre(long categoryId) => categoryId switch
     {
-        >= 61 and <= 63 => "класика",
-        >= 71 and <= 73 => "фентезі",
-        >= 81 and <= 83 => "детектив",
-        >= 41 and <= 44 => "it",
-        >= 51 and <= 53 => "освіта",
-        >= 31 and <= 33 => "бізнес",
-        >= 21 and <= 23 => "дитяча",
-        _ => "художня"
+        11 or 16 or 19 or 20 => "fiction",
+        12 => "detective",
+        13 => "fantasy",
+        14 => "fiction",
+        15 => "thriller",
+        17 => "sci-fi",
+        18 => "fiction",
+        21 => "memoir",
+        22 or 23 or 26 or 27 or 28 => "non-fiction",
+        24 => "self-help",
+        25 => "business",
+        31 or 32 or 33 or 35 or 36 or 37 or 38 => "children",
+        34 => "ya",
+        41 or 42 or 43 or 44 or 46 or 47 or 48 => "education",
+        45 => "it",
+        _ => "fiction",
     };
 }

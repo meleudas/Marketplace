@@ -61,18 +61,20 @@ public class UserSeeder : IDbSeeder
             var ln = lastNames[i % lastNames.Length];
             var email = $"user{i + 1}@bookmarket.ua";
             var isSeller = i < 48;
+            var birthday = new DateTime(1970 + rng.Next(18, 50), rng.Next(1, 13), rng.Next(1, 29));
 
             var appUser = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true };
             users.Add((appUser, new MarketplaceUserRecord
             {
                 FirstName = fn, LastName = ln, Role = isSeller ? 2 : 1,
                 IsVerified = true,
-                Birthday = new DateTime(1970 + rng.Next(18, 50), rng.Next(1, 13), rng.Next(1, 29)),
+                Birthday = DateTime.SpecifyKind(birthday, DateTimeKind.Utc),
                 LastLoginAt = now.AddDays(-rng.Next(0, 30)),
                 CreatedAt = now, UpdatedAt = now
             }));
         }
 
+        var createdRecords = new List<MarketplaceUserRecord>();
         foreach (var (appUser, record) in users)
         {
             var result = await userManager.CreateAsync(appUser, password);
@@ -82,9 +84,10 @@ public class UserSeeder : IDbSeeder
             var role = record.Role switch { 4 => "Admin", 2 => "Seller", _ => "Buyer" };
             await userManager.AddToRoleAsync(appUser, role);
             record.Id = appUser.Id;
-            context.MarketplaceUsers.Add(record);
+            createdRecords.Add(record);
         }
 
+        context.MarketplaceUsers.AddRange(createdRecords);
         await context.SaveChangesAsync(ct);
     }
 }

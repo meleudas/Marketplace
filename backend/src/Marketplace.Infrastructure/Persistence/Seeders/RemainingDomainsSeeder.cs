@@ -7,7 +7,7 @@ public class RemainingDomainsSeeder : IDbSeeder
 {
     public async Task SeedAsync(ApplicationDbContext context, IServiceProvider sp, CancellationToken ct = default)
     {
-        if (await context.CompanyLegalProfiles.AnyAsync(ct))
+        if (await context.CompanyLegalProfiles.AnyAsync(ct) || await context.ReturnRequests.AnyAsync(ct))
             return;
 
         var rng = Random.Shared;

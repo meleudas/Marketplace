@@ -7,7 +7,7 @@ public class InteractionSeeder : IDbSeeder
 {
     public async Task SeedAsync(ApplicationDbContext context, IServiceProvider sp, CancellationToken ct = default)
     {
-        if (await context.Carts.AnyAsync(ct))
+        if (await context.Coupons.AnyAsync(ct) || await context.Carts.AnyAsync(ct))
             return;
 
         var rng = Random.Shared;
@@ -43,25 +43,41 @@ public class InteractionSeeder : IDbSeeder
             });
         }
 
+        var selectedBuyers = buyers.OrderBy(_ => rng.Next()).Take(40).ToList();
         var carts = new List<CartRecord>();
         var cartItems = new List<CartItemRecord>();
-        foreach (var buyer in buyers.OrderBy(_ => rng.Next()).Take(40))
+        foreach (var buyer in selectedBuyers)
         {
-            var cart = new CartRecord { UserId = buyer.Id, Status = 1, LastActivityAt = now.AddDays(-rng.Next(0, 14)), CreatedAt = now, UpdatedAt = now };
-            carts.Add(cart);
-
-            foreach (var product in products.OrderBy(_ => rng.Next()).Take(rng.Next(1, 4)))
-                cartItems.Add(new CartItemRecord
-                {
-                    ProductId = product.Id, Quantity = rng.Next(1, 3),
-                    PriceAtMoment = product.Price, CreatedAt = now, UpdatedAt = now,
-                });
+            carts.Add(new CartRecord
+            {
+                UserId = buyer.Id,
+                Status = 1,
+                LastActivityAt = now.AddDays(-rng.Next(0, 14)),
+                CreatedAt = now,
+                UpdatedAt = now,
+            });
         }
+
         context.Carts.AddRange(carts);
         await context.SaveChangesAsync(ct);
 
-        for (int i = 0; i < cartItems.Count; i++)
-            cartItems[i].CartId = carts[i % carts.Count].Id;
+        for (var cartIndex = 0; cartIndex < carts.Count; cartIndex++)
+        {
+            var cartId = carts[cartIndex].Id;
+            foreach (var product in products.OrderBy(_ => rng.Next()).Take(rng.Next(1, 4)))
+            {
+                cartItems.Add(new CartItemRecord
+                {
+                    CartId = cartId,
+                    ProductId = product.Id,
+                    Quantity = rng.Next(1, 3),
+                    PriceAtMoment = product.Price,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
+            }
+        }
+
         context.CartItems.AddRange(cartItems);
 
         var favorites = new HashSet<(Guid UserId, long ProductId)>();

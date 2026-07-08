@@ -438,6 +438,7 @@ VALUES
 );
 
 -- 5) Categories (bookstore hierarchy: 4 roots + nested subcategories)
+-- Canonical mirror: backend/src/Marketplace.Infrastructure/Persistence/Seeders/BookCatalogCategorySeedData.cs
 INSERT INTO categories (
     "Id",
     "Name",
