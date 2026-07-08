@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Button } from "../Button";
-import { Container } from "../Container";
-import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from "../icons";
-import iconStyles from "../icons/Icon.module.css";
-import { PageBackground } from "../PageBackground";
-import { Typography } from "../Typography";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { Button } from "@/shared/ui/Button";
+import { Container } from "@/shared/ui/Container";
+import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from "@/shared/ui/icons";
+import iconStyles from "@/shared/ui/icons/Icon.module.css";
+import { PageBackground } from "@/shared/ui/PageBackground";
+import { Typography } from "@/shared/ui/Typography";
 import styles from "./CatalogMenu.module.css";
 
-export type CatalogFormatFilter = "all" | "hardcover" | "paperback";
+export type CatalogFormatFilter = "all" | "електронний" | "паперовий";
 
 export interface CatalogMenuCategory {
   id: number;
@@ -23,15 +24,15 @@ interface CatalogMenuProps {
   open: boolean;
   categories: CatalogMenuCategory[];
   onClose: () => void;
-  onCategorySelect?: (slug: string) => void;
-  onShowAll?: () => void;
-  onFormatChange?: (format: CatalogFormatFilter) => void;
+  onCategorySelect?: (slug: string, format: CatalogFormatFilter) => void;
+  onShowAll?: (format: CatalogFormatFilter) => void;
+  activeFormat?: CatalogFormatFilter;
 }
 
 const FORMAT_OPTIONS: Array<{ value: CatalogFormatFilter; label: string }> = [
   { value: "all", label: "Всі" },
-  { value: "hardcover", label: "Тверда обкладинка" },
-  { value: "paperback", label: "М'яка обкладинка" },
+  { value: "електронний", label: "Електронна" },
+  { value: "паперовий", label: "Паперова" },
 ];
 
 function sortCategories(a: CatalogMenuCategory, b: CatalogMenuCategory): number {
@@ -44,10 +45,11 @@ export function CatalogMenu({
   onClose,
   onCategorySelect,
   onShowAll,
-  onFormatChange,
+  activeFormat = "all",
 }: CatalogMenuProps) {
-  const [formatFilter, setFormatFilter] = useState<CatalogFormatFilter>("all");
+  const [selectedFormat, setSelectedFormat] = useState<CatalogFormatFilter | null>(null);
   const [activeRootCategory, setActiveRootCategory] = useState<CatalogMenuCategory | null>(null);
+  const formatFilter = selectedFormat ?? activeFormat;
 
   const rootCategories = useMemo(
     () => categories.filter((category) => category.parentId == null).sort(sortCategories),
@@ -64,10 +66,14 @@ export function CatalogMenu({
       .sort(sortCategories);
   }, [activeRootCategory, categories]);
 
+  const handleClose = useCallback(() => {
+    setSelectedFormat(null);
+    setActiveRootCategory(null);
+    onClose();
+  }, [onClose]);
+
   useEffect(() => {
     if (!open) {
-      setActiveRootCategory(null);
-      setFormatFilter("all");
       return;
     }
 
@@ -84,7 +90,7 @@ export function CatalogMenu({
         return;
       }
 
-      onClose();
+      handleClose();
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -93,15 +99,10 @@ export function CatalogMenu({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [activeRootCategory, onClose, open]);
-
-  if (!open) {
-    return null;
-  }
+  }, [activeRootCategory, handleClose, open]);
 
   const handleFormatSelect = (format: CatalogFormatFilter) => {
-    setFormatFilter(format);
-    onFormatChange?.(format);
+    setSelectedFormat(format);
   };
 
   const handleRootCategoryClick = (category: CatalogMenuCategory) => {
@@ -111,13 +112,13 @@ export function CatalogMenu({
       return;
     }
 
-    onCategorySelect?.(category.slug);
-    onClose();
+    onCategorySelect?.(category.slug, formatFilter);
+    handleClose();
   };
 
   const handleSubcategoryClick = (slug: string) => {
-    onCategorySelect?.(slug);
-    onClose();
+    onCategorySelect?.(slug, formatFilter);
+    handleClose();
   };
 
   const handleShowSection = () => {
@@ -125,75 +126,75 @@ export function CatalogMenu({
       return;
     }
 
-    onCategorySelect?.(activeRootCategory.slug);
-    onClose();
+    onCategorySelect?.(activeRootCategory.slug, formatFilter);
+    handleClose();
   };
 
   const handleShowAll = () => {
-    onShowAll?.();
-    onClose();
+    onShowAll?.(formatFilter);
+    handleClose();
   };
 
   const handleBackToCatalog = () => {
     setActiveRootCategory(null);
   };
 
-  if (activeRootCategory) {
-    return (
-      <div
-        className={styles.overlay}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="catalog-menu-title"
-      >
-        <PageBackground />
-
-        <Container className={styles.content}>
-          <header className={styles.header}>
-            <h1 id="catalog-menu-title">
-              <Typography variant="h2" as="span">
-                {activeRootCategory.name}
-              </Typography>
-            </h1>
-            <button type="button" className={styles.closeButton} aria-label="Закрити" onClick={onClose}>
-              <CloseIcon className={iconStyles.icon} />
-            </button>
-          </header>
-
-          <button type="button" className={styles.backButton} onClick={handleBackToCatalog}>
-            <ChevronLeftIcon className={`${iconStyles.icon} ${styles.backButtonIcon}`.trim()} />
-            <span>До каталогу</span>
-          </button>
-
-          <nav className={styles.categoryList} aria-label="Підкатегорії">
-            {activeSubcategories.map((category) => (
-              <button
-                key={category.id}
-                type="button"
-                className={styles.subcategoryItem}
-                onClick={() => handleSubcategoryClick(category.slug)}
-              >
-                {category.name}
-              </button>
-            ))}
-          </nav>
-
-          <Button
-            type="button"
-            variant="primary"
-            size="lg"
-            fullWidth
-            className={styles.showAllButton}
-            onClick={handleShowSection}
-          >
-            Усе в розділі
-          </Button>
-        </Container>
-      </div>
-    );
+  if (!open || typeof document === "undefined") {
+    return null;
   }
 
-  return (
+  const menuContent = activeRootCategory ? (
+    <div
+      className={styles.overlay}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="catalog-menu-title"
+    >
+      <PageBackground />
+
+      <Container className={styles.content}>
+        <header className={styles.header}>
+          <h1 id="catalog-menu-title">
+            <Typography variant="h2" as="span">
+              {activeRootCategory.name}
+            </Typography>
+          </h1>
+          <button type="button" className={styles.closeButton} aria-label="Закрити" onClick={handleClose}>
+            <CloseIcon className={iconStyles.icon} />
+          </button>
+        </header>
+
+        <button type="button" className={styles.backButton} onClick={handleBackToCatalog}>
+          <ChevronLeftIcon className={`${iconStyles.icon} ${styles.backButtonIcon}`.trim()} />
+          <span>До каталогу</span>
+        </button>
+
+        <nav className={styles.categoryList} aria-label="Підкатегорії">
+          {activeSubcategories.map((category) => (
+            <button
+              key={category.id}
+              type="button"
+              className={styles.subcategoryItem}
+              onClick={() => handleSubcategoryClick(category.slug)}
+            >
+              {category.name}
+            </button>
+          ))}
+        </nav>
+
+        <Button
+          type="button"
+          variant="primary"
+          size="lg"
+          fullWidth
+          className={styles.showAllButton}
+          onClick={handleShowSection}
+        >
+          Усе в розділі
+        </Button>
+      </Container>
+    </div>
+  ) : (
     <div
       className={styles.overlay}
       role="dialog"
@@ -209,7 +210,7 @@ export function CatalogMenu({
               Каталог
             </Typography>
           </h1>
-          <button type="button" className={styles.closeButton} aria-label="Закрити" onClick={onClose}>
+          <button type="button" className={styles.closeButton} aria-label="Закрити" onClick={handleClose}>
             <CloseIcon className={iconStyles.icon} />
           </button>
         </header>
@@ -260,4 +261,6 @@ export function CatalogMenu({
       </Container>
     </div>
   );
+
+  return createPortal(menuContent, document.body);
 }

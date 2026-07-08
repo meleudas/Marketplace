@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { searchCatalogProducts, type CatalogSearchProductDto } from "@/shared/api/catalog-search.api";
+import { usePathname } from "next/navigation";
+import {
+  searchCatalogProducts,
+  type CatalogSearchProductDto,
+} from "@/shared/api/catalog-search.api";
+import { useCartStore } from "@/features/cart/model/cart.store";
+import { useAuth } from "@/features/auth/model/auth.store";
 import { Container } from "./Container";
 import { Spinner } from "./Spinner";
 import { TextField } from "./TextField";
@@ -31,23 +37,42 @@ interface HeaderProps {
   homeHref?: string;
   userHref?: string;
   cartHref?: string;
+  searchValue?: string;
   searchPlaceholder?: string;
-  onSearchQueryChange?: (value: string) => void;
+  onSearchChange?: (value: string) => void;
   onMenuClick?: () => void;
 }
 
 export function Header({
   homeHref = "/",
   userHref = "/auth",
-  cartHref = "#",
+  cartHref = "/cart",
+  searchValue: controlledSearchValue,
   searchPlaceholder = "Пошук",
-  onSearchQueryChange,
+  onSearchChange,
   onMenuClick,
 }: HeaderProps) {
+  const pathname = usePathname();
+  const isCatalogRoute = pathname === "/catalog" || pathname.startsWith("/catalog/");
+
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
+  const [searchValue, setSearchValue] = useState(controlledSearchValue ?? "");
   const [searchResults, setSearchResults] = useState<SearchPreviewItem[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+
+  const { isAuthenticated, initialized: authInitialized } = useAuth();
+  const {
+    totalItems: cartCount,
+    loadCart,
+    initialized: cartInitialized,
+  } = useCartStore();
+
+  useEffect(() => {
+    if (authInitialized && isAuthenticated && !cartInitialized) {
+      loadCart();
+    }
+  }, [authInitialized, isAuthenticated, cartInitialized, loadCart]);
+
   const hasSearchQuery = Boolean(searchValue.trim());
 
   const handleOpenSearch = () => {
@@ -58,10 +83,13 @@ export function Header({
     setIsSearchExpanded(false);
     setSearchValue("");
     setSearchResults([]);
-    onSearchQueryChange?.("");
+    onSearchChange?.("");
   };
 
-  const previewItems = useMemo(() => searchResults.slice(0, 4), [searchResults]);
+  const previewItems = useMemo(
+    () => searchResults.slice(0, 4),
+    [searchResults],
+  );
 
   useEffect(() => {
     if (!isSearchExpanded) {
@@ -81,8 +109,8 @@ export function Header({
   }, [isSearchExpanded]);
 
   useEffect(() => {
-    onSearchQueryChange?.(searchValue);
-  }, [onSearchQueryChange, searchValue]);
+    onSearchChange?.(searchValue);
+  }, [onSearchChange, searchValue]);
 
   useEffect(() => {
     const query = searchValue.trim();
@@ -133,43 +161,85 @@ export function Header({
   }, [isSearchExpanded, searchValue]);
 
   return (
-    <header className={styles.header} data-search-open={isSearchExpanded ? "true" : "false"}>
+    <header
+      className={styles.header}
+      data-search-open={isSearchExpanded ? "true" : "false"}
+    >
       <Container className={styles.inner}>
         <div className={styles.topRow}>
-          <button
-            type="button"
-            className={styles.iconAction}
-            aria-label="Відкрити меню"
-            onClick={onMenuClick}
-          >
-            <MenuIcon className={iconStyles.icon} />
-          </button>
+          {onMenuClick ? (
+            <button
+              type="button"
+              className={`${styles.iconAction} ${styles.menuBtn}`}
+              aria-label="Відкрити каталог"
+              onClick={onMenuClick}
+            >
+              <MenuIcon className={iconStyles.icon} />
+            </button>
+          ) : null}
 
-          <Link href={homeHref} className={styles.logo} aria-label="BOOK TOP — на головну">
+          <Link
+            href={homeHref}
+            className={styles.logo}
+            aria-label="BOOK TOP — на головну"
+          >
             <BookTopLogo className={styles.logoImage} />
           </Link>
 
+          {onMenuClick ? (
+            <nav className={styles.nav} aria-label="Головна навігація">
+              <button
+                type="button"
+                className={`${styles.navLink} ${isCatalogRoute ? styles.navLinkActive : ""}`.trim()}
+                aria-current={isCatalogRoute ? "page" : undefined}
+                onClick={onMenuClick}
+              >
+                Каталог
+              </button>
+              <Link
+                href="/about"
+                className={`${styles.navLink} ${pathname === "/about" ? styles.navLinkActive : ""}`.trim()}
+                aria-current={pathname === "/about" ? "page" : undefined}
+              >
+                Про нас
+              </Link>
+            </nav>
+          ) : null}
+
+          <TextField
+            kind="search"
+            className={`${styles.search} ${styles.primarySearch}`}
+            value={searchValue}
+            placeholder={searchPlaceholder}
+            aria-label="Пошук"
+            leadingIcon={<SearchIcon className={iconStyles.icon} />}
+            trailingIcon={<MicrophoneIcon className={iconStyles.icon} />}
+            onFocus={handleOpenSearch}
+            onChange={(event) => setSearchValue(event.target.value)}
+          />
+
           <div className={styles.actions}>
-            <Link href={userHref} className={styles.iconAction} aria-label="Профіль">
+            <Link
+              href={userHref}
+              className={styles.iconAction}
+              aria-label="Профіль"
+            >
               <UserIcon className={iconStyles.icon} />
             </Link>
-            <Link href={cartHref} className={styles.iconAction} aria-label="Кошик">
+            <Link
+              href={cartHref}
+              className={`${styles.iconAction} ${styles.cartIconWrap}`}
+              aria-label="Кошик"
+            >
               <CartIcon className={iconStyles.icon} />
+              {cartCount > 0 && (
+                <span className={styles.cartBadge}>
+                  {cartCount > 99 ? "99+" : cartCount}
+                </span>
+              )}
             </Link>
           </div>
         </div>
-
-        <TextField
-          kind="search"
-          className={`${styles.search} ${styles.primarySearch}`}
-          value={searchValue}
-          placeholder={searchPlaceholder}
-          aria-label="Пошук"
-          leadingIcon={<SearchIcon className={iconStyles.icon} />}
-          trailingIcon={<MicrophoneIcon className={iconStyles.icon} />}
-          onFocus={handleOpenSearch}
-          onChange={(event) => setSearchValue(event.target.value)}
-        />
 
         <div className={styles.searchSheet}>
           <div className={styles.searchSheetInner}>
@@ -198,14 +268,21 @@ export function Header({
             />
 
             {hasSearchQuery ? (
-              <section className={styles.previewCard} aria-label="Підбірка для вас">
+              <section
+                className={styles.previewCard}
+                aria-label="Підбірка для вас"
+              >
                 <div className={styles.previewHeader}>
                   <span className={styles.previewTitle}>Для вас</span>
                   <ChevronRightIcon className={iconStyles.icon} />
                 </div>
 
                 {searchLoading ? (
-                  <div className={styles.loadingState} role="status" aria-live="polite">
+                  <div
+                    className={styles.loadingState}
+                    role="status"
+                    aria-live="polite"
+                  >
                     <Spinner aria-hidden="true" />
                     <span className={styles.loadingText}>Завантаження...</span>
                   </div>
@@ -218,7 +295,9 @@ export function Header({
                           className={styles.previewItem}
                           onClick={handleCloseSearch}
                         >
-                          <span className={styles.previewName}>{item.title}</span>
+                          <span className={styles.previewName}>
+                            {item.title}
+                          </span>
                           <span className={styles.previewPrice}>
                             {typeof item.price === "number"
                               ? item.price.toLocaleString("uk-UA")

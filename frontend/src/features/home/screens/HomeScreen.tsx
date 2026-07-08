@@ -1,18 +1,23 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   getCatalogCategories,
   getCatalogNewProducts,
   getCatalogOnSaleProducts,
   getCatalogPopularProducts,
   getPersonalizedRecommendations,
+  searchCatalogProducts,
 } from "@/features/storefront/api/catalog.api";
 import type { CatalogCategoryDto } from "@/features/storefront/model/catalog.types";
-import { mapProductToRailCard, type ProductRailCard } from "@/features/home/lib/map-product-to-rail-card";
-import { CatalogMenu, PageLayout } from "@/shared/ui";
+import {
+  mapProductToRailCard,
+  type ProductRailCard,
+} from "@/features/home/lib/map-product-to-rail-card";
+import { CatalogMenu, PageLayout, ProductCard, Spinner } from "@/shared/ui";
 import { ProductRailItems } from "../ui/ProductRailItems";
 import { RecommendationsRail } from "../ui/RecommendationsRail";
 import styles from "./HomeScreen.module.css";
@@ -32,6 +37,34 @@ export function HomeScreen() {
   const [newProductsLoading, setNewProductsLoading] = useState(true);
   const [onSaleLoading, setOnSaleLoading] = useState(true);
 
+  const [feedItems, setFeedItems] = useState<ProductRailCard[]>([]);
+  const [feedLoading, setFeedLoading] = useState(false);
+  const [feedPage, setFeedPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+
+  const loadFeed = useCallback(
+    async (page: number, categoryId: number | null, append: boolean) => {
+      setFeedLoading(true);
+      try {
+        const response = await searchCatalogProducts({
+          categoryIds: categoryId ? [categoryId] : undefined,
+          page,
+          pageSize: 12,
+        });
+        const newItems = response.items.map(mapProductToRailCard);
+
+        setFeedItems((prev) => (append ? [...prev, ...newItems] : newItems));
+        setHasMore(response.items.length === 12);
+      } catch {
+        // ignore — keep current items
+      } finally {
+        setFeedLoading(false);
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -46,12 +79,39 @@ export function HomeScreen() {
   }, []);
 
   useEffect(() => {
+    setFeedPage(1);
+    setHasMore(true);
+    void loadFeed(1, selectedCategory, false);
+  }, [selectedCategory, loadFeed]);
+
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const triggerRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (feedLoading) return;
+      if (observerRef.current) observerRef.current.disconnect();
+
+      observerRef.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          const nextPage = feedPage + 1;
+          setFeedPage(nextPage);
+          void loadFeed(nextPage, selectedCategory, true);
+        }
+      });
+
+      if (node) observerRef.current.observe(node);
+    },
+    [feedLoading, hasMore, feedPage, selectedCategory, loadFeed],
+  );
+
+  useEffect(() => {
     let cancelled = false;
 
     const loadRecommendations = async () => {
       try {
         setRecommendationsLoading(true);
-        const result = await getPersonalizedRecommendations({ limit: HOME_RAIL_PAGE_SIZE });
+        const result = await getPersonalizedRecommendations({
+          limit: HOME_RAIL_PAGE_SIZE,
+        });
 
         if (!cancelled) {
           setRecommendations(result.items.map(mapProductToRailCard));
@@ -60,8 +120,7 @@ export function HomeScreen() {
         if (!cancelled) {
           setRecommendations([]);
         }
-      }
-      finally {
+      } finally {
         if (!cancelled) {
           setRecommendationsLoading(false);
         }
@@ -83,11 +142,13 @@ export function HomeScreen() {
       setNewProductsLoading(true);
       setOnSaleLoading(true);
 
-      const [popularResult, newResult, onSaleResult] = await Promise.allSettled([
-        getCatalogPopularProducts({ pageSize: HOME_RAIL_PAGE_SIZE }),
-        getCatalogNewProducts({ pageSize: HOME_RAIL_PAGE_SIZE }),
-        getCatalogOnSaleProducts({ pageSize: HOME_RAIL_PAGE_SIZE }),
-      ]);
+      const [popularResult, newResult, onSaleResult] = await Promise.allSettled(
+        [
+          getCatalogPopularProducts({ pageSize: HOME_RAIL_PAGE_SIZE }),
+          getCatalogNewProducts({ pageSize: HOME_RAIL_PAGE_SIZE }),
+          getCatalogOnSaleProducts({ pageSize: HOME_RAIL_PAGE_SIZE }),
+        ],
+      );
 
       if (cancelled) {
         return;
@@ -99,10 +160,14 @@ export function HomeScreen() {
           : [],
       );
       setNewProducts(
-        newResult.status === "fulfilled" ? newResult.value.items.map(mapProductToRailCard) : [],
+        newResult.status === "fulfilled"
+          ? newResult.value.items.map(mapProductToRailCard)
+          : [],
       );
       setOnSale(
-        onSaleResult.status === "fulfilled" ? onSaleResult.value.items.map(mapProductToRailCard) : [],
+        onSaleResult.status === "fulfilled"
+          ? onSaleResult.value.items.map(mapProductToRailCard)
+          : [],
       );
       setPopularLoading(false);
       setNewProductsLoading(false);
@@ -119,41 +184,120 @@ export function HomeScreen() {
   return (
     <PageLayout
       headerProps={{
-        homeHref: "/home",
+        homeHref: "/",
         userHref: "/me",
         onMenuClick: () => setCatalogOpen(true),
       }}
-      footerProps={{ homeHref: "/home" }}
+      footerProps={{ homeHref: "/" }}
     >
       <section className={styles.promoBanner} aria-label="Рекламний банер">
         <div className={styles.promoContent}>
           <p className={styles.promoEyebrow}>Не пропусти!</p>
-          <p className={styles.promoQuote}>“Літературне чаювання”</p>
+          <p className={styles.promoQuote}>
+            {"“"}Літературне чаювання{"”"}
+          </p>
           <p className={styles.promoDate}>
             11:00 - Середа
             <br />
             15 квітня 2026
           </p>
         </div>
-
-        <Image className={styles.promoCat} src="/promo-cat.svg" alt="" width={85} height={98} />
+        <Image
+          className={styles.promoCat}
+          src="/promo-cat.svg"
+          alt=""
+          width={85}
+          height={98}
+        />
       </section>
 
-      <RecommendationsRail title="Рекомендовані" loading={recommendationsLoading}>
+      <RecommendationsRail
+        title="Рекомендовані"
+        loading={recommendationsLoading}
+        viewAllHref="/catalog"
+      >
         <ProductRailItems items={recommendations} />
       </RecommendationsRail>
 
-      <RecommendationsRail title="Популярні" loading={popularLoading}>
+      <RecommendationsRail
+        title="Популярні"
+        loading={popularLoading}
+        viewAllHref="/catalog?sort=relevance"
+      >
         <ProductRailItems items={popular} />
       </RecommendationsRail>
 
-      <RecommendationsRail title="Новинки" loading={newProductsLoading}>
+      <RecommendationsRail
+        title="Новинки"
+        loading={newProductsLoading}
+        viewAllHref="/catalog?sort=newest"
+      >
         <ProductRailItems items={newProducts} />
       </RecommendationsRail>
 
-      <RecommendationsRail title="Акції" loading={onSaleLoading}>
+      <RecommendationsRail
+        title="Акції"
+        loading={onSaleLoading}
+        viewAllHref="/catalog"
+      >
         <ProductRailItems items={onSale} />
       </RecommendationsRail>
+
+      <section className={styles.feedSection}>
+        <div className={styles.feedHeader}>
+          <h2 className={styles.feedTitle}>Спеціально для вас</h2>
+
+          <div className={styles.tagPillsList} role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedCategory === null}
+              className={`${styles.tagPill} ${selectedCategory === null ? styles.tagPillActive : ""}`}
+              onClick={() => setSelectedCategory(null)}
+            >
+              Всі
+            </button>
+            {categories
+              .filter((c) => c.parentId === null && c.productCount > 0)
+              .map((cat) => (
+                <button
+                  type="button"
+                  key={cat.id}
+                  role="tab"
+                  aria-selected={selectedCategory === cat.id}
+                  className={`${styles.tagPill} ${selectedCategory === cat.id ? styles.tagPillActive : ""}`}
+                  onClick={() => setSelectedCategory(cat.id)}
+                >
+                  #{cat.name}
+                </button>
+              ))}
+          </div>
+        </div>
+
+        {feedItems.length > 0 ? (
+          <div className={styles.feedGrid}>
+            {feedItems.map((item) => (
+              <Link
+                key={item.id}
+                href={item.href}
+                className={styles.feedCardLink}
+              >
+                <ProductCard product={item} />
+              </Link>
+            ))}
+          </div>
+        ) : !feedLoading ? (
+          <div className={styles.feedEmpty}>Немає товарів у цій категорії</div>
+        ) : null}
+
+        {feedLoading && (
+          <div className={styles.feedLoading}>
+            <Spinner />
+          </div>
+        )}
+
+        {hasMore && <div ref={triggerRef} className={styles.scrollTrigger} />}
+      </section>
 
       <CatalogMenu
         open={catalogOpen}
@@ -165,8 +309,16 @@ export function HomeScreen() {
           sortOrder: category.sortOrder,
         }))}
         onClose={() => setCatalogOpen(false)}
-        onCategorySelect={(slug) => router.push(`/catalog/${slug}`)}
-        onShowAll={() => router.push("/catalog")}
+        onCategorySelect={(slug, format) => {
+          const formatParam =
+            format === "all" ? "" : `?format=${encodeURIComponent(format)}`;
+          router.push(`/catalog/${slug}${formatParam}`);
+        }}
+        onShowAll={(format) => {
+          const formatParam =
+            format === "all" ? "" : `?format=${encodeURIComponent(format)}`;
+          router.push(`/catalog${formatParam}`);
+        }}
       />
     </PageLayout>
   );

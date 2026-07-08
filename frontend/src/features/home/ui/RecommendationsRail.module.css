@@ -38,3 +38,24 @@
 .skeletonCard {
   width: 100%;
 }
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.viewAllBtn {
+  font-family: var(--font-primary), sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-primary-pink);
+  text-decoration: none;
+  transition: opacity 0.12ms ease-in-out;
+}
+
+.viewAllBtn:hover {
+  opacity: 0.8;
+}
+

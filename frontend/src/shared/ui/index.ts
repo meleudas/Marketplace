@@ -21,9 +21,11 @@ export {
   ChevronLeftIcon,
   ChevronRightIcon,
   CloseIcon,
+  EditIcon,
   EmailIcon,
   FacebookIcon,
   FilterIcon,
+  GiftIcon,
   InstagramIcon,
   MenuIcon,
   MicrophoneIcon,
@@ -34,7 +36,10 @@ export {
   RecordActiveIcon,
   RecordIcon,
   SearchIcon,
+  ShopIcon,
+  SleapCat,
   StarIcon,
+
   TrashIcon,
   UserIcon,
   ViberIcon,
@@ -54,6 +59,8 @@ export { ProductCardSkeleton } from "./ProductCardSkeleton";
 export { Pagination } from "./Pagination";
 export { Header } from "./Header";
 export { Footer } from "./Footer";
+export { InitialsAvatar } from "./InitialsAvatar/InitialsAvatar";
+
 export { PageLayout } from "./PageLayout";
 export { PageBackground } from "./PageBackground";
 export { Spinner } from "./Spinner";

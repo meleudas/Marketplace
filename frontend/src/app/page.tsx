@@ -1,5 +1,6 @@
-import { AuthHomeScreen } from "@/features/auth/screens/AuthHomeScreen";
+import { HomeScreen } from "@/features/home/screens/HomeScreen";
 
 export default function Page() {
-  return <AuthHomeScreen />;
+  return <HomeScreen />;
 }
+
