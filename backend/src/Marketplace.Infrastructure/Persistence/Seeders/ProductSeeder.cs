@@ -134,16 +134,14 @@ public class ProductSeeder : IDbSeeder
         images.AddRange(products.Select(p => new ProductImageRecord
         {
             ProductId = p.Id,
-            ImageUrl = BuildBookImageUrl(p.Id, 400, 600),
-            ThumbnailUrl = BuildBookImageUrl(p.Id, 200, 300),
-            OriginalObjectKey = $"seed/products/{p.Id}/main.jpg",
-            ImageObjectKey = $"seed/products/{p.Id}/main.jpg",
-            ThumbnailObjectKey = $"seed/products/{p.Id}/thumb.jpg",
+            ImageUrl = $"https://picsum.photos/seed/marketplace-book-{p.Id}/400/600",
+            ThumbnailUrl = $"https://picsum.photos/seed/marketplace-book-{p.Id}/200/300",
+            OriginalObjectKey = $"products/{p.Id}/original.jpg",
+            ImageObjectKey = $"products/{p.Id}/image.jpg",
+            ThumbnailObjectKey = $"products/{p.Id}/thumb.jpg",
             AltText = p.Name,
             SortOrder = 0,
             IsMain = true,
-            Width = 400,
-            Height = 600,
             CreatedAt = now,
             UpdatedAt = now,
         }));
@@ -252,9 +250,6 @@ public class ProductSeeder : IDbSeeder
 
         throw new InvalidOperationException($"Could not generate unique slug for '{baseSlug}'.");
     }
-
-    private static string BuildBookImageUrl(long productId, int width, int height) =>
-        $"https://picsum.photos/seed/marketplace-book-{productId}/{width}/{height}";
 
     private static string ResolveGenre(long categoryId) => categoryId switch
     {
