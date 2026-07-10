@@ -49,7 +49,7 @@
   transition: opacity var(--ui-transition-fast);
 }
 
-.socialLink:hover {
+.socialLink:is(a):hover {
   opacity: 0.85;
 }
 
@@ -112,6 +112,114 @@
   transition: color var(--ui-transition-fast);
 }
 
-.link:hover {
+.link:is(a):hover {
   color: var(--color-white);
+}
+
+.mobileContent {
+  display: block;
+}
+
+.desktopContent {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .mobileContent {
+    display: none;
+  }
+
+  .desktopContent {
+    display: block;
+  }
+
+  .footer .inner {
+    width: 90%;
+    max-width: none;
+    margin-inline: auto;
+    padding-inline: 0;
+  }
+
+  .desktopGrid {
+    display: grid;
+    grid-template-columns: repeat(4, max-content);
+    justify-content: space-between;
+    align-items: start;
+    width: 100%;
+  }
+
+  .desktopContacts {
+    display: grid;
+    gap: var(--space-24);
+  }
+
+  .desktopSectionNav {
+    display: grid;
+    gap: var(--space-16);
+  }
+
+  .desktopSectionTitle {
+    margin: 0;
+    font-family: var(--font-primary);
+    font-size: var(--typography-h2-font-size);
+    font-weight: var(--ui-font-weight-semibold);
+    line-height: 1.2;
+    color: var(--color-white);
+  }
+
+  .desktopList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-12);
+  }
+
+  .desktopLink {
+    font-family: var(--font-primary);
+    font-size: var(--typography-body1-font-size);
+    font-weight: var(--typography-body1-font-weight);
+    line-height: 1.4;
+    color: var(--color-white);
+    text-decoration: none;
+    transition: opacity var(--ui-transition-fast);
+  }
+
+  .desktopLink:is(a):hover {
+    opacity: 0.8;
+  }
+
+  .desktopContactList,
+  .desktopPhoneList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-12);
+  }
+
+  .desktopContactItem {
+    display: flex;
+    align-items: center;
+    gap: var(--space-12);
+    color: var(--color-white);
+  }
+
+  .desktopContactItem .socialLink {
+    flex-shrink: 0;
+    width: 27px;
+    height: 27px;
+  }
+
+  .desktopContactItem .socialLink svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .desktopContactLabel {
+    font-family: var(--font-primary);
+    font-size: var(--typography-body1-font-size);
+    font-weight: var(--typography-body1-font-weight);
+    line-height: 1.4;
+  }
 }
