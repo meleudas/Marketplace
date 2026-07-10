@@ -14,6 +14,7 @@ import {
   type CartDto,
 } from "@/features/checkout/api/checkout.api";
 import type { CatalogProductListItemDto } from "@/features/storefront/model/catalog.types";
+import { formatCartPrice } from "@/features/cart/lib/format-cart-price";
 import { PageLayout, Spinner } from "@/shared/ui";
 import styles from "./CartScreen.module.css";
 
@@ -309,7 +310,7 @@ export function CartScreen() {
                         </button>
                       </div>
                       <span className={styles.priceText}>
-                        {item.priceAtMoment * item.quantity} грн.
+                        {formatCartPrice(item.lineTotal)} грн.
                       </span>
                     </div>
                   </div>
@@ -321,7 +322,7 @@ export function CartScreen() {
               <div className={styles.bottomBar}>
                 <div className={styles.totalsRow}>
                   <span className={styles.totalsLabel}>Разом</span>
-                  <span className={styles.totalsAmount}>{totalAmount}грн</span>
+                  <span className={styles.totalsAmount}>{formatCartPrice(totalAmount)}грн</span>
                 </div>
                 <Link href="/checkout" className={styles.ctaBtn}>
                   Оформити замовлення

@@ -187,34 +187,39 @@
 
 .filter {
   background: transparent;
-  border-color: var(--color-button-secondary-bg);
+  border-color: var(--color-neutral-600);
   color: var(--color-button-text);
+}
+
+.filter .leadingIcon svg {
+  width: var(--space-24);
+  height: var(--space-24);
 }
 
 .filter.selectable:not(.selected):is(:focus, :active) {
   background: transparent;
-  border-color: var(--color-button-secondary-bg);
+  border-color: var(--color-neutral-600);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .filter.selectable:not(.selected):hover:not(:disabled) {
-    background: var(--color-button-secondary-bg);
-    border-color: var(--color-button-secondary-bg);
+    background: rgb(95 112 129 / 0.2);
+    border-color: var(--color-neutral-600);
   }
 
   .filter.selectable:not(.selected):hover:active:not(:disabled) {
-    background: var(--color-button-secondary-hover);
-    border-color: var(--color-button-secondary-hover);
+    background: rgb(95 112 129 / 0.3);
+    border-color: var(--color-neutral-600);
   }
 }
 
 .filter.selectable.selected,
 .filter.selectable.selected:is(:hover, :focus) {
-  background: var(--color-button-secondary-bg);
-  border-color: var(--color-button-secondary-bg);
+  background: var(--color-neutral-600);
+  border-color: var(--color-neutral-600);
 }
 
 .filter.selectable.selected:active:not(:disabled) {
-  background: var(--color-button-secondary-active);
-  border-color: var(--color-button-secondary-active);
+  background: var(--color-neutral-600);
+  border-color: var(--color-neutral-600);
 }

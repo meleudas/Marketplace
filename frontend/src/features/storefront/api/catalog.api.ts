@@ -212,6 +212,16 @@ export const getCatalogProductBySlug = async (slug: string): Promise<CatalogProd
   return response.data;
 };
 
+export const getSimilarProductsBySlug = async (
+  slug: string,
+  limit = 12,
+): Promise<CatalogProductListItemDto[]> => {
+  const response = await apiClient.get<{ sourceProductId: number; items: CatalogProductListItemDto[] }>(
+    `/catalog/products/${slug}/similar?limit=${limit}`,
+  );
+  return response.data.items;
+};
+
 export const getProductAvailability = async (
   companyId: string,
   productId: string,

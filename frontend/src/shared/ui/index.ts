@@ -61,6 +61,8 @@ export { Header } from "./Header";
 export { Footer } from "./Footer";
 export { InitialsAvatar } from "./InitialsAvatar/InitialsAvatar";
 
+export { SurfaceCard } from "./SurfaceCard/SurfaceCard";
+export type { SurfaceCardProps } from "./SurfaceCard/SurfaceCard";
 export { PageLayout } from "./PageLayout";
 export { PageBackground } from "./PageBackground";
 export { Spinner } from "./Spinner";
