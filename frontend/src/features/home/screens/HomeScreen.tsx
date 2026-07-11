@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   getCatalogCategories,
@@ -9,7 +10,7 @@ import {
   getCatalogOnSaleProducts,
   getCatalogPopularProducts,
   getPersonalizedRecommendations,
-  // searchCatalogProducts,
+  searchCatalogProducts,
 } from "@/features/storefront/api/catalog.api";
 import type { CatalogCategoryDto } from "@/features/storefront/model/catalog.types";
 import {
@@ -17,12 +18,13 @@ import {
   type ProductRailCard,
 } from "@/features/home/lib/map-product-to-rail-card";
 import { useAuth } from "@/features/auth/model/auth.store";
-import { CatalogMenu, PageLayout } from "@/shared/ui";
+import { ChevronDownIcon, Button, CatalogMenu, PageLayout, ProductCard, Spinner } from "@/shared/ui";
 import { ProductRailItems } from "../ui/ProductRailItems";
 import { RecommendationsRail } from "../ui/RecommendationsRail";
 import styles from "./HomeScreen.module.css";
 
-const HOME_RAIL_PAGE_SIZE = 12;
+const HOME_RAIL_PAGE_SIZE = 15;
+const FEED_PAGE_SIZE = 24;
 
 export function HomeScreen() {
   const router = useRouter();
@@ -40,9 +42,8 @@ export function HomeScreen() {
   const [newProductsLoading, setNewProductsLoading] = useState(true);
   const [onSaleLoading, setOnSaleLoading] = useState(true);
 
-  /* TODO: restore "Спеціально для вас" feed section when needed.
   const [feedItems, setFeedItems] = useState<ProductRailCard[]>([]);
-  const [feedLoading, setFeedLoading] = useState(false);
+  const [feedLoading, setFeedLoading] = useState(true);
   const [feedPage, setFeedPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
@@ -54,21 +55,23 @@ export function HomeScreen() {
         const response = await searchCatalogProducts({
           categoryIds: categoryId ? [categoryId] : undefined,
           page,
-          pageSize: 12,
+          pageSize: FEED_PAGE_SIZE,
         });
         const newItems = response.items.map(mapProductToRailCard);
 
         setFeedItems((prev) => (append ? [...prev, ...newItems] : newItems));
-        setHasMore(response.items.length === 12);
+        setHasMore(response.items.length === FEED_PAGE_SIZE);
       } catch {
-        // ignore — keep current items
+        if (!append) {
+          setFeedItems([]);
+        }
+        setHasMore(false);
       } finally {
         setFeedLoading(false);
       }
     },
     [],
   );
-  */
 
   useEffect(() => {
     const load = async () => {
@@ -87,32 +90,21 @@ export function HomeScreen() {
     void loadMe();
   }, [loadMe]);
 
-  /* TODO: restore "Спеціально для вас" feed section when needed.
   useEffect(() => {
     setFeedPage(1);
     setHasMore(true);
     void loadFeed(1, selectedCategory, false);
   }, [selectedCategory, loadFeed]);
 
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const triggerRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (feedLoading) return;
-      if (observerRef.current) observerRef.current.disconnect();
+  const handleLoadMoreFeed = () => {
+    if (feedLoading || !hasMore) {
+      return;
+    }
 
-      observerRef.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          const nextPage = feedPage + 1;
-          setFeedPage(nextPage);
-          void loadFeed(nextPage, selectedCategory, true);
-        }
-      });
-
-      if (node) observerRef.current.observe(node);
-    },
-    [feedLoading, hasMore, feedPage, selectedCategory, loadFeed],
-  );
-  */
+    const nextPage = feedPage + 1;
+    setFeedPage(nextPage);
+    void loadFeed(nextPage, selectedCategory, true);
+  };
 
   useEffect(() => {
     if (!authInitialized || !isAuthenticated) {
@@ -208,6 +200,33 @@ export function HomeScreen() {
       }}
       footerProps={{ homeHref: "/" }}
     >
+      <div className={styles.homeShell}>
+        <div className={styles.sideDecor} aria-hidden="true">
+          <div className={`${styles.sideDecorPanel} ${styles.sideDecorLeft}`}>
+            <span className={styles.sideAccent} />
+            <p className={`${styles.sideQuote} ${styles.sideQuoteLeft}`}>Читай більше</p>
+            <Image
+              className={`${styles.sideCat} ${styles.sideCatLeft}`}
+              src="/about-cat.svg"
+              alt=""
+              width={127}
+              height={172}
+            />
+          </div>
+          <div className={`${styles.sideDecorPanel} ${styles.sideDecorRight}`}>
+            <span className={styles.sideAccent} />
+            <p className={`${styles.sideQuote} ${styles.sideQuoteRight}`}>Відкривай світ</p>
+            <Image
+              className={`${styles.sideCat} ${styles.sideCatRight}`}
+              src="/promo-cat.svg"
+              alt=""
+              width={85}
+              height={98}
+            />
+          </div>
+        </div>
+
+        <div className={styles.homeContent}>
       <section className={styles.promoBanner} aria-label="Рекламний банер">
         <div className={styles.promoContent}>
           <p className={styles.promoEyebrow}>Не пропусти!</p>
@@ -232,6 +251,7 @@ export function HomeScreen() {
       {authInitialized && isAuthenticated ? (
         <RecommendationsRail
           title="Рекомендовані"
+          variant="personal"
           loading={recommendationsLoading}
           viewAllHref="/catalog"
         >
@@ -241,6 +261,7 @@ export function HomeScreen() {
 
       <RecommendationsRail
         title="Популярні"
+        variant="popular"
         loading={popularLoading}
         viewAllHref="/catalog?sort=relevance"
       >
@@ -249,6 +270,7 @@ export function HomeScreen() {
 
       <RecommendationsRail
         title="Новинки"
+        variant="new"
         loading={newProductsLoading}
         viewAllHref="/catalog?sort=newest"
       >
@@ -257,6 +279,7 @@ export function HomeScreen() {
 
       <RecommendationsRail
         title="Акції"
+        variant="sale"
         loading={onSaleLoading}
         viewAllHref="/catalog"
       >
@@ -264,31 +287,23 @@ export function HomeScreen() {
       </RecommendationsRail>
 
       <section className={styles.discountPromo} aria-label="Знижка на перше замовлення">
-        <Image
-          src="/first-order-discount.png"
-          alt="Отримай -15% на перше замовлення. Реєструйся та отримуй більше оновлення від придбання книг."
-          className={styles.discountPromoImage}
-          width={353}
-          height={212}
-          sizes="(max-width: 353px) 100vw, 353px"
-        />
+        <span className={styles.discountPromoFrame}>
+          <Image
+            src="/first-order-discount.png"
+            alt="Отримай -15% на перше замовлення. Реєструйся та отримуй більше оновлення від придбання книг."
+            className={styles.discountPromoImage}
+            width={706}
+            height={424}
+            sizes="(max-width: 480px) 100vw, (max-width: 1023px) 480px, 560px"
+          />
+        </span>
       </section>
 
-      {/* TODO: restore "Спеціально для вас" feed section when needed.
-      <section className={styles.feedSection}>
+      <section className={styles.feedSection} aria-label="Спеціально для вас">
         <div className={styles.feedHeader}>
           <h2 className={styles.feedTitle}>Спеціально для вас</h2>
 
           <div className={styles.tagPillsList} role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={selectedCategory === null}
-              className={`${styles.tagPill} ${selectedCategory === null ? styles.tagPillActive : ""}`}
-              onClick={() => setSelectedCategory(null)}
-            >
-              Всі
-            </button>
             {categories
               .filter((c) => c.parentId === null && c.productCount > 0)
               .map((cat) => (
@@ -328,9 +343,22 @@ export function HomeScreen() {
           </div>
         )}
 
-        {hasMore && <div ref={triggerRef} className={styles.scrollTrigger} />}
+        {!feedLoading && hasMore && feedItems.length > 0 ? (
+          <div className={styles.loadMoreWrap}>
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={handleLoadMoreFeed}
+              leadingIcon={<ChevronDownIcon className={styles.loadMoreIcon} />}
+            >
+              Показати ще
+            </Button>
+          </div>
+        ) : null}
       </section>
-      */}
+
+        </div>
+      </div>
 
       <CatalogMenu
         open={catalogOpen}

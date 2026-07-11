@@ -29,6 +29,16 @@ export function ArrowsSortIcon(props: IconProps) {
   );
 }
 
+export function PercentIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden {...props}>
+      <path d="M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="7.5" cy="7.5" r="2.5" stroke="currentColor" strokeWidth="2" />
+      <circle cx="16.5" cy="16.5" r="2.5" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
 export function ChevronDownIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden {...props}>

@@ -4,6 +4,76 @@
   margin-top: var(--space-20);
 }
 
+.section[data-variant="personal"] {
+  --rail-accent: var(--color-primary-blue);
+  --rail-accent-soft: rgb(83 93 223 / 0.16);
+  --rail-border: rgb(83 93 223 / 0.22);
+}
+
+.section[data-variant="popular"] {
+  --rail-accent: var(--color-secondary-light-blue);
+  --rail-accent-soft: rgb(124 144 224 / 0.16);
+  --rail-border: rgb(124 144 224 / 0.22);
+}
+
+.section[data-variant="new"] {
+  --rail-accent: var(--color-primary-light-blue);
+  --rail-accent-soft: rgb(163 194 224 / 0.18);
+  --rail-border: rgb(163 194 224 / 0.24);
+}
+
+.section[data-variant="sale"] {
+  --rail-accent: var(--color-primary-pink);
+  --rail-accent-soft: rgb(238 2 144 / 0.16);
+  --rail-border: rgb(238 2 144 / 0.24);
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.iconBadge {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--rail-accent-soft, rgb(163 194 224 / 0.12));
+  color: var(--rail-accent, var(--color-primary-light-blue));
+}
+
+.iconBadge svg {
+  width: 18px;
+  height: 18px;
+}
+
+.titleTextGroup {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.eyebrow {
+  margin: 0;
+  font-family: var(--font-primary), sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--rail-accent, var(--color-neutral-600));
+}
+
 .title {
   margin: 0;
   font-family: var(--font-primary), sans-serif;
@@ -39,23 +109,68 @@
   width: 100%;
 }
 
-.headerRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
+.toggleWrap {
+  display: none;
 }
 
-.viewAllBtn {
-  font-family: var(--font-primary), sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-primary-pink);
-  text-decoration: none;
-  transition: opacity 0.12ms ease-in-out;
+.toggleIconExpanded {
+  transform: rotate(180deg);
 }
 
-.viewAllBtn:hover {
-  opacity: 0.8;
+@media (min-width: 1024px) {
+  .section {
+    gap: var(--space-16);
+    margin-top: var(--space-32);
+    padding-top: var(--space-32);
+    border-top: 1px solid var(--rail-border, rgb(163 194 224 / 0.12));
+  }
+
+  .iconBadge {
+    width: 44px;
+    height: 44px;
+  }
+
+  .iconBadge svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .title {
+    font-size: 28px;
+  }
+
+  .eyebrow {
+    font-size: 13px;
+  }
+
+  .scroller {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--product-card-width), 1fr));
+    overflow-x: visible;
+    scroll-snap-type: none;
+  }
+
+  .cardLink {
+    width: 100%;
+  }
+
+  .toggleWrap {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--space-8);
+  }
+
+  .scrollerCollapsed > :nth-child(n + 5) {
+    display: none;
+  }
 }
 
+@media (min-width: 1280px) {
+  .scrollerCollapsed > :nth-child(n + 5) {
+    display: block;
+  }
+
+  .scrollerCollapsed > :nth-child(n + 6) {
+    display: none;
+  }
+}
