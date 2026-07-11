@@ -10,12 +10,26 @@
   isolation: isolate;
 }
 
+.desktopShell {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  background: transparent;
+}
+
+.panel {
+  position: relative;
+  z-index: 1;
+}
+
 .content {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: var(--space-24);
-  padding-block: var(--space-24);
+  gap: var(--space-8);
+  padding-block: var(--space-16);
+  align-content: start;
 }
 
 .header {
@@ -54,12 +68,15 @@
 
 .formatRow {
   display: flex;
-  gap: var(--space-8);
+  gap: var(--space-4);
 }
 
 .formatButton {
   flex: 1;
   min-width: 0;
+  height: 32px;
+  padding-inline: var(--space-8);
+  font-size: 13px;
 }
 
 .categoryList {
@@ -72,7 +89,7 @@
   justify-content: space-between;
   gap: var(--space-12);
   width: 100%;
-  padding: var(--space-16) 0;
+  padding: var(--space-12) 0;
   border: 0;
   border-bottom: 1px solid var(--color-button-dark-border);
   color: var(--color-text);
@@ -102,7 +119,7 @@
 .subcategoryItem {
   display: block;
   width: 100%;
-  padding: var(--space-16) 0;
+  padding: var(--space-12) 0;
   border: 0;
   border-bottom: 1px solid var(--color-button-dark-border);
   color: var(--color-text);
@@ -154,5 +171,42 @@
 }
 
 .showAllButton {
-  margin-top: var(--space-8);
+  height: 36px;
+  max-width: 100%;
+  font-size: 14px;
+}
+
+@media (min-width: 1024px) {
+  .desktopShell .panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(400px, 34vw);
+    pointer-events: auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-right: 1px solid rgb(163 194 224 / 0.12);
+    background:
+      radial-gradient(circle at 0% 0%, rgb(83 93 223 / 0.12) 0, transparent 42%),
+      var(--color-bg);
+    box-shadow: 12px 0 40px rgb(0 0 0 / 0.28);
+    animation: catalogDrawerIn 0.24s ease-out;
+  }
+
+  .desktopShell .content {
+    min-height: 100%;
+    padding-block: var(--space-16);
+    align-content: start;
+  }
+}
+
+@keyframes catalogDrawerIn {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
 }

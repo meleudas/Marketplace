@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -43,6 +43,8 @@ interface HeaderProps {
   onMenuClick?: () => void;
 }
 
+const DESKTOP_MEDIA_QUERY = "(min-width: 1024px)";
+
 export function Header({
   homeHref = "/",
   userHref = "/auth",
@@ -54,8 +56,11 @@ export function Header({
 }: HeaderProps) {
   const pathname = usePathname();
   const isCatalogRoute = pathname === "/catalog" || pathname.startsWith("/catalog/");
+  const searchWrapRef = useRef<HTMLDivElement>(null);
 
+  const [isDesktop, setIsDesktop] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
   const [searchValue, setSearchValue] = useState(controlledSearchValue ?? "");
   const [searchResults, setSearchResults] = useState<SearchPreviewItem[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -68,22 +73,47 @@ export function Header({
   } = useCartStore();
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia(DESKTOP_MEDIA_QUERY);
+    const updateViewport = () => setIsDesktop(mediaQuery.matches);
+
+    updateViewport();
+    mediaQuery.addEventListener("change", updateViewport);
+
+    return () => mediaQuery.removeEventListener("change", updateViewport);
+  }, []);
+
+  useEffect(() => {
     if (authInitialized && isAuthenticated && !cartInitialized) {
       loadCart();
     }
   }, [authInitialized, isAuthenticated, cartInitialized, loadCart]);
 
   const hasSearchQuery = Boolean(searchValue.trim());
+  const isMobileSearchOpen = !isDesktop && isSearchExpanded;
+  const isSearchActive = isDesktop ? isSearchDropdownOpen : isSearchExpanded;
+  const showSearchPreview = hasSearchQuery && isSearchActive;
 
   const handleOpenSearch = () => {
+    if (isDesktop) {
+      setIsSearchDropdownOpen(true);
+      return;
+    }
+
     setIsSearchExpanded(true);
   };
 
   const handleCloseSearch = () => {
     setIsSearchExpanded(false);
+    setIsSearchDropdownOpen(false);
     setSearchValue("");
     setSearchResults([]);
     onSearchChange?.("");
+  };
+
+  const handleCloseSearchResults = () => {
+    setIsSearchExpanded(false);
+    setIsSearchDropdownOpen(false);
+    setSearchResults([]);
   };
 
   const previewItems = useMemo(
@@ -92,7 +122,7 @@ export function Header({
   );
 
   useEffect(() => {
-    if (!isSearchExpanded) {
+    if (!isMobileSearchOpen) {
       return;
     }
 
@@ -106,7 +136,7 @@ export function Header({
       document.body.style.overflow = previousBodyOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
     };
-  }, [isSearchExpanded]);
+  }, [isMobileSearchOpen]);
 
   useEffect(() => {
     onSearchChange?.(searchValue);
@@ -115,7 +145,7 @@ export function Header({
   useEffect(() => {
     const query = searchValue.trim();
 
-    if (!isSearchExpanded || query.length === 0) {
+    if (!isSearchActive || query.length === 0) {
       setSearchResults([]);
       setSearchLoading(false);
       return;
@@ -158,12 +188,85 @@ export function Header({
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [isSearchExpanded, searchValue]);
+  }, [isSearchActive, searchValue]);
+
+  useEffect(() => {
+    if (!isDesktop || !isSearchDropdownOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!searchWrapRef.current?.contains(event.target as Node)) {
+        setIsSearchDropdownOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsSearchDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isDesktop, isSearchDropdownOpen]);
+
+  useEffect(() => {
+    if (!isDesktop) {
+      setIsSearchDropdownOpen(false);
+    } else {
+      setIsSearchExpanded(false);
+    }
+  }, [isDesktop]);
+
+  const searchPreview = showSearchPreview ? (
+    <section className={styles.previewCard} aria-label="Підбірка для вас">
+      <div className={styles.previewHeader}>
+        <span className={styles.previewTitle}>Для вас</span>
+        <ChevronRightIcon className={iconStyles.icon} />
+      </div>
+
+      {searchLoading ? (
+        <div className={styles.loadingState} role="status" aria-live="polite">
+          <Spinner aria-hidden="true" />
+          <span className={styles.loadingText}>Завантаження...</span>
+        </div>
+      ) : previewItems.length > 0 ? (
+        <ul className={styles.previewList}>
+          {previewItems.map((item) => (
+            <li key={item.id}>
+              <Link
+                href={`/products/${item.slug}`}
+                className={styles.previewItem}
+                onClick={handleCloseSearchResults}
+              >
+                <span className={styles.previewName}>{item.title}</span>
+                <span className={styles.previewPrice}>
+                  {typeof item.price === "number"
+                    ? item.price.toLocaleString("uk-UA")
+                    : item.price}{" "}
+                  грн
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className={styles.emptyState}>Нічого не знайдено</p>
+      )}
+    </section>
+  ) : null;
 
   return (
     <header
       className={styles.header}
-      data-search-open={isSearchExpanded ? "true" : "false"}
+      data-search-open={isMobileSearchOpen ? "true" : "false"}
+      data-search-dropdown-open={isDesktop && isSearchDropdownOpen ? "true" : "false"}
     >
       <Container className={styles.inner}>
         <div className={styles.topRow}>
@@ -178,45 +281,60 @@ export function Header({
             </button>
           ) : null}
 
-          <Link
-            href={homeHref}
-            className={styles.logo}
-            aria-label="BOOK TOP — на головну"
-          >
-            <BookTopLogo className={styles.logoImage} />
-          </Link>
+          <div className={styles.brandGroup}>
+            <Link
+              href={homeHref}
+              className={styles.logo}
+              aria-label="BOOK TOP — на головну"
+            >
+              <BookTopLogo className={styles.logoImage} />
+            </Link>
 
-          {onMenuClick ? (
-            <nav className={styles.nav} aria-label="Головна навігація">
-              <button
-                type="button"
-                className={`${styles.navLink} ${isCatalogRoute ? styles.navLinkActive : ""}`.trim()}
-                aria-current={isCatalogRoute ? "page" : undefined}
-                onClick={onMenuClick}
-              >
-                Каталог
-              </button>
-              <Link
-                href="/about"
-                className={`${styles.navLink} ${pathname === "/about" ? styles.navLinkActive : ""}`.trim()}
-                aria-current={pathname === "/about" ? "page" : undefined}
-              >
-                Про нас
-              </Link>
-            </nav>
-          ) : null}
+            {onMenuClick ? (
+              <nav className={styles.nav} aria-label="Головна навігація">
+                <button
+                  type="button"
+                  className={`${styles.navLink} ${isCatalogRoute ? styles.navLinkActive : ""}`.trim()}
+                  aria-current={isCatalogRoute ? "page" : undefined}
+                  onClick={onMenuClick}
+                >
+                  Каталог
+                </button>
+              </nav>
+            ) : null}
+          </div>
 
-          <TextField
-            kind="search"
-            className={`${styles.search} ${styles.primarySearch}`}
-            value={searchValue}
-            placeholder={searchPlaceholder}
-            aria-label="Пошук"
-            leadingIcon={<SearchIcon className={iconStyles.icon} />}
-            trailingIcon={<MicrophoneIcon className={iconStyles.icon} />}
-            onFocus={handleOpenSearch}
-            onChange={(event) => setSearchValue(event.target.value)}
-          />
+          <div className={styles.searchWrap} ref={searchWrapRef}>
+            <TextField
+              kind="search"
+              className={`${styles.search} ${styles.primarySearch}`}
+              value={searchValue}
+              placeholder={searchPlaceholder}
+              aria-label="Пошук"
+              aria-expanded={isDesktop ? isSearchDropdownOpen : undefined}
+              aria-controls={isDesktop ? "header-search-dropdown" : undefined}
+              leadingIcon={<SearchIcon className={iconStyles.icon} />}
+              trailingIcon={<MicrophoneIcon className={iconStyles.icon} />}
+              onFocus={handleOpenSearch}
+              onChange={(event) => {
+                setSearchValue(event.target.value);
+                if (isDesktop) {
+                  setIsSearchDropdownOpen(true);
+                }
+              }}
+            />
+
+            {isDesktop && showSearchPreview ? (
+              <div
+                id="header-search-dropdown"
+                className={styles.searchDropdown}
+                role="listbox"
+                aria-label="Результати пошуку"
+              >
+                {searchPreview}
+              </div>
+            ) : null}
+          </div>
 
           <div className={styles.actions}>
             <Link
@@ -241,7 +359,7 @@ export function Header({
           </div>
         </div>
 
-        <div className={styles.searchSheet}>
+        <div className={styles.searchSheet} aria-hidden={!isMobileSearchOpen}>
           <div className={styles.searchSheetInner}>
             <div className={styles.searchSheetHeader}>
               <h2 className={styles.searchTitle}>Пошук</h2>
@@ -263,56 +381,11 @@ export function Header({
               aria-label="Пошук"
               leadingIcon={<SearchIcon className={iconStyles.icon} />}
               trailingIcon={<MicrophoneIcon className={iconStyles.icon} />}
-              autoFocus
+              autoFocus={isMobileSearchOpen}
               onChange={(event) => setSearchValue(event.target.value)}
             />
 
-            {hasSearchQuery ? (
-              <section
-                className={styles.previewCard}
-                aria-label="Підбірка для вас"
-              >
-                <div className={styles.previewHeader}>
-                  <span className={styles.previewTitle}>Для вас</span>
-                  <ChevronRightIcon className={iconStyles.icon} />
-                </div>
-
-                {searchLoading ? (
-                  <div
-                    className={styles.loadingState}
-                    role="status"
-                    aria-live="polite"
-                  >
-                    <Spinner aria-hidden="true" />
-                    <span className={styles.loadingText}>Завантаження...</span>
-                  </div>
-                ) : previewItems.length > 0 ? (
-                  <ul className={styles.previewList}>
-                    {previewItems.map((item) => (
-                      <li key={item.id}>
-                        <Link
-                          href={`/products/${item.slug}`}
-                          className={styles.previewItem}
-                          onClick={handleCloseSearch}
-                        >
-                          <span className={styles.previewName}>
-                            {item.title}
-                          </span>
-                          <span className={styles.previewPrice}>
-                            {typeof item.price === "number"
-                              ? item.price.toLocaleString("uk-UA")
-                              : item.price}{" "}
-                            грн
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className={styles.emptyState}>Нічого не знайдено</p>
-                )}
-              </section>
-            ) : null}
+            {searchPreview}
           </div>
 
           <FooterCatIllustration className={styles.cat} />

@@ -16,6 +16,7 @@ import {
   getCatalogProductSortLabel,
   type CatalogProductSort,
 } from "@/features/storefront/lib/catalog-product-sort";
+import { getRouteCategorySlugs } from "@/features/storefront/lib/catalog-category-filter";
 import { StateBlock } from "@/features/storefront/ui/StateBlock";
 import { CatalogMenu, PageLayout, type CatalogFormatFilter } from "@/shared/ui";
 import styles from "./CatalogScreen.module.css";
@@ -262,9 +263,7 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
       <CatalogSelectedFilters
         loading={isInitialLoading}
         categories={categories}
-        routeCategorySlugs={[selectedRootSlug, selectedSubcategorySlug].filter(
-          (slug): slug is string => Boolean(slug),
-        )}
+        routeCategorySlugs={getRouteCategorySlugs(selectedRootSlug, selectedSubcategorySlug)}
         appliedCategorySlugs={appliedCategorySlugs}
         appliedAuthors={appliedAuthors}
         appliedFormat={appliedFormat}

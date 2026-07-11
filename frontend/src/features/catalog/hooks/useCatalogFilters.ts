@@ -5,7 +5,7 @@ import {
   resolveAppliedPriceFilter,
 } from "@/features/catalog/lib/catalog-filter-options";
 import { toggleArrayFilter } from "@/features/catalog/lib/catalog-filter-utils";
-import { getChildCategories } from "@/features/storefront/lib/catalog-category-filter";
+import { getChildCategories, getRouteCategorySlugs } from "@/features/storefront/lib/catalog-category-filter";
 import type { CatalogCategoryDto } from "@/features/storefront/model/catalog.types";
 
 interface UseCatalogFiltersParams {
@@ -36,9 +36,7 @@ export function useCatalogFilters({
   const [showAllAuthors, setShowAllAuthors] = useState(false);
 
   const openFilters = () => {
-    const routeCategorySlugs = [selectedRootSlug, selectedSubcategorySlug].filter(
-      (slug): slug is string => Boolean(slug),
-    );
+    const routeCategorySlugs = getRouteCategorySlugs(selectedRootSlug, selectedSubcategorySlug);
 
     setDraftAuthors(appliedAuthors);
     setDraftCategorySlugs(
