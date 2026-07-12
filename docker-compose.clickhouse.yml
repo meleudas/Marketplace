@@ -1,0 +1,45 @@
+# Optional ClickHouse analytics warehouse.
+#
+# Standalone (HTTP :8123, native :9009):
+#   docker compose -f docker-compose.clickhouse.yml up -d
+#
+# With local API stack (also set ClickHouse__Enabled=true for the API, see below):
+#   docker compose -f docker-compose.dev.yml -f docker-compose.clickhouse.yml up -d --build
+#
+# Wire the API to this service (docker network hostname `clickhouse`), e.g. in backend/.env:
+#   ClickHouse__Enabled=true
+#   ClickHouse__Url=http://clickhouse:8123
+#   ClickHouse__Database=marketplace
+#   ConnectionStrings__ClickHouse=http://clickhouse:8123
+#
+# Host-run API (dotnet run) can use http://localhost:8123 from appsettings.Development.json.
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    ports:
+      - "8123:8123"
+      # Native protocol (9000 inside container). Do not map to host 9000 — MinIO uses that port.
+      - "9009:9000"
+    environment:
+      CLICKHOUSE_DB: marketplace
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+      CLICKHOUSE_USER: "${CLICKHOUSE_USER:-default}"
+      CLICKHOUSE_PASSWORD: "${CLICKHOUSE_PASSWORD:-}"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - marketplace
+
+volumes:
+  clickhouse_data:
+
+networks:
+  marketplace:
+    name: marketplace_net
+    driver: bridge
