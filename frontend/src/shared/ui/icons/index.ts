@@ -26,6 +26,7 @@ export {
   MicrophoneIcon,
   MinusIcon,
   OpenBookIcon,
+  PercentIcon,
   PhoneIcon,
   PlusIcon,
   RecordActiveIcon,

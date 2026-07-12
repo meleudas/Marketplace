@@ -187,7 +187,7 @@ public sealed class CatalogController : ControllerBase
 
     [HttpGet("recommendations/me")]
     [Authorize]
-    public async Task<IActionResult> GetPersonalizedRecommendations([FromQuery] int limit = 12, CancellationToken ct = default)
+    public async Task<IActionResult> GetPersonalizedRecommendations([FromQuery] int limit = 15, CancellationToken ct = default)
     {
         if (!User.TryGetUserId(out var userId))
             return Unauthorized();

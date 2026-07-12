@@ -1,226 +1,480 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
+import { isAxiosError } from "axios";
 import { useEffect, useMemo, useState } from "react";
 import {
   getCatalogProductBySlug,
-  getProductAvailability,
+  searchCatalogProducts,
 } from "@/features/storefront/api/catalog.api";
-import type {
-  CatalogProductDetailDto,
-  ProductAvailabilityDto,
-} from "@/features/storefront/model/catalog.types";
+import type { CatalogProductDetailDto } from "@/features/storefront/model/catalog.types";
+import { fetchShippingMethods, type ShippingMethodDto } from "@/features/checkout/api/checkout.api";
 import { useCartStore } from "@/features/cart/model/cart.store";
 import { StateBlock } from "@/features/storefront/ui/StateBlock";
-import { StorefrontLayout } from "@/features/storefront/ui/StorefrontLayout";
-import styles from "@/features/storefront/ui/StorefrontScreen.module.css";
 import { apiClient } from "@/shared/api/http.client";
+import {
+  Button,
+  ChevronDownIcon,
+  OpenBookIcon,
+  PageLayout,
+  PhoneIcon,
+  QuantityStepper,
+  Spinner,
+  SurfaceCard,
+} from "@/shared/ui";
+import iconStyles from "@/shared/ui/icons/Icon.module.css";
+import {
+  buildProductCharacteristics,
+  formatCompactPrice,
+  formatPriceWithUnit,
+  resolveAvailabilityLabel,
+  resolveProductFormat,
+  stripFormatSuffix,
+} from "../lib/product-details.lib";
+import { ProductGallery } from "../ui/ProductGallery";
+import { ReviewsSection } from "../ui/ReviewsSection";
+import { SimilarProductsSection } from "../ui/SimilarProductsSection";
+import styles from "./ProductDetailsScreen.module.css";
 
 interface ProductDetailsScreenProps {
   slug: string;
 }
 
-const formatPrice = (value: number | null | undefined): string => {
-  if (typeof value !== "number") {
-    return "-";
-  }
+interface FormatPriceOption {
+  key: string;
+  label: string;
+  price: number;
+  isElectronic: boolean;
+}
 
-  return `$${value.toFixed(2)}`;
-};
+const VISIBLE_CHARACTERISTICS_COUNT = 4;
+
+const MOCK_NOVA_POSHTA_PRICE_LABEL = "70-135 грн.";
 
 export function ProductDetailsScreen({ slug }: ProductDetailsScreenProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [productDetails, setProductDetails] = useState<CatalogProductDetailDto | null>(null);
-  const [availability, setAvailability] = useState<ProductAvailabilityDto | null>(null);
+  const [siblingFormat, setSiblingFormat] = useState<FormatPriceOption | null>(null);
 
+  const [shippingMethods, setShippingMethods] = useState<ShippingMethodDto[] | null>(null);
+  const [novaPoshtaOpen, setNovaPoshtaOpen] = useState(false);
+  const [ukrposhtaOpen, setUkrposhtaOpen] = useState(true);
+
+  const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
-  const [cartSuccess, setCartSuccess] = useState(false);
-  const [cartError, setCartError] = useState<string | null>(null);
+  const [cartMessage, setCartMessage] = useState<{ text: string; isError: boolean } | null>(null);
+
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [allCharacteristicsVisible, setAllCharacteristicsVisible] = useState(false);
 
   const { loadCart } = useCartStore();
 
+  useEffect(() => {
+    let isCancelled = false;
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        setSiblingFormat(null);
+
+        const details = await getCatalogProductBySlug(slug);
+        if (isCancelled) return;
+        setProductDetails(details);
+
+        const stem = stripFormatSuffix(details.product.name);
+        if (stem) {
+          try {
+            const siblingResult = await searchCatalogProducts({
+              name: stem,
+              companyId: details.product.companyId,
+              pageSize: 5,
+            });
+            const sibling = siblingResult.items.find(
+              (item) => item.slug !== details.product.slug && item.name.startsWith(stem),
+            );
+
+            if (sibling && !isCancelled) {
+              const isElectronic = sibling.name.toLowerCase().includes("електронна");
+              setSiblingFormat({
+                key: sibling.slug,
+                label: isElectronic ? "Електронна" : "Паперова",
+                price: sibling.price,
+                isElectronic,
+              });
+            }
+          } catch {
+            // Sibling format is a nice-to-have; ignore failures silently.
+          }
+        }
+      } catch {
+        if (!isCancelled) {
+          setError("Не вдалося завантажити дані про товар");
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void load();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [slug]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadShipping = async () => {
+      try {
+        const methods = await fetchShippingMethods();
+        if (!isCancelled) {
+          setShippingMethods(methods);
+        }
+      } catch {
+        if (!isCancelled) {
+          setShippingMethods([]);
+        }
+      }
+    };
+
+    void loadShipping();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  const characteristics = useMemo(
+    () => buildProductCharacteristics(productDetails?.detail ?? null),
+    [productDetails],
+  );
+
+  const productFormat = useMemo(
+    () =>
+      productDetails
+        ? resolveProductFormat(productDetails.detail, productDetails.product.name)
+        : null,
+    [productDetails],
+  );
+
+  const visibleCharacteristics = allCharacteristicsVisible
+    ? characteristics
+    : characteristics.slice(0, VISIBLE_CHARACTERISTICS_COUNT);
+
+  const hasHiddenCharacteristics = characteristics.length > VISIBLE_CHARACTERISTICS_COUNT;
+
+  const novaPoshtaMethod = useMemo(
+    () => shippingMethods?.find((method) => method.name.toLowerCase().includes("нова")) ?? null,
+    [shippingMethods],
+  );
+
+  const ukrposhtaMethod = useMemo(
+    () => shippingMethods?.find((method) => method.name.toLowerCase().includes("укрпошта")) ?? null,
+    [shippingMethods],
+  );
+
+  const novaPoshtaPriceLabel = novaPoshtaMethod
+    ? formatPriceWithUnit(novaPoshtaMethod.price)
+    : MOCK_NOVA_POSHTA_PRICE_LABEL;
+
+  const ukrposhtaPriceLabel = ukrposhtaMethod
+    ? formatPriceWithUnit(ukrposhtaMethod.price)
+    : "40 грн.";
+
   const handleAddToCart = async () => {
     if (!productDetails) return;
+
     setAddingToCart(true);
-    setCartError(null);
+    setCartMessage(null);
+
     try {
       await apiClient.post("/me/cart/items", {
         productId: productDetails.product.id,
-        quantity: 1,
+        quantity,
       });
-      setCartSuccess(true);
-      loadCart();
-    } catch (err: any) {
-      console.error(err);
-      if (err.response?.status === 401) {
-        setCartError("Будь ласка, увійдіть у свій акаунт, щоб додати книгу до кошика.");
+      setCartMessage({ text: "Книгу додано в кошик", isError: false });
+      void loadCart();
+    } catch (err: unknown) {
+      if (isAxiosError(err) && err.response?.status === 401) {
+        setCartMessage({ text: "Увійдіть, щоб додати книгу в кошик", isError: true });
       } else {
-        setCartError("Помилка при додаванні до кошика. Спробуйте ще раз.");
+        setCartMessage({ text: "Не вдалося додати книгу в кошик", isError: true });
       }
     } finally {
       setAddingToCart(false);
     }
   };
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const details = await getCatalogProductBySlug(slug);
-        setProductDetails(details);
-
-        const hasAvailabilityInDetails = typeof details.product.availableQty === "number";
-
-        if (!hasAvailabilityInDetails) {
-          const extraAvailability = await getProductAvailability(details.product.companyId, String(details.product.id));
-          setAvailability(extraAvailability);
-        }
-      } catch {
-        setError("Failed to load data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void load();
-  }, [slug]);
-
-  const resolvedAvailability = useMemo(() => {
-    if (!productDetails) {
-      return null;
-    }
-
-    const availableQty = productDetails.product.availableQty ?? availability?.availableQty;
-    const availabilityStatus =
-      productDetails.product.availabilityStatus ?? availability?.availabilityStatus;
-
-    if (typeof availableQty !== "number" || !availabilityStatus) {
-      return null;
-    }
-
-    return { availableQty, availabilityStatus };
-  }, [availability, productDetails]);
-
-  const previewImage = productDetails?.images[0]?.imageUrl ?? null;
-
   return (
-    <StorefrontLayout title="Product details">
-      <Link href="/products" className={styles.actionLink}>
-        Back to products
-      </Link>
+    <PageLayout
+      headerProps={{
+        homeHref: "/",
+        userHref: "/me",
+        searchPlaceholder: "Пошук книг",
+      }}
+      footerProps={{ homeHref: "/" }}
+    >
+      <div className={styles.main}>
+        {loading ? (
+          <div className={styles.loading}>
+            <Spinner size="lg" />
+          </div>
+        ) : null}
 
-      {loading ? <StateBlock message="Loading..." /> : null}
-      {error ? <StateBlock message={error} isError /> : null}
+        {!loading && error ? <StateBlock message={error} isError /> : null}
 
-      {!loading && !error && !productDetails ? <StateBlock message="No products found" /> : null}
+        {!loading && !error && !productDetails ? (
+          <StateBlock message="Товар не знайдено" />
+        ) : null}
 
-      {!loading && !error && productDetails ? (
-        <article className={styles.detailCard}>
-          <h2 className={styles.sectionTitle}>{productDetails.product.name}</h2>
-          <p className={styles.text}>Slug: {productDetails.product.slug}</p>
-
-          {previewImage ? (
-            <Image
-              src={previewImage}
+        {!loading && !error && productDetails ? (
+          <>
+            <ProductGallery
+              images={productDetails.images.map((image) => image.imageUrl)}
               alt={productDetails.product.name}
-              className={styles.detailImage}
-              width={960}
-              height={540}
             />
-          ) : null}
 
-          <p className={styles.text}>Price: {formatPrice(productDetails.product.price)}</p>
-          {typeof productDetails.product.oldPrice === "number" ? (
-            <p className={styles.text}>Old price: {formatPrice(productDetails.product.oldPrice)}</p>
-          ) : null}
+            <Button variant="secondary" fullWidth leadingIcon={<OpenBookIcon />} className={styles.previewButton}>
+              Читати уривок
+            </Button>
 
-          {productDetails.product.description ? (
-            <p className={styles.text}>{productDetails.product.description}</p>
-          ) : null}
+            <div className={styles.headline}>
+              <h1 className={styles.title}>{stripFormatSuffix(productDetails.product.name)}</h1>
+              <p className={styles.price}>{formatPriceWithUnit(productDetails.product.price)}</p>
+              <p className={styles.meta}>
+                {resolveAvailabilityLabel(productDetails.product).label}
+                {" · "}
+                {productFormat?.label ?? "Паперова"} книга
+              </p>
+            </div>
 
-          {resolvedAvailability ? (
-            <>
-              <p className={styles.text}>Available: {resolvedAvailability.availableQty}</p>
-              <p className={styles.text}>Status: {resolvedAvailability.availabilityStatus}</p>
-            </>
-          ) : null}
+            <div className={styles.actionsGrid}>
+              <Button
+                variant="primary"
+                fullWidth
+                className={styles.gridCell}
+                disabled={addingToCart || !resolveAvailabilityLabel(productDetails.product).inStock}
+                onClick={handleAddToCart}
+              >
+                {addingToCart ? "Додавання..." : "До кошика"}
+              </Button>
 
-          {/* Cart Action Block */}
-          <div style={{ marginTop: "24px", borderTop: "1px solid #2f2f2f", paddingTop: "20px" }}>
-            {cartSuccess ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <p style={{ color: "#22c55e", fontWeight: "600", fontSize: "16px" }}>✓ Книгу додано в кошик!</p>
-                <div style={{ display: "flex", gap: "12px" }}>
-                  <Link href="/checkout" style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    height: "44px",
-                    padding: "0 24px",
-                    borderRadius: "8px",
-                    background: "#ee0290",
-                    color: "#ffffff",
-                    fontSize: "15px",
-                    fontWeight: "600",
-                    textDecoration: "none",
-                    transition: "background 0.15s"
-                  }}>
-                    Оформити замовлення
-                  </Link>
+              <QuantityStepper
+                value={quantity}
+                onChange={setQuantity}
+                className={styles.gridQuantityStepper}
+              />
+
+              <Button
+                variant="filter"
+                fullWidth
+                selectable
+                selected
+                leadingIcon={<PhoneIcon />}
+                className={styles.gridCell}
+                disabled={!productFormat?.isElectronic && !siblingFormat?.isElectronic}
+              >
+                {productFormat?.isElectronic
+                  ? formatCompactPrice(productDetails.product.price)
+                  : siblingFormat?.isElectronic
+                    ? formatCompactPrice(siblingFormat.price)
+                    : "—"}
+              </Button>
+
+              <Button
+                variant="filter"
+                fullWidth
+                selectable
+                selected={false}
+                leadingIcon={<OpenBookIcon />}
+                className={styles.gridCell}
+                disabled={productFormat?.isElectronic && !siblingFormat}
+              >
+                {!productFormat?.isElectronic
+                  ? formatCompactPrice(productDetails.product.price)
+                  : siblingFormat
+                    ? formatCompactPrice(siblingFormat.price)
+                    : "—"}
+              </Button>
+            </div>
+
+            {cartMessage ? (
+              <p className={cartMessage.isError ? styles.cartMessageError : styles.cartMessageSuccess}>
+                {cartMessage.text}
+              </p>
+            ) : null}
+
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>Доставка</h2>
+
+              <div className={styles.deliveryList}>
+                <div className={styles.deliveryItem}>
                   <button
-                    onClick={() => setCartSuccess(false)}
-                    style={{
-                      background: "transparent",
-                      border: "1px solid #3e3e3e",
-                      borderRadius: "8px",
-                      color: "#ffffff",
-                      padding: "0 20px",
-                      fontSize: "15px",
-                      fontWeight: "600",
-                      cursor: "pointer"
-                    }}
+                    type="button"
+                    className={styles.deliveryHeader}
+                    onClick={() => setNovaPoshtaOpen((open) => !open)}
+                    aria-expanded={novaPoshtaOpen}
                   >
-                    Продовжити покупки
+                    <span className={styles.deliveryName}>Нова пошта</span>
+                    <span className={styles.deliveryHeaderRight}>
+                      {!novaPoshtaOpen ? (
+                        <span className={styles.deliveryPrice}>{novaPoshtaPriceLabel}</span>
+                      ) : null}
+                      <ChevronDownIcon
+                        className={[
+                          iconStyles.icon,
+                          styles.deliveryChevron,
+                          novaPoshtaOpen ? styles.deliveryChevronOpen : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      />
+                    </span>
                   </button>
+
+                  {novaPoshtaOpen ? (
+                    <ul className={styles.deliveryDetails}>
+                      {novaPoshtaMethod ? (
+                        <>
+                          <li>
+                            Термін доставки — {novaPoshtaMethod.estimatedDaysMin}-
+                            {novaPoshtaMethod.estimatedDaysMax} дні.
+                          </li>
+                          {typeof novaPoshtaMethod.freeShippingThreshold === "number" ? (
+                            <li>
+                              Безкоштовно від {formatPriceWithUnit(novaPoshtaMethod.freeShippingThreshold)}
+                            </li>
+                          ) : null}
+                        </>
+                      ) : (
+                        <li>Вартість залежить від відділення отримання.</li>
+                      )}
+                    </ul>
+                  ) : null}
+                </div>
+
+                <div className={styles.deliveryItem}>
+                  <button
+                    type="button"
+                    className={styles.deliveryHeader}
+                    onClick={() => setUkrposhtaOpen((open) => !open)}
+                    aria-expanded={ukrposhtaOpen}
+                  >
+                    <span className={styles.deliveryName}>Укрпошта</span>
+                    <span className={styles.deliveryHeaderRight}>
+                      {!ukrposhtaOpen ? (
+                        <span className={styles.deliveryPrice}>{ukrposhtaPriceLabel}</span>
+                      ) : null}
+                      <ChevronDownIcon
+                        className={[
+                          iconStyles.icon,
+                          styles.deliveryChevron,
+                          ukrposhtaOpen ? styles.deliveryChevronOpen : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      />
+                    </span>
+                  </button>
+
+                  {ukrposhtaOpen ? (
+                    <ul className={styles.deliveryDetails}>
+                      {ukrposhtaMethod && typeof ukrposhtaMethod.freeShippingThreshold === "number" ? (
+                        <>
+                          <li>
+                            Замовлення до {formatPriceWithUnit(ukrposhtaMethod.freeShippingThreshold)} —{" "}
+                            {formatPriceWithUnit(ukrposhtaMethod.price)}
+                          </li>
+                          <li>
+                            Замовлення від {formatPriceWithUnit(ukrposhtaMethod.freeShippingThreshold)} —
+                            безкоштовно.
+                          </li>
+                        </>
+                      ) : (
+                        <>
+                          <li>Замовлення до 499 грн. — 40 грн.</li>
+                          <li>Замовлення від 499 грн. — безкоштовно.</li>
+                        </>
+                      )}
+                    </ul>
+                  ) : null}
                 </div>
               </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <button
-                  onClick={handleAddToCart}
-                  disabled={addingToCart || resolvedAvailability?.availableQty === 0}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    height: "48px",
-                    padding: "0 32px",
-                    borderRadius: "8px",
-                    background: resolvedAvailability?.availableQty === 0 ? "#3e3e3e" : "#ee0290",
-                    color: "#ffffff",
-                    fontSize: "16px",
-                    fontWeight: "700",
-                    border: "none",
-                    cursor: resolvedAvailability?.availableQty === 0 ? "not-allowed" : "pointer",
-                    transition: "background 0.15s",
-                    width: "fit-content"
-                  }}
-                >
-                  {addingToCart ? "Додавання..." : resolvedAvailability?.availableQty === 0 ? "Немає в наявності" : "Додати в кошик"}
-                </button>
-                {cartError && (
-                  <p style={{ color: "#ef4444", fontSize: "14px", fontWeight: "500" }}>{cartError}</p>
-                )}
+            </section>
+
+            {characteristics.length > 0 ? (
+              <div className={styles.surfaceCardWrap}>
+                <SurfaceCard>
+                  <h2 className={styles.cardSectionTitle}>Характеристики</h2>
+
+                  <dl className={styles.characteristicsList}>
+                    {visibleCharacteristics.map((item) => (
+                      <div className={styles.characteristicsRow} key={item.label}>
+                        <dt className={styles.characteristicsLabel}>{item.label}</dt>
+                        <span className={styles.characteristicsDash} aria-hidden="true">
+                          —
+                        </span>
+                        <dd className={styles.characteristicsValue}>{item.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+
+                  {hasHiddenCharacteristics ? (
+                    <button
+                      type="button"
+                      className={styles.expandLink}
+                      onClick={() => setAllCharacteristicsVisible((visible) => !visible)}
+                    >
+                      {allCharacteristicsVisible ? "Згорнути" : "Усі параметри"}
+                    </button>
+                  ) : null}
+                </SurfaceCard>
               </div>
-            )}
-          </div>
-        </article>
-      ) : null}
-    </StorefrontLayout>
+            ) : null}
+
+            {productDetails.product.description ? (
+              <div className={styles.surfaceCardWrap}>
+                <SurfaceCard>
+                  <h2 className={styles.cardSectionTitle}>Опис</h2>
+                  <p
+                    className={
+                      descriptionExpanded ? styles.description : `${styles.description} ${styles.descriptionClamped}`
+                    }
+                  >
+                    {productDetails.product.description}
+                  </p>
+
+                  {descriptionExpanded ? (
+                    <button
+                      type="button"
+                      className={styles.expandLink}
+                      onClick={() => setDescriptionExpanded(false)}
+                    >
+                      Згорнути
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.expandLink}
+                      onClick={() => setDescriptionExpanded(true)}
+                    >
+                      Розгорнути
+                    </button>
+                  )}
+                </SurfaceCard>
+              </div>
+            ) : null}
+
+            <ReviewsSection productId={productDetails.product.id} />
+
+            <SimilarProductsSection slug={productDetails.product.slug} />
+          </>
+        ) : null}
+      </div>
+    </PageLayout>
   );
 }
-

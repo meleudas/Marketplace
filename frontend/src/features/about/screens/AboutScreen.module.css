@@ -69,3 +69,44 @@
   width: 127px;
   height: auto;
 }
+
+@media (min-width: 1024px) {
+  .aboutMain {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "header header"
+      "text cat";
+    gap: var(--space-24) var(--space-32);
+    align-items: start;
+    max-width: 800px;
+    margin-inline: auto;
+    min-height: auto;
+    padding-block: var(--space-32);
+  }
+
+  .topRow {
+    grid-area: header;
+  }
+
+  .body {
+    grid-area: text;
+    gap: var(--space-20);
+  }
+
+  .catWrap {
+    grid-area: cat;
+    margin-top: 0;
+    padding-top: 0;
+    align-self: end;
+  }
+
+  .title {
+    font-size: 28px;
+  }
+
+  .text {
+    font-size: 18px;
+    line-height: 1.5;
+  }
+}

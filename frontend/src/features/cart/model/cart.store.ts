@@ -15,7 +15,7 @@ interface CartResponse {
   totalItems: number;
 }
 
-export const useCartStore = create<CartState>((set, get) => ({
+export const useCartStore = create<CartState>((set) => ({
   totalItems: 0,
   initialized: false,
 

@@ -6,7 +6,7 @@ public sealed class RecommendationModelOptions
 
     public bool Enabled { get; set; }
     public bool ShadowModeEnabled { get; set; }
-    public int TopK { get; set; } = 12;
+    public int TopK { get; set; } = 15;
     public int CandidatePoolSize { get; set; } = 300;
     public int MinUserInteractions { get; set; } = 3;
     public string RetrainCron { get; set; } = "0 */6 * * *";

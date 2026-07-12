@@ -1,0 +1,24 @@
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.sm svg {
+  width: 14px;
+  height: 14px;
+}
+
+.md svg {
+  width: 20px;
+  height: 20px;
+}
+
+.starFilled {
+  color: #ffc700;
+}
+
+.starEmpty {
+  color: #4d4d52;
+}

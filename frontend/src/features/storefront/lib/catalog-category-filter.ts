@@ -60,6 +60,22 @@ export function resolveCategorySelection(
   };
 }
 
+/** Route-derived category slugs for filters: prefer the deepest selected category only. */
+export function getRouteCategorySlugs(
+  selectedRootSlug: string | null,
+  selectedSubcategorySlug: string | null,
+): string[] {
+  if (selectedSubcategorySlug) {
+    return [selectedSubcategorySlug];
+  }
+
+  if (selectedRootSlug) {
+    return [selectedRootSlug];
+  }
+
+  return [];
+}
+
 /** Category id plus all descendant ids (for root → subcategory filtering). */
 export function getCategoryFilterIdsFromSlugs(
   categories: CatalogCategoryDto[],

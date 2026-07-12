@@ -30,7 +30,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const isIconOnly = size === "icon";
-  const isSpread = variant === "dark" && Boolean(leadingIcon);
+  const isSpread = (variant === "dark" || variant === "filter") && Boolean(leadingIcon);
 
   const classes = [
     styles.button,
@@ -47,7 +47,7 @@ export function Button({
     .join(" ");
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
-    if (selectable && selected && variant === "dark") {
+    if (selectable && selected && (variant === "dark" || variant === "filter")) {
       const target = event.currentTarget;
       target.blur();
       requestAnimationFrame(() => target.blur());

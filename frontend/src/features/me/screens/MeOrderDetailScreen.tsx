@@ -11,8 +11,11 @@ import {
 import {
   fetchOrderDetails,
   OrderDetails,
-  OrderStatusHistoryDto,
 } from "../api/me.api";
+import {
+  getStatusClass,
+  getStatusLabel,
+} from "../lib/order-status";
 import styles from "./MeScreen.module.css";
 
 const MOCK_ORDER_DETAIL: OrderDetails = {
@@ -180,52 +183,18 @@ export function MeOrderDetailScreen({ orderId }: MeOrderDetailScreenProps) {
   }, [orderId]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
       void loadDetails();
-    }
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
   }, [isAuthenticated, loadDetails]);
-
-  const getNormalizedStatus = (status: any): string => {
-    if (status === null || status === undefined) return "";
-    if (typeof status === "number") {
-      switch (status) {
-        case 0: return "pending";
-        case 1: return "processing";
-        case 2: return "shipped";
-        case 3: return "delivered";
-        case 4: return "cancelled";
-        case 5: return "refunded";
-        default: return String(status).toLowerCase();
-      }
-    }
-    return String(status).toLowerCase();
-  };
-
-  const getStatusLabel = (status: any) => {
-    const normalized = getNormalizedStatus(status);
-    switch (normalized) {
-      case "pending": return "Очікує оплати";
-      case "processing": return "Обробляється";
-      case "shipped": return "Відправлено";
-      case "delivered": return "Доставлено";
-      case "cancelled": return "Скасовано";
-      case "refunded": return "Повернено";
-      default: return String(status);
-    }
-  };
-
-  const getStatusClass = (status: any) => {
-    const normalized = getNormalizedStatus(status);
-    switch (normalized) {
-      case "pending": return styles.statusPending;
-      case "processing": return styles.statusProcessing;
-      case "shipped": return styles.statusShipped;
-      case "delivered": return styles.statusDelivered;
-      case "cancelled": return styles.statusCancelled;
-      case "refunded": return styles.statusRefunded;
-      default: return "";
-    }
-  };
 
   if (!initialized || loading) {
     return (
@@ -313,7 +282,7 @@ export function MeOrderDetailScreen({ orderId }: MeOrderDetailScreenProps) {
                   <h2 className={styles.sectionTitle} style={{ margin: 0 }}>
                     Замовлення №{orderDetails.orderNumber}
                   </h2>
-                  <span className={`${styles.orderStatusBadge} ${getStatusClass(orderDetails.status)}`}>
+                  <span className={`${styles.orderStatusBadge} ${getStatusClass(orderDetails.status, styles)}`}>
                     {getStatusLabel(orderDetails.status)}
                   </span>
                 </div>

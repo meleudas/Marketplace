@@ -1,0 +1,86 @@
+.section {
+  display: grid;
+  gap: var(--space-16);
+  padding-block: var(--space-8);
+  border-top: 1px solid var(--color-neutral-800);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: var(--font-primary), sans-serif;
+  font-size: 20px;
+  font-weight: var(--ui-font-weight-semibold);
+  line-height: 1.2;
+  color: var(--color-white);
+}
+
+.submitButton {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.stateText {
+  margin: 0;
+  font-family: var(--font-primary), sans-serif;
+  font-size: var(--typography-body2-font-size);
+  color: var(--color-neutral-400);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-12);
+}
+
+.card {
+  display: grid;
+  gap: var(--space-8);
+  padding: var(--space-16);
+  border-radius: var(--radius-sm);
+  background: #2f2f2f;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-12);
+}
+
+.cardHeaderMeta {
+  display: grid;
+  gap: 2px;
+}
+
+.author {
+  font-family: var(--font-primary), sans-serif;
+  font-size: var(--typography-body1-font-size);
+  font-weight: var(--typography-body1-font-weight);
+  color: #ececec;
+}
+
+.date {
+  font-family: var(--font-primary), sans-serif;
+  font-size: var(--typography-body2-font-size);
+  color: #80838d;
+}
+
+.comment {
+  margin: 0;
+  font-family: var(--font-primary), sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #c0c1c6;
+}
+
+.moreButton {
+  padding: 0;
+  margin-left: 4px;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-primary), sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary-light-blue);
+  text-decoration: underline;
+  cursor: pointer;
+}

@@ -1,4 +1,5 @@
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: var(--product-card-width);
@@ -11,14 +12,29 @@
     box-shadow var(--ui-transition-base);
 }
 
-.card:hover {
+.card:has(.cardNav:hover):not(:has(.cartButton:hover)),
+.card:has(.cardNav:focus-visible):not(:has(.cartButton:hover)) {
   transform: translateY(-4px);
   box-shadow: 0 12px 28px rgb(0 0 0 / 0.28);
 }
 
-.card:active {
+.card:has(.cardNav:active):not(:has(.cartButton:active)) {
   transform: translateY(-1px) scale(0.98);
   box-shadow: 0 6px 16px rgb(0 0 0 / 0.22);
+}
+
+.cardNav {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.cardNav:focus-visible {
+  outline: 2px solid var(--color-primary-blue);
+  outline-offset: 2px;
 }
 
 .media {
@@ -39,7 +55,8 @@
   transition: transform var(--ui-transition-base);
 }
 
-.card:hover .image {
+.card:has(.cardNav:hover):not(:has(.cartButton:hover)) .image,
+.card:has(.cardNav:focus-visible):not(:has(.cartButton:hover)) .image {
   transform: scale(1.05);
 }
 
@@ -54,7 +71,8 @@
   transition: opacity var(--ui-transition-fast);
 }
 
-.card:hover .imagePlaceholder {
+.card:has(.cardNav:hover):not(:has(.cartButton:hover)) .imagePlaceholder,
+.card:has(.cardNav:focus-visible):not(:has(.cartButton:hover)) .imagePlaceholder {
   opacity: 0.85;
 }
 
@@ -62,6 +80,7 @@
   display: grid;
   gap: var(--product-card-gap);
   padding: var(--product-card-padding);
+  padding-right: calc(var(--product-card-padding) + var(--button-icon-size) + var(--space-8));
   background: transparent;
   border: 1px solid var(--color-primary-light-blue);
   border-top: none;
@@ -72,20 +91,21 @@
     background-color var(--ui-transition-fast);
 }
 
-.card:hover .body {
+.card:has(.cardNav:hover):not(:has(.cartButton:hover)) .body,
+.card:has(.cardNav:focus-visible):not(:has(.cartButton:hover)) .body {
   border-color: var(--color-primary-blue);
   box-shadow: inset 0 0 0 1px rgb(83 93 223 / 0.2);
   background: rgb(83 93 223 / 0.06);
 }
 
-.card:active .body {
+.card:has(.cardNav:active):not(:has(.cartButton:active)) .body {
   border-color: var(--color-primary-light-blue);
   background: rgb(163 194 224 / 0.08);
 }
 
 .author {
   margin: 0;
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-size: var(--typography-body2-font-size);
   font-weight: var(--typography-body2-font-weight);
   line-height: var(--typography-body2-line-height);
@@ -99,7 +119,7 @@
   -webkit-line-clamp: 2;
   overflow: hidden;
   min-height: calc(2 * var(--typography-body1-line-height));
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-size: var(--typography-body1-font-size);
   font-weight: var(--typography-h2-font-weight);
   line-height: var(--typography-body1-line-height);
@@ -108,7 +128,7 @@
 
 .availability {
   margin: 0;
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-size: var(--typography-body2-font-size);
   font-weight: var(--typography-body2-font-weight);
   line-height: var(--typography-body2-line-height);
@@ -117,7 +137,7 @@
 
 .availabilityOut {
   margin: 0;
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-size: var(--typography-body2-font-size);
   font-weight: var(--typography-body2-font-weight);
   line-height: var(--typography-body2-line-height);
@@ -127,15 +147,14 @@
 .footer {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-8);
+  min-height: var(--button-icon-size);
   margin-top: var(--space-4);
 }
 
 .priceGroup {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-4);
   min-width: 0;
 }
 
@@ -148,7 +167,7 @@
   border-radius: var(--radius-sm);
   background: var(--color-primary-pink);
   color: var(--color-white);
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-size: var(--typography-body2-font-size);
   font-weight: 700;
   line-height: 1;
@@ -156,7 +175,7 @@
 }
 
 .price {
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-size: var(--typography-body3-font-size);
   font-weight: var(--typography-body3-font-weight);
   line-height: var(--typography-body3-line-height);
@@ -165,7 +184,7 @@
 }
 
 .priceSale {
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-size: var(--typography-body3-font-size);
   font-weight: 700;
   line-height: var(--typography-body3-line-height);
@@ -174,7 +193,7 @@
 }
 
 .oldPrice {
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-size: var(--typography-body2-font-size);
   font-weight: var(--typography-body2-font-weight);
   line-height: var(--typography-body2-line-height);
@@ -182,9 +201,29 @@
   text-decoration: line-through;
 }
 
-.card:hover .price,
-.card:hover .priceSale {
+.card:has(.cardNav:hover):not(:has(.cartButton:hover)) .price,
+.card:has(.cardNav:hover):not(:has(.cartButton:hover)) .priceSale,
+.card:has(.cardNav:focus-visible):not(:has(.cartButton:hover)) .price,
+.card:has(.cardNav:focus-visible):not(:has(.cartButton:hover)) .priceSale {
   color: var(--color-primary-light-blue);
+}
+
+.cartButton {
+  position: absolute;
+  right: var(--product-card-padding);
+  bottom: var(--product-card-padding);
+  z-index: 2;
+  box-shadow: 0 4px 12px rgb(238 2 144 / 0.28);
+}
+
+.cartButton:hover:not(:disabled) {
+  transform: scale(1.08);
+  box-shadow: 0 8px 20px rgb(238 2 144 / 0.45);
+}
+
+.cartButton:active:not(:disabled) {
+  transform: scale(0.94);
+  box-shadow: 0 2px 8px rgb(238 2 144 / 0.35);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -193,17 +232,24 @@
   .imagePlaceholder,
   .body,
   .price,
-  .priceSale {
+  .priceSale,
+  .cartButton {
     transition: none;
   }
 
-  .card:hover,
-  .card:active {
+  .card:has(.cardNav:hover):not(:has(.cartButton:hover)),
+  .card:has(.cardNav:active):not(:has(.cartButton:active)) {
     transform: none;
     box-shadow: none;
   }
 
-  .card:hover .image {
+  .card:has(.cardNav:hover):not(:has(.cartButton:hover)) .image,
+  .card:has(.cardNav:focus-visible):not(:has(.cartButton:hover)) .image {
+    transform: none;
+  }
+
+  .cartButton:hover:not(:disabled),
+  .cartButton:active:not(:disabled) {
     transform: none;
   }
 }

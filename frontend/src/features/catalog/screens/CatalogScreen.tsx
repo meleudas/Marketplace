@@ -16,6 +16,7 @@ import {
   getCatalogProductSortLabel,
   type CatalogProductSort,
 } from "@/features/storefront/lib/catalog-product-sort";
+import { getRouteCategorySlugs } from "@/features/storefront/lib/catalog-category-filter";
 import { StateBlock } from "@/features/storefront/ui/StateBlock";
 import { CatalogMenu, PageLayout, type CatalogFormatFilter } from "@/shared/ui";
 import styles from "./CatalogScreen.module.css";
@@ -25,6 +26,19 @@ interface CatalogScreenProps {
 }
 
 const PAGE_SIZE = 8;
+
+function parseCatalogSortParam(value: string | null): CatalogProductSort | null {
+  if (
+    value === "relevance" ||
+    value === "newest" ||
+    value === "price_asc" ||
+    value === "price_desc"
+  ) {
+    return value;
+  }
+
+  return null;
+}
 
 export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
   const router = useRouter();
@@ -36,7 +50,12 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     selectedSubcategorySlug,
     categoryError,
   } = useCatalogCategories(categorySlug);
-  const [selectedSort, setSelectedSort] = useState<CatalogProductSort>(DEFAULT_CATALOG_PRODUCT_SORT);
+  const [manualSort, setManualSort] = useState<CatalogProductSort>(DEFAULT_CATALOG_PRODUCT_SORT);
+  const sortFromUrl = useMemo(
+    () => parseCatalogSortParam(searchParams.get("sort")),
+    [searchParams],
+  );
+  const selectedSort = sortFromUrl ?? manualSort;
   const [sortModalOpen, setSortModalOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
@@ -102,18 +121,6 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
       setAppliedFormat(formatParam);
     }
   }, [searchParams, setAppliedFormat]);
-
-  useEffect(() => {
-    const sortParam = searchParams.get("sort");
-    if (
-      sortParam === "relevance" ||
-      sortParam === "newest" ||
-      sortParam === "price_asc" ||
-      sortParam === "price_desc"
-    ) {
-      setSelectedSort(sortParam);
-    }
-  }, [searchParams]);
 
   const paginationKey = useMemo(() => {
     return JSON.stringify({
@@ -192,7 +199,7 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
   };
 
   const handleSortSelect = (sort: CatalogProductSort) => {
-    setSelectedSort(sort);
+    setManualSort(sort);
     setSortModalOpen(false);
   };
 
@@ -256,9 +263,7 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
       <CatalogSelectedFilters
         loading={isInitialLoading}
         categories={categories}
-        routeCategorySlugs={[selectedRootSlug, selectedSubcategorySlug].filter(
-          (slug): slug is string => Boolean(slug),
-        )}
+        routeCategorySlugs={getRouteCategorySlugs(selectedRootSlug, selectedSubcategorySlug)}
         appliedCategorySlugs={appliedCategorySlugs}
         appliedAuthors={appliedAuthors}
         appliedFormat={appliedFormat}

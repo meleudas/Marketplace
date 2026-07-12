@@ -1,3 +1,5 @@
+import Link from "next/link";
+import type { MouseEvent } from "react";
 import { Button } from "./Button";
 import { CartIcon } from "./icons";
 import iconStyles from "./icons/Icon.module.css";
@@ -16,7 +18,9 @@ export interface ProductCardData {
 
 interface ProductCardProps {
   product: ProductCardData;
-  onAddToCart?: (productId: string) => void;
+  href?: string;
+  onAddToCart?: (product: ProductCardData) => void;
+  isAddingToCart?: boolean;
 }
 
 interface ProductSaleInfo {
@@ -45,12 +49,23 @@ const getSaleInfo = (product: ProductCardData): ProductSaleInfo | null => {
   return null;
 };
 
-export function ProductCard({ product, onAddToCart }: ProductCardProps) {
+export function ProductCard({
+  product,
+  href,
+  onAddToCart,
+  isAddingToCart = false,
+}: ProductCardProps) {
   const isInStock = product.inStock ?? true;
   const sale = getSaleInfo(product);
 
-  return (
-    <article className={styles.card}>
+  const handleAddToCart = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onAddToCart?.(product);
+  };
+
+  const cardContent = (
+    <>
       <div className={styles.media}>
         <div className={styles.imagePlaceholder} aria-hidden="true" />
         {product.imageUrl ? (
@@ -84,16 +99,30 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
               <span className={styles.price}>{formatPrice(product.price)}</span>
             )}
           </div>
-          <Button
-            variant="primary"
-            size="icon"
-            aria-label="Додати до кошика"
-            leadingIcon={<CartIcon className={iconStyles.icon} />}
-            disabled={!isInStock}
-            onClick={() => onAddToCart?.(product.id)}
-          />
         </div>
       </div>
+    </>
+  );
+
+  return (
+    <article className={styles.card}>
+      {href ? (
+        <Link href={href} className={styles.cardNav}>
+          {cardContent}
+        </Link>
+      ) : (
+        <div className={styles.cardNav}>{cardContent}</div>
+      )}
+
+      <Button
+        variant="primary"
+        size="icon"
+        className={styles.cartButton}
+        aria-label="Додати до кошика"
+        leadingIcon={<CartIcon className={iconStyles.icon} />}
+        disabled={!isInStock || isAddingToCart}
+        onClick={handleAddToCart}
+      />
     </article>
   );
 }

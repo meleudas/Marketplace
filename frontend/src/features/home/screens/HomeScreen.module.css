@@ -1,4 +1,5 @@
 .promoBanner {
+  position: relative;
   width: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -12,10 +13,17 @@
 }
 
 .promoContent {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--product-card-width), var(--product-card-width)));
-  justify-content: start;
-  gap: var(--space-12);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.promoCat {
+  flex: 0 0 auto;
+  width: 85px;
+  height: 98px;
 }
 
 .cardLink {
@@ -77,11 +85,243 @@
 
 .promoDate {
   margin: 0;
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-size: var(--typography-h2-font-size);
   font-weight: var(--typography-h2-font-weight);
   line-height: var(--typography-h2-line-height);
   color: var(--color-text);
+}
+
+.homeMain {
+  position: relative;
+  overflow: visible;
+  flex: 0 0 auto !important;
+  min-height: auto;
+  align-content: start;
+  padding-bottom: 0;
+}
+
+.homeShell {
+  position: relative;
+  width: 100%;
+}
+
+.homeContent {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.sideDecor {
+  display: none;
+}
+
+.discountPromo {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: var(--space-32);
+  margin-bottom: var(--space-32);
+}
+
+.discountPromoFrame {
+  display: block;
+  width: min(100%, 353px);
+  aspect-ratio: 706 / 300;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.discountPromoImage {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.feedSection {
+  display: grid;
+  gap: var(--space-16);
+  margin-top: var(--space-32);
+  margin-bottom: var(--space-32);
+}
+
+.feedHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+}
+
+.feedTitle {
+  margin: 0;
+  font-family: var(--font-primary), sans-serif;
+  font-size: var(--typography-h3-font-size);
+  font-weight: var(--typography-h3-font-weight);
+  line-height: var(--typography-h3-line-height);
+  color: var(--color-text);
+}
+
+.loadMoreWrap {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-8);
+}
+
+.loadMoreIcon {
+  width: var(--button-icon-inner-size);
+  height: var(--button-icon-inner-size);
+}
+
+@media (min-width: 1024px) {
+  .feedSection {
+    margin-top: var(--space-32);
+    padding-top: var(--space-32);
+    border-top: 1px solid rgb(163 194 224 / 0.12);
+  }
+
+  .feedTitle {
+    font-size: 28px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .homeContent {
+    max-width: 1200px;
+    --product-card-width: 224px;
+  }
+
+  .promoBanner {
+    justify-content: space-between;
+    gap: var(--space-32);
+    padding: var(--space-32) var(--space-36);
+    min-height: 220px;
+  }
+
+  .promoContent {
+    gap: var(--space-12);
+  }
+
+  .promoEyebrow {
+    font-size: 32px;
+  }
+
+  .promoQuote {
+    font-size: 22px;
+  }
+
+  .promoDate {
+    font-size: 24px;
+  }
+
+  .promoCat {
+    width: 140px;
+    height: 161px;
+  }
+
+  .discountPromoImage {
+    width: 100%;
+  }
+
+  .discountPromoFrame {
+    width: min(100%, 560px);
+  }
+}
+
+@media (min-width: 1320px) {
+  .sideDecor {
+    display: block;
+  }
+
+  .sideDecorPanel {
+    position: fixed;
+    top: 88px;
+    bottom: 0;
+    width: calc((100vw - 1200px) / 2);
+    max-width: 320px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .sideDecorLeft {
+    left: 0;
+    background:
+      linear-gradient(90deg, rgb(83 93 223 / 0.16) 0%, rgb(83 93 223 / 0.05) 55%, transparent 100%);
+  }
+
+  .sideDecorRight {
+    right: 0;
+    background:
+      linear-gradient(-90deg, rgb(238 2 144 / 0.12) 0%, rgb(238 2 144 / 0.04) 55%, transparent 100%);
+  }
+
+  .sideAccent {
+    position: absolute;
+    top: 10%;
+    bottom: 10%;
+    width: 1px;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgb(163 194 224 / 0.35) 18%,
+      rgb(163 194 224 / 0.35) 82%,
+      transparent 100%
+    );
+  }
+
+  .sideDecorLeft .sideAccent {
+    right: 28px;
+  }
+
+  .sideDecorRight .sideAccent {
+    left: 28px;
+  }
+
+  .sideQuote {
+    position: absolute;
+    margin: 0;
+    font-family: var(--font-primary), sans-serif;
+    font-size: 11px;
+    font-style: italic;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgb(163 194 224 / 0.42);
+    writing-mode: vertical-rl;
+    white-space: nowrap;
+  }
+
+  .sideQuoteLeft {
+    right: 52px;
+    top: 18%;
+  }
+
+  .sideQuoteRight {
+    left: 52px;
+    bottom: 24%;
+    transform: rotate(180deg);
+  }
+
+  .sideCat {
+    position: absolute;
+    height: auto;
+    opacity: 0.16;
+    filter: saturate(0.85);
+  }
+
+  .sideCatLeft {
+    right: 10%;
+    bottom: 14%;
+    width: min(140px, 70%);
+  }
+
+  .sideCatRight {
+    left: 8%;
+    top: 26%;
+    width: min(100px, 55%);
+    transform: scaleX(-1);
+  }
 }
 
 .modalClose {
