@@ -8,6 +8,8 @@
 
 [`docker-compose.dev.yml`](../../docker-compose.dev.yml) — api, postgres, redis, elasticsearch, minio.
 
+ClickHouse (analytics) — [`docker-compose.clickhouse.yml`](../../docker-compose.clickhouse.yml) (опційний overlay).
+
 Моніторинг і SonarQube — [`docker-compose.monitoring.yml`](../../docker-compose.monitoring.yml) (profiles `observability`, `sonar`).
 
 ## 3. To-be
@@ -15,6 +17,19 @@
 Профілі в окремому compose; API з OTLP env через [`docker-compose.observability.yml`](../../docker-compose.observability.yml).
 
 ## 4. Покрокова інтеграція
+
+### ClickHouse (analytics)
+
+```powershell
+# тільки ClickHouse
+docker compose -f docker-compose.clickhouse.yml up -d
+
+# разом із dev stack
+docker compose -f docker-compose.dev.yml -f docker-compose.clickhouse.yml up -d --build
+# HTTP http://localhost:8123 , native localhost:9009
+```
+
+Для API в Docker увімкни ClickHouse через `backend/.env` (див. коментарі в `docker-compose.clickhouse.yml`). Для `dotnet run` на хості достатньо `appsettings.Development.json` (`http://localhost:8123`).
 
 ### Повний dev stack
 
