@@ -66,6 +66,7 @@ export { SurfaceCard } from "./SurfaceCard/SurfaceCard";
 export type { SurfaceCardProps } from "./SurfaceCard/SurfaceCard";
 export { PageLayout } from "./PageLayout";
 export { PageBackground } from "./PageBackground";
+export { SideDecorShell } from "./SideDecor";
 export { Spinner } from "./Spinner";
 export type { SpinnerProps, SpinnerSize } from "./Spinner";
 export { CatalogMenu } from "./CatalogMenu";

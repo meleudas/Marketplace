@@ -18,7 +18,7 @@ import {
   type ProductRailCard,
 } from "@/features/home/lib/map-product-to-rail-card";
 import { useAuth } from "@/features/auth/model/auth.store";
-import { ChevronDownIcon, Button, CatalogMenu, PageLayout, ProductCard, Spinner } from "@/shared/ui";
+import { ChevronDownIcon, Button, CatalogMenu, PageLayout, ProductCard, SideDecorShell, Spinner } from "@/shared/ui";
 import { ProductRailItems } from "../ui/ProductRailItems";
 import { RecommendationsRail } from "../ui/RecommendationsRail";
 import styles from "./HomeScreen.module.css";
@@ -200,33 +200,7 @@ export function HomeScreen() {
       }}
       footerProps={{ homeHref: "/" }}
     >
-      <div className={styles.homeShell}>
-        <div className={styles.sideDecor} aria-hidden="true">
-          <div className={`${styles.sideDecorPanel} ${styles.sideDecorLeft}`}>
-            <span className={styles.sideAccent} />
-            <p className={`${styles.sideQuote} ${styles.sideQuoteLeft}`}>Читай більше</p>
-            <Image
-              className={`${styles.sideCat} ${styles.sideCatLeft}`}
-              src="/about-cat.svg"
-              alt=""
-              width={127}
-              height={172}
-            />
-          </div>
-          <div className={`${styles.sideDecorPanel} ${styles.sideDecorRight}`}>
-            <span className={styles.sideAccent} />
-            <p className={`${styles.sideQuote} ${styles.sideQuoteRight}`}>Відкривай світ</p>
-            <Image
-              className={`${styles.sideCat} ${styles.sideCatRight}`}
-              src="/promo-cat.svg"
-              alt=""
-              width={85}
-              height={98}
-            />
-          </div>
-        </div>
-
-        <div className={styles.homeContent}>
+      <SideDecorShell contentClassName={styles.homeContent}>
       <section className={styles.promoBanner} aria-label="Рекламний банер">
         <div className={styles.promoContent}>
           <p className={styles.promoEyebrow}>Не пропусти!</p>
@@ -356,9 +330,7 @@ export function HomeScreen() {
           </div>
         ) : null}
       </section>
-
-        </div>
-      </div>
+      </SideDecorShell>
 
       <CatalogMenu
         open={catalogOpen}

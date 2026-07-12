@@ -31,6 +31,12 @@ function parseJsonBlob<T>(raw: string | null | undefined): T | null {
   }
 }
 
+export function getProductAuthor(detail: CatalogProductDetailDto["detail"]): string | null {
+  const attributes = parseJsonBlob<ProductAttributesBlob>(detail?.attributesRaw);
+  const author = attributes?.author?.trim();
+  return author || null;
+}
+
 export function buildProductCharacteristics(
   detail: CatalogProductDetailDto["detail"],
 ): ProductCharacteristic[] {

@@ -1,0 +1,110 @@
+.shell {
+  position: relative;
+  width: 100%;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.decor {
+  display: none;
+}
+
+.decorPanel {
+  position: fixed;
+  top: 88px;
+  bottom: 0;
+  width: calc((100vw - 1200px) / 2);
+  max-width: 320px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.decorPanelLeft {
+  left: 0;
+  background:
+    linear-gradient(90deg, rgb(83 93 223 / 0.16) 0%, rgb(83 93 223 / 0.05) 55%, transparent 100%);
+}
+
+.decorPanelRight {
+  right: 0;
+  background:
+    linear-gradient(-90deg, rgb(238 2 144 / 0.12) 0%, rgb(238 2 144 / 0.04) 55%, transparent 100%);
+}
+
+.accent {
+  position: absolute;
+  top: 10%;
+  bottom: 10%;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgb(163 194 224 / 0.35) 18%,
+    rgb(163 194 224 / 0.35) 82%,
+    transparent 100%
+  );
+}
+
+.decorPanelLeft .accent {
+  right: 28px;
+}
+
+.decorPanelRight .accent {
+  left: 28px;
+}
+
+.quote {
+  position: absolute;
+  margin: 0;
+  font-family: var(--font-primary), sans-serif;
+  font-size: 11px;
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(163 194 224 / 0.42);
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+}
+
+.quoteLeft {
+  right: 52px;
+  top: 18%;
+}
+
+.quoteRight {
+  left: 52px;
+  bottom: 24%;
+  transform: rotate(180deg);
+}
+
+.cat {
+  position: absolute;
+  height: auto;
+  opacity: 0.16;
+  filter: saturate(0.85);
+}
+
+.catLeft {
+  right: 10%;
+  bottom: 14%;
+  width: min(140px, 70%);
+}
+
+.catRight {
+  left: 8%;
+  top: 26%;
+  width: min(100px, 55%);
+  transform: scaleX(-1);
+}
+
+@media (min-width: 1320px) {
+  .decor {
+    display: block;
+  }
+}

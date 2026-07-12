@@ -39,6 +39,22 @@
   object-fit: cover;
 }
 
+@media (min-width: 1024px) {
+  .gallery {
+    aspect-ratio: 4 / 5;
+    max-height: 620px;
+  }
+
+  .image {
+    object-fit: contain;
+  }
+
+  .placeholder {
+    aspect-ratio: 4 / 5;
+    max-height: 620px;
+  }
+}
+
 .arrow {
   position: absolute;
   top: 50%;

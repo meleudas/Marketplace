@@ -84,3 +84,24 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+@media (min-width: 1024px) {
+  .section {
+    padding-block: var(--space-24);
+    border-top: 1px solid rgb(163 194 224 / 0.12);
+  }
+
+  .sectionTitle {
+    font-size: 28px;
+  }
+
+  .list {
+    gap: var(--space-16);
+  }
+
+  .card {
+    padding: var(--space-20) var(--space-24);
+    background: rgb(163 194 224 / 0.12);
+    border: 1px solid rgb(163 194 224 / 0.18);
+  }
+}

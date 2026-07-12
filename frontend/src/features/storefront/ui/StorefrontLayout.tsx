@@ -33,7 +33,7 @@ export function StorefrontLayout({ title, children }: StorefrontLayoutProps) {
           <Link href="/" className={styles.link}>
             Home
           </Link>
-          <Link href="/products" className={styles.link}>
+          <Link href="/catalog" className={styles.link}>
             Products
           </Link>
           <Link href="/companies" className={styles.link}>

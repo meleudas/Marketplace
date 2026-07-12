@@ -10,7 +10,7 @@ interface SimilarProductsSectionProps {
   slug: string;
 }
 
-const SIMILAR_PRODUCTS_LIMIT = 12;
+const SIMILAR_PRODUCTS_LIMIT = 15;
 
 export function SimilarProductsSection({ slug }: SimilarProductsSectionProps) {
   const [items, setItems] = useState<ProductRailCard[]>([]);
@@ -45,7 +45,7 @@ export function SimilarProductsSection({ slug }: SimilarProductsSectionProps) {
   }, [slug]);
 
   return (
-    <RecommendationsRail title="Схожі товари" loading={loading}>
+    <RecommendationsRail title="Схожі книги" loading={loading}>
       <ProductRailItems items={items} />
     </RecommendationsRail>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { forwardRef, useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/model/auth.store";
 import {
   createProductReview,
@@ -56,7 +56,10 @@ function ReviewCard({ review }: { review: ProductReviewDto }) {
   );
 }
 
-export function ReviewsSection({ productId }: ReviewsSectionProps) {
+export const ReviewsSection = forwardRef<HTMLElement, ReviewsSectionProps>(function ReviewsSection(
+  { productId },
+  ref,
+) {
   const { isAuthenticated } = useAuth();
 
   const [allReviews, setAllReviews] = useState<ProductReviewDto[]>([]);
@@ -107,7 +110,7 @@ export function ReviewsSection({ productId }: ReviewsSectionProps) {
   };
 
   return (
-    <section className={styles.section}>
+    <section ref={ref} id="product-reviews" className={styles.section}>
       <h2 className={styles.sectionTitle}>Відгуки</h2>
 
       <Button
@@ -145,4 +148,4 @@ export function ReviewsSection({ productId }: ReviewsSectionProps) {
       />
     </section>
   );
-}
+});
