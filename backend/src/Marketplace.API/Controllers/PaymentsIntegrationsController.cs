@@ -30,7 +30,20 @@ public sealed class PaymentsIntegrationsController : ControllerBase
     }
 
     [HttpPost("webhook")]
-    public async Task<IActionResult> Webhook([FromBody] LiqPayWebhookRequest request, CancellationToken ct)
+    [Consumes("application/json")]
+    public async Task<IActionResult> WebhookJson([FromBody] LiqPayWebhookRequest request, CancellationToken ct)
+    {
+        return await ProcessWebhookAsync(request, ct);
+    }
+
+    [HttpPost("webhook")]
+    [Consumes("application/x-www-form-urlencoded")]
+    public async Task<IActionResult> WebhookForm([FromForm] LiqPayWebhookRequest request, CancellationToken ct)
+    {
+        return await ProcessWebhookAsync(request, ct);
+    }
+
+    private async Task<IActionResult> ProcessWebhookAsync(LiqPayWebhookRequest request, CancellationToken ct)
     {
         using var timer = MarketplaceMetrics.StartTimer(MarketplaceMetrics.WebhookLatencyMs, new KeyValuePair<string, object?>("provider", "liqpay"));
         var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString();
@@ -60,7 +73,9 @@ public sealed class PaymentsIntegrationsController : ControllerBase
 
         var result = await _sender.Send(new HandleLiqPayWebhookCommand(request.Data, request.Signature, idempotencyKey), ct);
         if (result.IsSuccess)
+        {
             MarketplaceMetrics.WebhookOps.Add(1, [new KeyValuePair<string, object?>("provider", "liqpay"), new KeyValuePair<string, object?>("status", "success")]);
+        }
         else
         {
             MarketplaceMetrics.WebhookErrors.Add(1, [new KeyValuePair<string, object?>("provider", "liqpay")]);

@@ -28,7 +28,10 @@ public sealed class PaymentRepository : IPaymentRepository
     public async Task<Payment?> GetByTransactionIdAsync(string transactionId, CancellationToken ct = default)
     {
         var normalized = transactionId.Trim();
-        var row = await _context.Payments.AsNoTracking().FirstOrDefaultAsync(x => x.TransactionId == normalized, ct);
+        var row = await _context.Payments
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.TransactionId == normalized
+                || _context.Orders.Any(o => o.Id == x.OrderId && o.OrderNumber == normalized), ct);
         return row is null ? null : ToDomain(row);
     }
 
