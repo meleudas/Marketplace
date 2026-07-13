@@ -1,18 +1,21 @@
 "use client";
 
-import { useAddToCart } from "@/features/cart/hooks/useAddToCart";
-import { AddToCartDialog } from "@/features/cart/ui/AddToCartDialog";
 import { ProductCard } from "@/shared/ui";
+import type { ProductCardData } from "@/shared/ui";
 import type { ProductRailCard } from "../lib/map-product-to-rail-card";
 import styles from "./RecommendationsRail.module.css";
 
 interface ProductRailItemsProps {
   items: ProductRailCard[];
+  onAddToCart: (product: ProductCardData) => void;
+  addingProductId: string | null;
 }
 
-export function ProductRailItems({ items }: ProductRailItemsProps) {
-  const { addToCart, addingProductId, addedProduct, dismissAddedDialog } = useAddToCart();
-
+export function ProductRailItems({
+  items,
+  onAddToCart,
+  addingProductId,
+}: ProductRailItemsProps) {
   return (
     <>
       {items.map((item) => (
@@ -20,17 +23,11 @@ export function ProductRailItems({ items }: ProductRailItemsProps) {
           <ProductCard
             product={item}
             href={item.href}
-            onAddToCart={addToCart}
+            onAddToCart={onAddToCart}
             isAddingToCart={addingProductId === item.id}
           />
         </div>
       ))}
-
-      <AddToCartDialog
-        open={addedProduct !== null}
-        product={addedProduct}
-        onClose={dismissAddedDialog}
-      />
     </>
   );
 }

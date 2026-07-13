@@ -18,115 +18,7 @@ import {
 } from "../lib/order-status";
 import styles from "./MeScreen.module.css";
 
-const MOCK_ORDER_DETAIL: OrderDetails = {
-  orderId: 1,
-  orderNumber: "2345678901354",
-  customerId: "",
-  companyId: "",
-  status: "Delivered",
-  totalPrice: 1900,
-  subtotal: 1900,
-  shippingCost: 0,
-  discountAmount: 0,
-  taxAmount: 0,
-  paymentMethod: "Card",
-  notes: "Будь ласка, запакуйте книгу надійно як подарунок.",
-  trackingNumber: "20450849204918",
-  shippedAt: "2026-12-09T13:30:00Z",
-  deliveredAt: "2026-12-09T15:00:00Z",
-  cancelledAt: null,
-  refundedAt: null,
-  createdAt: "2026-12-09T12:00:00Z",
-  updatedAt: "2026-12-09T15:00:00Z",
-  items: [
-    {
-      orderItemId: 1,
-      productId: 101,
-      productName: "Портрет Доріана Грея",
-      productImage: null,
-      quantity: 1,
-      priceAtMoment: 950,
-      discount: 0,
-      totalPrice: 950,
-    },
-    {
-      orderItemId: 2,
-      productId: 102,
-      productName: "Портрет Доріана Грея",
-      productImage: null,
-      quantity: 1,
-      priceAtMoment: 950,
-      discount: 0,
-      totalPrice: 950,
-    },
-  ],
-  addresses: [
-    {
-      kind: "Shipping",
-      firstName: "Данило",
-      lastName: "Гамаран",
-      phone: "+380 56 435 678",
-      street: "вул. Сагайдачного 54ж",
-      city: "м. Чернівці",
-      state: "Чернівецька",
-      postalCode: "58000",
-      country: "Україна",
-    },
-  ],
-  payment: {
-    paymentId: 12,
-    method: "Card",
-    amount: 1900,
-    currency: "UAH",
-    transactionId: "pay_txn_8482049810",
-    status: "Captured",
-    processedAt: "2026-12-09T12:05:00Z",
-  },
-  refunds: [],
-  returns: [],
-  statusHistory: [
-    {
-      oldStatus: "Created",
-      newStatus: "Pending",
-      changedByUserId: "00000000-0000-0000-0000-000000000000",
-      actorRole: "System",
-      source: "Checkout",
-      comment: "Замовлення успішно створене в системі.",
-      correlationId: null,
-      changedAt: "2026-12-09T12:00:00Z",
-    },
-    {
-      oldStatus: "Pending",
-      newStatus: "Processing",
-      changedByUserId: "00000000-0000-0000-0000-000000000000",
-      actorRole: "System",
-      source: "PaymentService",
-      comment: "Оплата отримана.",
-      correlationId: null,
-      changedAt: "2026-12-09T12:05:00Z",
-    },
-    {
-      oldStatus: "Processing",
-      newStatus: "Shipped",
-      changedByUserId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      actorRole: "Seller",
-      source: "FulfillmentModule",
-      comment: "Передано кур'єру.",
-      correlationId: null,
-      changedAt: "2026-12-09T13:30:00Z",
-    },
-    {
-      oldStatus: "Shipped",
-      newStatus: "Delivered",
-      changedByUserId: "00000000-0000-0000-0000-000000000000",
-      actorRole: "System",
-      source: "ShippingCarrierIntegration",
-      comment: "Посилку успішно отримано одержувачем.",
-      correlationId: null,
-      changedAt: "2026-12-09T15:00:00Z",
-    },
-  ],
-};
+
 
 interface MeOrderDetailScreenProps {
   orderId: number;
@@ -143,6 +35,7 @@ export function MeOrderDetailScreen({ orderId }: MeOrderDetailScreenProps) {
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     void loadMe();
@@ -150,33 +43,13 @@ export function MeOrderDetailScreen({ orderId }: MeOrderDetailScreenProps) {
 
   const loadDetails = useCallback(async () => {
     setLoadingDetails(true);
+    setError(null);
     try {
-      if (orderId === 1 || orderId === 2) {
-        setOrderDetails({
-          ...MOCK_ORDER_DETAIL,
-          orderId,
-          orderNumber: orderId === 1 ? "2345678901354" : "2345678901355",
-          status: orderId === 1 ? "Delivered" : "Shipped",
-          totalPrice: orderId === 1 ? 1900 : 950,
-          subtotal: orderId === 1 ? 1900 : 950,
-          trackingNumber: orderId === 1 ? "20450849204918" : "59000849204919",
-          items: orderId === 1 ? MOCK_ORDER_DETAIL.items : [MOCK_ORDER_DETAIL.items[0]],
-          statusHistory: orderId === 1
-            ? MOCK_ORDER_DETAIL.statusHistory
-            : MOCK_ORDER_DETAIL.statusHistory.slice(0, 3),
-        });
-        setLoadingDetails(false);
-        return;
-      }
-
       const details = await fetchOrderDetails(orderId);
       setOrderDetails(details);
     } catch (e) {
-      console.warn("Failed to load order details from API, using mock fallback:", e);
-      setOrderDetails({
-        ...MOCK_ORDER_DETAIL,
-        orderId,
-      });
+      console.error("Failed to load order details from API:", e);
+      setError("Не вдалося завантажити деталі замовлення. Дані відсутні.");
     } finally {
       setLoadingDetails(false);
     }
@@ -245,6 +118,22 @@ export function MeOrderDetailScreen({ orderId }: MeOrderDetailScreenProps) {
       ? "Укрпошта"
       : "Самовивіз / Інша служба доставки";
 
+  const isPaymentSuccess =
+    orderDetails?.payment?.status?.toLowerCase() === "captured" ||
+    orderDetails?.payment?.status?.toLowerCase() === "completed" ||
+    orderDetails?.payment?.status?.toLowerCase() === "success" ||
+    orderDetails?.payment?.status?.toLowerCase() === "paid";
+  
+  const isPaymentFailed =
+    orderDetails?.payment?.status?.toLowerCase() === "failed" ||
+    orderDetails?.payment?.status?.toLowerCase() === "failure";
+
+  const getPaymentStatusText = () => {
+    if (isPaymentSuccess) return "Сплачено успішно";
+    if (isPaymentFailed) return "Помилка оплати";
+    return orderDetails?.payment?.status || "Очікує оплати";
+  };
+
   // Build carrier tracking link
   const trackingNumber = orderDetails?.trackingNumber;
   let trackingLink = "";
@@ -274,8 +163,12 @@ export function MeOrderDetailScreen({ orderId }: MeOrderDetailScreenProps) {
           </button>
 
           <section className={styles.card}>
-            {loadingDetails || !orderDetails ? (
+            {loadingDetails ? (
               <div className={styles.detailLoading}>Завантаження деталей замовлення...</div>
+            ) : error || !orderDetails ? (
+              <div className={styles.detailLoading} style={{ color: "#e74c3c", padding: "40px 0" }}>
+                {error || "Деталі замовлення відсутні."}
+              </div>
             ) : (
               <>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "20px" }}>
@@ -400,13 +293,15 @@ export function MeOrderDetailScreen({ orderId }: MeOrderDetailScreenProps) {
                     <p className={styles.detailValue}>
                       {shippingAddress
                         ? `${shippingAddress.firstName} ${shippingAddress.lastName}`
-                        : `${user.firstName} ${user.lastName}`}
+                        : user
+                          ? `${user.firstName} ${user.lastName}`
+                          : "Не вказано"}
                     </p>
                   </div>
                   <div className={styles.detailRow}>
                     <p className={styles.detailLabel}>Телефон отримувача:</p>
                     <p className={styles.detailValue}>
-                      {shippingAddress?.phone || "+380 56 435 678"}
+                      {shippingAddress?.phone || "Не вказано"}
                     </p>
                   </div>
                   <div className={styles.detailRow}>
@@ -419,8 +314,8 @@ export function MeOrderDetailScreen({ orderId }: MeOrderDetailScreenProps) {
                     <>
                       <div className={styles.detailRow}>
                         <p className={styles.detailLabel}>Статус платежу:</p>
-                        <p className={styles.detailValue} style={{ color: orderDetails.payment.status === "Captured" ? "#28a745" : "#ffc107" }}>
-                          {orderDetails.payment.status === "Captured" ? "Сплачено успішно" : orderDetails.payment.status}
+                        <p className={styles.detailValue} style={{ color: isPaymentSuccess ? "#28a745" : isPaymentFailed ? "#dc3545" : "#ffc107" }}>
+                          {getPaymentStatusText()}
                         </p>
                       </div>
                       {orderDetails.payment.transactionId && (
@@ -442,7 +337,7 @@ export function MeOrderDetailScreen({ orderId }: MeOrderDetailScreenProps) {
                     <p className={styles.detailValue}>
                       {shippingAddress
                         ? `${shippingAddress.country}, ${shippingAddress.state} обл., ${shippingAddress.city}, ${shippingAddress.street} (Індекс: ${shippingAddress.postalCode})`
-                        : "Чернівці"}
+                        : "Не вказано"}
                     </p>
                   </div>
                   {orderDetails.notes && (

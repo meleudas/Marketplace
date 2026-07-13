@@ -22,6 +22,19 @@ export function CheckoutResultScreen() {
     orderNumber ? "" : "Номер замовлення не вказано в URL."
   );
 
+  const shippingAddress = order?.addresses.find((a) => a.kind === "Shipping");
+  const addressText = shippingAddress
+    ? `${shippingAddress.city}, ${shippingAddress.street}`
+    : "";
+
+  const isUkrPoshta = addressText.toLowerCase().includes("укрпошта");
+  const isNovaPoshta = addressText.toLowerCase().includes("нова пошта") || addressText.toLowerCase().includes("поштомат");
+  const deliveryService = isNovaPoshta
+    ? "Нова Пошта"
+    : isUkrPoshta
+      ? "Укрпошта"
+      : "Самовивіз / Інша служба доставки";
+
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const retriesRef = useRef(0);
   const maxRetries = 6;
@@ -59,12 +72,12 @@ export function CheckoutResultScreen() {
         const orderData = detailsResponse.data;
         setOrder(orderData);
 
-        const paymentStatus = orderData.payment?.status;
+        const paymentStatus = orderData.payment?.status?.toLowerCase();
 
-        if (paymentStatus === "Completed") {
+        if (paymentStatus === "completed" || paymentStatus === "captured" || paymentStatus === "success" || paymentStatus === "paid") {
           setStatus("success");
           clearPoll();
-        } else if (paymentStatus === "Failed") {
+        } else if (paymentStatus === "failed" || paymentStatus === "failure") {
           setStatus("failed");
           clearPoll();
         } else {
@@ -198,7 +211,7 @@ export function CheckoutResultScreen() {
                 </svg>
               </div>
               <h1 className={styles.title}>Оплачено успішно!</h1>
-              <p className={styles.subtitle}>Дякуємо за покупку. Ваше замовлення прийнято в обробку.</p>
+              <p className={styles.subtitle}>Дякуємо за покупку. Ваше замовлення прийнято в обобку.</p>
             </>
           )}
 
@@ -227,31 +240,145 @@ export function CheckoutResultScreen() {
             </>
           )}
 
-          {/* Order Details summary */}
-          <div className={styles.infoBox}>
-            <div className={styles.infoRow}>
-              <span className={styles.infoLabel}>Номер замовлення</span>
-              <span className={`${styles.infoValue} ${styles.orderNum}`}>{orderNumber}</span>
-            </div>
-            {order && (
-              <>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Сума до сплати</span>
-                  <span className={styles.infoValue}>{order.totalPrice} ₴</span>
-                </div>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Спосіб оплати</span>
-                  <span className={styles.infoValue}>Карта онлайн (LiqPay)</span>
-                </div>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Статус платежу</span>
-                  <span className={`${styles.statusBadge} ${getStatusBadgeClass()}`}>
-                    {getStatusText()}
+          {/* Purchased Items */}
+          {order && order.items && order.items.length > 0 && (
+            <>
+              <h3 className={styles.sectionTitle}>Товари в замовленні</h3>
+              <div className={styles.ordersList}>
+                {order.items.map((item) => (
+                  <div className={styles.orderItem} key={item.orderItemId}>
+                    <div className={styles.orderItemInfo}>
+                      {item.productImage ? (
+                        <img
+                          src={item.productImage}
+                          alt={item.productName}
+                          className={styles.orderItemImage}
+                        />
+                      ) : (
+                        <div className={styles.orderItemImage} style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "#80838d", fontSize: "24px" }}>
+                          📚
+                        </div>
+                      )}
+                      <div className={styles.orderItemDetails}>
+                        <p className={styles.orderItemAuthor}>Книга</p>
+                        <p className={styles.orderItemBookTitle}>{item.productName}</p>
+                      </div>
+                    </div>
+                    <div className={styles.orderItemBottom}>
+                      <p className={styles.orderQty}>{item.quantity} шт.</p>
+                      <p className={styles.orderPrice}>{Number(item.priceAtMoment)} ₴</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Delivery & Recipient Details */}
+          {order && (
+            <>
+              <h3 className={styles.sectionTitle}>Дані доставки та оплати</h3>
+              <div className={styles.detailRows}>
+                <div className={styles.detailRow}>
+                  <span className={styles.detailLabel}>Отримувач:</span>
+                  <span className={styles.detailValue}>
+                    {shippingAddress
+                      ? `${shippingAddress.firstName} ${shippingAddress.lastName}`
+                      : "—"}
                   </span>
                 </div>
-              </>
-            )}
-          </div>
+                <div className={styles.detailRow}>
+                  <span className={styles.detailLabel}>Телефон:</span>
+                  <span className={styles.detailValue}>{shippingAddress?.phone || "—"}</span>
+                </div>
+                <div className={styles.detailRow}>
+                  <span className={styles.detailLabel}>Служба доставки:</span>
+                  <span className={styles.detailValue}>{deliveryService}</span>
+                </div>
+                <div className={styles.detailRow}>
+                  <span className={styles.detailLabel}>Адреса доставки:</span>
+                  <span className={styles.detailValue}>
+                    {shippingAddress
+                      ? `${shippingAddress.country}, ${shippingAddress.state} обл., ${shippingAddress.city}, ${shippingAddress.street} (Індекс: ${shippingAddress.postalCode})`
+                      : "—"}
+                  </span>
+                </div>
+                <div className={styles.detailRow}>
+                  <span className={styles.detailLabel}>Спосіб оплати:</span>
+                  <span className={styles.detailValue}>
+                    {order.paymentMethod === "Card" ? "Оплата карткою онлайн (LiqPay)" : order.paymentMethod}
+                  </span>
+                </div>
+                {order.payment && (
+                  <>
+                    <div className={styles.detailRow}>
+                      <span className={styles.detailLabel}>Статус платежу:</span>
+                      <span className={`${styles.statusBadge} ${getStatusBadgeClass()}`}>
+                        {getStatusText()}
+                      </span>
+                    </div>
+                    {order.payment.transactionId && (
+                      <div className={styles.detailRow}>
+                        <span className={styles.detailLabel}>ID транзакції:</span>
+                        <span className={styles.detailValue} style={{ fontFamily: "monospace", fontSize: "12px" }}>
+                          {order.payment.transactionId}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                )}
+                {order.notes && (
+                  <div className={styles.detailRow} style={{ flexDirection: "column", alignItems: "flex-start", gap: "4px" }}>
+                    <span className={styles.detailLabel}>Коментар до замовлення:</span>
+                    <span className={styles.detailValue} style={{ fontStyle: "italic", textAlign: "left", width: "100%" }}>
+                      {order.notes}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Pricing Summary */}
+          {order && (
+            <>
+              <h3 className={styles.sectionTitle}>Фінансовий підсумок</h3>
+              <div className={styles.infoBox}>
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Номер замовлення</span>
+                  <span className={`${styles.infoValue} ${styles.orderNum}`}>{orderNumber}</span>
+                </div>
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Вартість товарів</span>
+                  <span className={styles.infoValue}>{order.subtotal} ₴</span>
+                </div>
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Вартість доставки</span>
+                  <span className={styles.infoValue}>
+                    {order.shippingCost > 0 ? `${order.shippingCost} ₴` : "Безкоштовно"}
+                  </span>
+                </div>
+                {order.discountAmount > 0 && (
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel} style={{ color: "#f1c40f" }}>Знижка</span>
+                    <span className={styles.infoValue} style={{ color: "#f1c40f" }}>-{order.discountAmount} ₴</span>
+                  </div>
+                )}
+                {order.taxAmount > 0 && (
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>ПДВ</span>
+                    <span className={styles.infoValue}>{order.taxAmount} ₴</span>
+                  </div>
+                )}
+                <div className={styles.infoRow} style={{ marginTop: "12px", borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: "12px" }}>
+                  <span className={styles.infoLabel} style={{ fontSize: "16px", fontWeight: "600", color: "#ffffff" }}>Загалом до сплати</span>
+                  <span className={styles.infoValue} style={{ fontSize: "18px", fontWeight: "600", color: "#ff007a" }}>
+                    {order.totalPrice} ₴
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Action buttons */}
           <div className={styles.actions}>
