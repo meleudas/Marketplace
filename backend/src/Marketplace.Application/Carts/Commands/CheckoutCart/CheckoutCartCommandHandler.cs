@@ -296,7 +296,7 @@ public sealed class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCom
                     else
                     {
                         var callbackUrl = "/integrations/liqpay/webhook";
-                        var resultUrl = "/checkout/result";
+                        var resultUrl = $"/checkout/result?order_id={savedOrder.OrderNumber}";
                         var liqPayResult = await _liqPayPort.CreatePaymentAsync(
                             new LiqPayCreatePaymentRequest(
                                 savedOrder.OrderNumber,

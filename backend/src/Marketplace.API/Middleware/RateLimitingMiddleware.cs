@@ -105,9 +105,9 @@ public sealed class RateLimitingMiddleware
         if (p.StartsWith("/products/", StringComparison.Ordinal) && p.EndsWith("/reviews", StringComparison.Ordinal))
             return ("review", _options.Review, userId ?? ip);
 
-        if (p.Contains("/integrations/payments/liqpay/webhook", StringComparison.Ordinal)
+        if (p.Contains("/integrations/liqpay/webhook", StringComparison.Ordinal)
             || p.Contains("/integrations/shipping/novaposhta/webhook", StringComparison.Ordinal)
-            || p.Contains("/integrations/support/webhook", StringComparison.Ordinal))
+            || p.Contains("/integrations/support/helpdesk/webhook", StringComparison.Ordinal))
             return ("payment_webhook", _options.PaymentWebhook, ip);
 
         if (p.StartsWith("/admin/payments/", StringComparison.Ordinal)
