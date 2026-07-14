@@ -32,15 +32,7 @@ import {
 import styles from "./MeScreen.module.css";
 
 
-const MOCK_PROFILE = {
-  firstName: "Данило",
-  lastName: "Гамаран",
-  middleName: "Васильович",
-  birthday: "1995-10-15",
-  gender: "Чоловіча",
-  phone: "+380 56 435 678",
-  email: "Dmytro939@gmail.com",
-};
+
 
 interface Recipient {
   id: string;
@@ -49,14 +41,7 @@ interface Recipient {
   initial: string;
 }
 
-const MOCK_RECIPIENTS: Recipient[] = [
-  {
-    id: "1",
-    name: "Данило Гамаран",
-    phone: "+380 56 435 678",
-    initial: "Д",
-  },
-];
+
 
 interface Certificate {
   id: string;
@@ -64,10 +49,7 @@ interface Certificate {
   price: string;
 }
 
-const MOCK_CERTIFICATES: Certificate[] = [
-  { id: "1", title: "Електронний сертифікат", price: "500грн" },
-  { id: "2", title: "Електронний сертифікат", price: "1000грн" },
-];
+
 
 type OrderTab = "all" | "active" | "completed";
 
@@ -423,19 +405,25 @@ function RecipientsSection({ recipients, onAdd, onDelete }: RecipientsSectionPro
 }
 
 function CertificatesSection() {
+  const certificates: Certificate[] = []; // No mock certificates
+
   return (
     <section className={styles.card}>
       <h2 className={styles.sectionTitle}>Мої сертифікати</h2>
 
-      {MOCK_CERTIFICATES.map((cert) => (
-        <div key={cert.id} className={styles.certificateCard}>
-          <GiftIcon className={styles.certificateIcon} />
-          <div className={styles.certificateTexts}>
-            <p className={styles.certificateTitle}>{cert.title}</p>
-            <p className={styles.certificatePrice}>{cert.price}</p>
+      {certificates.length > 0 ? (
+        certificates.map((cert) => (
+          <div key={cert.id} className={styles.certificateCard}>
+            <GiftIcon className={styles.certificateIcon} />
+            <div className={styles.certificateTexts}>
+              <p className={styles.certificateTitle}>{cert.title}</p>
+              <p className={styles.certificatePrice}>{cert.price}</p>
+            </div>
           </div>
-        </div>
-      ))}
+        ))
+      ) : (
+        <div className={styles.noOrdersText} style={{ padding: "10px 0" }}>Немає придбаних сертифікатів</div>
+      )}
 
       <button type="button" className={styles.certificateButton}>
         <span>Подарункові сертифікати</span>
@@ -465,10 +453,10 @@ export function MeScreen() {
     return {
       firstName: "",
       lastName: "",
-      middleName: MOCK_PROFILE.middleName,
+      middleName: "",
       birthday: "",
-      gender: MOCK_PROFILE.gender,
-      phone: MOCK_PROFILE.phone,
+      gender: "",
+      phone: "",
       email: "",
     };
   });
@@ -485,13 +473,13 @@ export function MeScreen() {
         if (stored) return JSON.parse(stored) as ProfileState;
 
         return {
-          firstName: user.firstName || prev.firstName || MOCK_PROFILE.firstName,
-          lastName: user.lastName || prev.lastName || MOCK_PROFILE.lastName,
-          middleName: prev.middleName || MOCK_PROFILE.middleName,
-          birthday: user.birthday ? new Date(user.birthday).toISOString().split("T")[0] : prev.birthday || MOCK_PROFILE.birthday,
-          gender: prev.gender || MOCK_PROFILE.gender,
-          phone: prev.phone || MOCK_PROFILE.phone,
-          email: prev.email || MOCK_PROFILE.email,
+          firstName: user.firstName || prev.firstName,
+          lastName: user.lastName || prev.lastName,
+          middleName: prev.middleName,
+          birthday: user.birthday ? new Date(user.birthday).toISOString().split("T")[0] : prev.birthday,
+          gender: prev.gender,
+          phone: prev.phone,
+          email: prev.email || user.email,
         };
       });
     });
@@ -507,7 +495,7 @@ export function MeScreen() {
       const stored = localStorage.getItem("booktop_recipients");
       if (stored) return JSON.parse(stored);
     }
-    return MOCK_RECIPIENTS;
+    return [];
   });
 
   // Modal open states

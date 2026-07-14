@@ -2,6 +2,7 @@ export type NormalizableOrderStatus = string | number | null | undefined;
 
 export interface OrderStatusClassNames {
   statusPending: string;
+  statusPaid?: string;
   statusProcessing: string;
   statusShipped: string;
   statusDelivered: string;
@@ -19,14 +20,16 @@ export function getNormalizedStatus(status: NormalizableOrderStatus): string {
       case 0:
         return "pending";
       case 1:
-        return "processing";
+        return "paid";
       case 2:
-        return "shipped";
+        return "processing";
       case 3:
-        return "delivered";
+        return "shipped";
       case 4:
-        return "cancelled";
+        return "delivered";
       case 5:
+        return "cancelled";
+      case 6:
         return "refunded";
       default:
         return String(status).toLowerCase();
@@ -42,6 +45,8 @@ export function getStatusLabel(status: NormalizableOrderStatus): string {
   switch (normalized) {
     case "pending":
       return "Очікує оплати";
+    case "paid":
+      return "Оплачено";
     case "processing":
       return "Обробляється";
     case "shipped":
@@ -66,6 +71,8 @@ export function getStatusClass(
   switch (normalized) {
     case "pending":
       return classNames.statusPending;
+    case "paid":
+      return classNames.statusPaid || classNames.statusProcessing;
     case "processing":
       return classNames.statusProcessing;
     case "shipped":
