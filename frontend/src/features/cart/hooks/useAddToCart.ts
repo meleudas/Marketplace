@@ -3,7 +3,9 @@
 import { AxiosError } from "axios";
 import { useCallback, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/features/auth/model/auth.store";
 import { addCartItem } from "@/features/cart/api/cart.api";
+import { addGuestCartItem } from "@/features/cart/lib/guest-cart.storage";
 import type { AddedToCartProduct } from "@/features/cart/model/added-to-cart.types";
 import { useCartStore } from "@/features/cart/model/cart.store";
 
@@ -12,6 +14,7 @@ export type AddToCartInput = Pick<AddedToCartProduct, "id" | "title" | "imageUrl
 export function useAddToCart() {
   const router = useRouter();
   const pathname = usePathname();
+  const isAuthenticated = useAuth((state) => state.isAuthenticated);
   const loadCart = useCartStore((state) => state.loadCart);
   const setTotalItems = useCartStore((state) => state.setTotalItems);
   const [addingProductId, setAddingProductId] = useState<string | null>(null);
@@ -31,9 +34,14 @@ export function useAddToCart() {
       setAddingProductId(product.id);
 
       try {
-        const cart = await addCartItem({ productId: numericProductId, quantity: 1 });
-        setTotalItems(cart.totalItems);
-        await loadCart();
+        if (isAuthenticated) {
+          const cart = await addCartItem({ productId: numericProductId, quantity: 1 });
+          setTotalItems(cart.totalItems);
+          await loadCart();
+        } else {
+          addGuestCartItem(numericProductId, 1);
+        }
+
         setAddedProduct({
           id: product.id,
           title: product.title,
@@ -45,7 +53,7 @@ export function useAddToCart() {
 
         if (status === 401) {
           const redirect = encodeURIComponent(pathname || "/");
-          router.push(`/auth/login?redirect=${redirect}`);
+          router.push(`/auth?redirect=${redirect}`);
           return;
         }
 
@@ -54,7 +62,7 @@ export function useAddToCart() {
         setAddingProductId(null);
       }
     },
-    [loadCart, pathname, router, setTotalItems],
+    [isAuthenticated, loadCart, pathname, router, setTotalItems],
   );
 
   return { addToCart, addingProductId, addedProduct, dismissAddedDialog };

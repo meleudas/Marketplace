@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   getCatalogCategories,
   getCatalogNewProducts,
@@ -19,7 +18,7 @@ import {
 import { useAuth } from "@/features/auth/model/auth.store";
 import { useAddToCart } from "@/features/cart/hooks/useAddToCart";
 import { AddToCartDialog } from "@/features/cart/ui/AddToCartDialog";
-import { ChevronDownIcon, Button, CatalogMenu, PageLayout, ProductCard, SideDecorShell, Spinner } from "@/shared/ui";
+import { ChevronDownIcon, Button, PageLayout, ProductCard, SideDecorShell, Spinner } from "@/shared/ui";
 import { ProductRailItems } from "../ui/ProductRailItems";
 import { RecommendationsRail } from "../ui/RecommendationsRail";
 import styles from "./HomeScreen.module.css";
@@ -28,12 +27,10 @@ const HOME_RAIL_PAGE_SIZE = 15;
 const FEED_PAGE_SIZE = 24;
 
 export function HomeScreen() {
-  const router = useRouter();
   const { addToCart, addingProductId, addedProduct, dismissAddedDialog } = useAddToCart();
   const isAuthenticated = useAuth((state) => state.isAuthenticated);
   const authInitialized = useAuth((state) => state.initialized);
   const loadMe = useAuth((state) => state.loadMe);
-  const [catalogOpen, setCatalogOpen] = useState(false);
   const [categories, setCategories] = useState<CatalogCategoryDto[]>([]);
   const [recommendations, setRecommendations] = useState<ProductRailCard[]>([]);
   const [popular, setPopular] = useState<ProductRailCard[]>([]);
@@ -93,7 +90,6 @@ export function HomeScreen() {
   }, [loadMe]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFeedPage(1);
     setHasMore(true);
     void loadFeed(1, selectedCategory, false);
@@ -111,7 +107,6 @@ export function HomeScreen() {
 
   useEffect(() => {
     if (!authInitialized || !isAuthenticated) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRecommendations([]);
       setRecommendationsLoading(false);
       return;
@@ -200,7 +195,6 @@ export function HomeScreen() {
       headerProps={{
         homeHref: "/",
         userHref: "/me",
-        onMenuClick: () => setCatalogOpen(true),
       }}
       footerProps={{ homeHref: "/" }}
     >
@@ -352,28 +346,6 @@ export function HomeScreen() {
           ) : null}
         </section>
       </SideDecorShell>
-
-      <CatalogMenu
-        open={catalogOpen}
-        categories={categories.map((category) => ({
-          id: category.id,
-          name: category.name,
-          slug: category.slug,
-          parentId: category.parentId,
-          sortOrder: category.sortOrder,
-        }))}
-        onClose={() => setCatalogOpen(false)}
-        onCategorySelect={(slug, format) => {
-          const formatParam =
-            format === "all" ? "" : `?format=${encodeURIComponent(format)}`;
-          router.push(`/catalog/${slug}${formatParam}`);
-        }}
-        onShowAll={(format) => {
-          const formatParam =
-            format === "all" ? "" : `?format=${encodeURIComponent(format)}`;
-          router.push(`/catalog${formatParam}`);
-        }}
-      />
 
       <AddToCartDialog
         open={addedProduct !== null}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/features/auth/model/auth.store";
 import { ForgotPasswordForm } from "@/features/auth/ui/ForgotPasswordForm";
 import { LoginForm } from "@/features/auth/ui/LoginForm";
@@ -11,6 +11,7 @@ import styles from "./AuthHomeScreen.module.css";
 
 export function AuthHomeScreen() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [authMode, setAuthMode] = useState<"login" | "register" | "forgotPassword">("login");
 
   const isAuthenticated = useAuth((state) => state.isAuthenticated);
@@ -25,9 +26,10 @@ export function AuthHomeScreen() {
 
   useEffect(() => {
     if (initialized && isAuthenticated) {
-      router.replace("/");
+      const redirect = searchParams.get("redirect");
+      router.replace(redirect && redirect.startsWith("/") ? redirect : "/");
     }
-  }, [initialized, isAuthenticated, router]);
+  }, [initialized, isAuthenticated, router, searchParams]);
 
   return (
     <main className={styles.main}>

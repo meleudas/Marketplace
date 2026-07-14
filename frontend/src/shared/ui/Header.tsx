@@ -2,16 +2,19 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   searchCatalogProducts,
   type CatalogSearchProductDto,
 } from "@/shared/api/catalog-search.api";
+import { getCatalogCategories } from "@/shared/api/catalog-categories.api";
+import { useGuestCartCount } from "@/features/cart/hooks/useGuestCartCount";
 import { useCartStore } from "@/features/cart/model/cart.store";
 import { useAuth } from "@/features/auth/model/auth.store";
 import { Container } from "./Container";
 import { Spinner } from "./Spinner";
 import { TextField } from "./TextField";
+import { CatalogMenu, type CatalogFormatFilter } from "./CatalogMenu";
 import {
   BookTopLogo,
   CartIcon,
@@ -40,10 +43,13 @@ interface HeaderProps {
   searchValue?: string;
   searchPlaceholder?: string;
   onSearchChange?: (value: string) => void;
-  onMenuClick?: () => void;
+  catalogActiveFormat?: CatalogFormatFilter;
 }
 
 const DESKTOP_MEDIA_QUERY = "(min-width: 1024px)";
+
+const isCatalogFormatFilter = (value: string | null): value is CatalogFormatFilter =>
+  value === "all" || value === "електронний" || value === "паперовий";
 
 export function Header({
   homeHref = "/",
@@ -52,8 +58,9 @@ export function Header({
   searchValue: controlledSearchValue,
   searchPlaceholder = "Пошук",
   onSearchChange,
-  onMenuClick,
+  catalogActiveFormat,
 }: HeaderProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const isCatalogRoute = pathname === "/catalog" || pathname.startsWith("/catalog/");
   const searchWrapRef = useRef<HTMLDivElement>(null);
@@ -64,13 +71,27 @@ export function Header({
   const [searchValue, setSearchValue] = useState(controlledSearchValue ?? "");
   const [searchResults, setSearchResults] = useState<SearchPreviewItem[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [catalogCategories, setCatalogCategories] = useState<
+    Array<{
+      id: number;
+      name: string;
+      slug: string;
+      parentId?: number | null;
+      sortOrder?: number;
+    }>
+  >([]);
+  const [urlCatalogFormat, setUrlCatalogFormat] = useState<CatalogFormatFilter>("all");
 
-  const { isAuthenticated, initialized: authInitialized } = useAuth();
+  const { user, isAuthenticated, initialized: authInitialized } = useAuth();
   const {
-    totalItems: cartCount,
+    totalItems: backendCartCount,
     loadCart,
     initialized: cartInitialized,
   } = useCartStore();
+  const guestCartCount = useGuestCartCount();
+  const cartCount = isAuthenticated ? backendCartCount : guestCartCount;
+  const userDisplayName = authInitialized && isAuthenticated ? user?.firstName : null;
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(DESKTOP_MEDIA_QUERY);
@@ -87,6 +108,55 @@ export function Header({
       loadCart();
     }
   }, [authInitialized, isAuthenticated, cartInitialized, loadCart]);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const categories = await getCatalogCategories();
+        setCatalogCategories(
+          categories
+            .filter((category) => category.isActive)
+            .map((category) => ({
+              id: category.id,
+              name: category.name,
+              slug: category.slug,
+              parentId: category.parentId,
+              sortOrder: category.sortOrder,
+            })),
+        );
+      } catch {
+        setCatalogCategories([]);
+      }
+    };
+
+    void loadCategories();
+  }, []);
+
+  useEffect(() => {
+    if (!isCatalogRoute) {
+      setUrlCatalogFormat("all");
+      return;
+    }
+
+    const format = new URLSearchParams(window.location.search).get("format");
+    setUrlCatalogFormat(isCatalogFormatFilter(format) && format !== "all" ? format : "all");
+  }, [isCatalogRoute, pathname]);
+
+  const catalogMenuFormat = catalogActiveFormat ?? urlCatalogFormat;
+
+  const handleOpenCatalog = () => {
+    setCatalogOpen(true);
+  };
+
+  const handleCatalogCategorySelect = (slug: string, format: CatalogFormatFilter) => {
+    const formatParam = format === "all" ? "" : `?format=${encodeURIComponent(format)}`;
+    router.push(`/catalog/${slug}${formatParam}`);
+  };
+
+  const handleShowAllCategories = (format: CatalogFormatFilter) => {
+    const formatParam = format === "all" ? "" : `?format=${encodeURIComponent(format)}`;
+    router.push(`/catalog${formatParam}`);
+  };
 
   const hasSearchQuery = Boolean(searchValue.trim());
   const isMobileSearchOpen = !isDesktop && isSearchExpanded;
@@ -270,16 +340,14 @@ export function Header({
     >
       <Container className={styles.inner}>
         <div className={styles.topRow}>
-          {onMenuClick ? (
-            <button
-              type="button"
-              className={`${styles.iconAction} ${styles.menuBtn}`}
-              aria-label="Відкрити каталог"
-              onClick={onMenuClick}
-            >
-              <MenuIcon className={iconStyles.icon} />
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className={`${styles.iconAction} ${styles.menuBtn}`}
+            aria-label="Відкрити каталог"
+            onClick={handleOpenCatalog}
+          >
+            <MenuIcon className={iconStyles.icon} />
+          </button>
 
           <div className={styles.brandGroup}>
             <Link
@@ -290,18 +358,16 @@ export function Header({
               <BookTopLogo className={styles.logoImage} />
             </Link>
 
-            {onMenuClick ? (
-              <nav className={styles.nav} aria-label="Головна навігація">
-                <button
-                  type="button"
-                  className={`${styles.navLink} ${isCatalogRoute ? styles.navLinkActive : ""}`.trim()}
-                  aria-current={isCatalogRoute ? "page" : undefined}
-                  onClick={onMenuClick}
-                >
-                  Каталог
-                </button>
-              </nav>
-            ) : null}
+            <nav className={styles.nav} aria-label="Головна навігація">
+              <button
+                type="button"
+                className={`${styles.navLink} ${isCatalogRoute ? styles.navLinkActive : ""}`.trim()}
+                aria-current={isCatalogRoute ? "page" : undefined}
+                onClick={handleOpenCatalog}
+              >
+                Каталог
+              </button>
+            </nav>
           </div>
 
           <div className={styles.searchWrap} ref={searchWrapRef}>
@@ -339,10 +405,13 @@ export function Header({
           <div className={styles.actions}>
             <Link
               href={userHref}
-              className={styles.iconAction}
-              aria-label="Профіль"
+              className={`${styles.iconAction} ${styles.profileLink}`}
+              aria-label={userDisplayName ? `Профіль — ${userDisplayName}` : "Профіль"}
             >
               <UserIcon className={iconStyles.icon} />
+              {userDisplayName ? (
+                <span className={styles.profileName}>{userDisplayName}</span>
+              ) : null}
             </Link>
             <Link
               href={cartHref}
@@ -391,6 +460,15 @@ export function Header({
           <FooterCatIllustration className={styles.cat} />
         </div>
       </Container>
+
+      <CatalogMenu
+        open={catalogOpen}
+        categories={catalogCategories}
+        onClose={() => setCatalogOpen(false)}
+        onCategorySelect={handleCatalogCategorySelect}
+        onShowAll={handleShowAllCategories}
+        activeFormat={catalogMenuFormat}
+      />
     </header>
   );
 }

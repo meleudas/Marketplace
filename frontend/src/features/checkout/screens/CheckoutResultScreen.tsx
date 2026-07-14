@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { PageLayout, Spinner } from "@/shared/ui";
 import { apiClient } from "@/shared/api/http.client";
@@ -249,9 +250,11 @@ export function CheckoutResultScreen() {
                   <div className={styles.orderItem} key={item.orderItemId}>
                     <div className={styles.orderItemInfo}>
                       {item.productImage ? (
-                        <img
+                        <Image
                           src={item.productImage}
                           alt={item.productName}
+                          width={50}
+                          height={70}
                           className={styles.orderItemImage}
                         />
                       ) : (
