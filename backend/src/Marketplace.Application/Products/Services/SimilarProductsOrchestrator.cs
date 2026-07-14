@@ -2,6 +2,7 @@ using Marketplace.Application.Catalog.Cache;
 using Marketplace.Application.Common.Observability;
 using Marketplace.Application.Common.Options;
 using Marketplace.Application.Common.Ports;
+using Marketplace.Application.Products.Catalog;
 using Marketplace.Application.Products.DTOs;
 using Marketplace.Application.Products.Mappings;
 using Marketplace.Application.Products.Options;
@@ -21,6 +22,7 @@ public sealed class SimilarProductsOrchestrator
 {
     private readonly IProductRepository _productRepository;
     private readonly IProductDetailRepository _detailRepository;
+    private readonly IProductImageRepository _productImageRepository;
     private readonly IWarehouseStockRepository _stockRepository;
     private readonly IProductSimilarityService _similarityService;
     private readonly IAppCachePort _cache;
@@ -31,6 +33,7 @@ public sealed class SimilarProductsOrchestrator
     public SimilarProductsOrchestrator(
         IProductRepository productRepository,
         IProductDetailRepository detailRepository,
+        IProductImageRepository productImageRepository,
         IWarehouseStockRepository stockRepository,
         IProductSimilarityService similarityService,
         IAppCachePort cache,
@@ -40,6 +43,7 @@ public sealed class SimilarProductsOrchestrator
     {
         _productRepository = productRepository;
         _detailRepository = detailRepository;
+        _productImageRepository = productImageRepository;
         _stockRepository = stockRepository;
         _similarityService = similarityService;
         _cache = cache;
@@ -73,7 +77,7 @@ public sealed class SimilarProductsOrchestrator
             var cacheKey = CatalogCacheKeys.SimilarProductsPrefix + product.Id.Value;
             var cached = await _cache.GetAsync<SimilarProductsResultDto>(cacheKey, ct);
             if (cached is not null)
-                return Result<SimilarProductsResultDto>.Success(cached);
+                return Result<SimilarProductsResultDto>.Success(await EnrichAsync(cached, ct));
 
             var detail = await _detailRepository.GetByProductIdAsync(product.Id, ct);
             var tags = detail?.Tags ?? [];
@@ -94,8 +98,9 @@ public sealed class SimilarProductsOrchestrator
 
                 if (esResult.IsSuccess)
                 {
-                    await _cache.SetAsync(cacheKey, esResult.Value!, _ttl.CatalogSimilarProducts, ct);
-                    return esResult;
+                    var enriched = await EnrichAsync(esResult.Value!, ct);
+                    await _cache.SetAsync(cacheKey, enriched, _ttl.CatalogSimilarProducts, ct);
+                    return Result<SimilarProductsResultDto>.Success(enriched);
                 }
 
                 _logger.LogInformation(
@@ -107,7 +112,9 @@ public sealed class SimilarProductsOrchestrator
                 _logger.LogWarning(ex, "Similar products fallback to DB because Elasticsearch query threw");
             }
 
-            var fallback = await BuildDbFallbackAsync(product, detail, effectiveLimit, ct);
+            var fallback = await EnrichAsync(
+                await BuildDbFallbackAsync(product, detail, effectiveLimit, ct),
+                ct);
             MarketplaceMetrics.CatalogSimilarProductsFallbacks.Add(1);
             await _cache.SetAsync(cacheKey, fallback, _ttl.CatalogSimilarProducts, ct);
             return Result<SimilarProductsResultDto>.Success(fallback);
@@ -168,6 +175,18 @@ public sealed class SimilarProductsOrchestrator
             .ToList();
 
         return new SimilarProductsResultDto(source.Id.Value, items);
+    }
+
+    private async Task<SimilarProductsResultDto> EnrichAsync(
+        SimilarProductsResultDto result,
+        CancellationToken ct)
+    {
+        var items = await ProductListImageEnricher.WithImageUrlsAsync(
+            result.Items,
+            _productImageRepository,
+            ct);
+
+        return result with { Items = items };
     }
 
     internal static int ScoreCandidate(

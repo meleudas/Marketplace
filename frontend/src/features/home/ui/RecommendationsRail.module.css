@@ -28,6 +28,12 @@
   --rail-border: rgb(238 2 144 / 0.24);
 }
 
+.section[data-variant="similar"] {
+  --rail-accent: var(--color-primary-light-blue);
+  --rail-accent-soft: rgb(163 194 224 / 0.18);
+  --rail-border: rgb(163 194 224 / 0.24);
+}
+
 .headerRow {
   display: flex;
   justify-content: space-between;
@@ -162,6 +168,11 @@
 
   .scrollerCollapsed > :nth-child(n + 5) {
     display: none;
+  }
+
+  .section[data-variant="similar"] .scrollerCollapsed > :nth-child(n + 5),
+  .section[data-variant="similar"] .scrollerCollapsed > :nth-child(n + 6) {
+    display: block;
   }
 }
 
