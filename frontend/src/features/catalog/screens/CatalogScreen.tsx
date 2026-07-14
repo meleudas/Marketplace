@@ -21,7 +21,7 @@ import {
 } from "@/features/storefront/lib/catalog-product-sort";
 import { getRouteCategorySlugs } from "@/features/storefront/lib/catalog-category-filter";
 import { StateBlock } from "@/features/storefront/ui/StateBlock";
-import { CatalogMenu, PageLayout, type CatalogFormatFilter } from "@/shared/ui";
+import { PageLayout, type CatalogFormatFilter } from "@/shared/ui";
 import styles from "./CatalogScreen.module.css";
 
 interface CatalogScreenProps {
@@ -58,7 +58,6 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
   );
   const selectedSort = sortFromUrl ?? manualSort;
   const [sortModalOpen, setSortModalOpen] = useState(false);
-  const [catalogOpen, setCatalogOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [pageState, setPageState] = useState({ key: "", page: 1 });
@@ -163,7 +162,10 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
 
     if (formatParam && isCatalogProductFormat(formatParam)) {
       setAppliedFormat(formatParam);
+      return;
     }
+
+    setAppliedFormat(null);
   }, [searchParams, setAppliedFormat]);
 
   useEffect(() => {
@@ -222,18 +224,6 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     openFilters();
   };
 
-  const handleCatalogCategorySelect = (slug: string, format: CatalogFormatFilter) => {
-    setAppliedFormat(format === "all" ? null : format);
-    const formatParam = format === "all" ? "" : `?format=${encodeURIComponent(format)}`;
-    router.push(`/catalog/${slug}${formatParam}`);
-  };
-
-  const handleShowAllCategories = (format: CatalogFormatFilter) => {
-    setAppliedFormat(format === "all" ? null : format);
-    const formatParam = format === "all" ? "" : `?format=${encodeURIComponent(format)}`;
-    router.push(`/catalog${formatParam}`);
-  };
-
   const catalogMenuFormat: CatalogFormatFilter =
     appliedFormat && isCatalogProductFormat(appliedFormat) ? appliedFormat : "all";
 
@@ -261,7 +251,7 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
         userHref: "/me",
         searchPlaceholder: "Пошук книг",
         onSearchChange: setSearchInput,
-        onMenuClick: () => setCatalogOpen(true),
+        catalogActiveFormat: catalogMenuFormat,
       }}
       footerProps={{ homeHref: "/" }}
     >
@@ -357,21 +347,6 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
         selectedSort={selectedSort}
         onClose={() => setSortModalOpen(false)}
         onSelect={handleSortSelect}
-      />
-
-      <CatalogMenu
-        open={catalogOpen}
-        categories={categories.map((category) => ({
-          id: category.id,
-          name: category.name,
-          slug: category.slug,
-          parentId: category.parentId,
-          sortOrder: category.sortOrder,
-        }))}
-        onClose={() => setCatalogOpen(false)}
-        onCategorySelect={handleCatalogCategorySelect}
-        onShowAll={handleShowAllCategories}
-        activeFormat={catalogMenuFormat}
       />
     </PageLayout>
   );

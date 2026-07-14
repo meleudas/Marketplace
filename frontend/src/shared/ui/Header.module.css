@@ -106,6 +106,21 @@
   opacity: 0.75;
 }
 
+.profileLink {
+  width: auto;
+  gap: var(--space-8);
+  padding-inline: var(--space-8);
+}
+
+.profileName {
+  display: none;
+  font-family: var(--font-primary), sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-white);
+  white-space: nowrap;
+}
+
 .cartIconWrap {
   position: relative;
 }
@@ -458,6 +473,14 @@
   .iconAction {
     width: 40px;
     height: 40px;
+  }
+
+  .profileLink {
+    width: auto;
+  }
+
+  .profileName {
+    display: inline;
   }
 
   .searchSheet {

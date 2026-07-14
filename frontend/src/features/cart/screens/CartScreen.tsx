@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/features/auth/model/auth.store";
+import {
+  getGuestCart,
+  removeGuestCartItem,
+  setGuestCartItemQuantity,
+  subscribeToGuestCart,
+} from "@/features/cart/lib/guest-cart.storage";
 import { useCartStore } from "@/features/cart/model/cart.store";
 import { getCatalogProducts } from "@/features/storefront/api/catalog.api";
 import {
@@ -33,13 +38,13 @@ interface CartItemWithMeta {
 
 export function CartScreen() {
   const { isAuthenticated, initialized, loadMe } = useAuth();
-  const router = useRouter();
 
   useEffect(() => {
     loadMe();
   }, [loadMe]);
 
   const [cart, setCart] = useState<CartDto | null>(null);
+  const [guestQuantities, setGuestQuantities] = useState<Record<number, number>>({});
   const [catalogProducts, setCatalogProducts] = useState<
     CatalogProductListItemDto[]
   >([]);
@@ -49,9 +54,34 @@ export function CartScreen() {
 
   useEffect(() => {
     if (!initialized) return;
+
     if (!isAuthenticated) {
-      setLoading(false);
-      return;
+      const syncGuestQuantities = () => {
+        const items = getGuestCart();
+        setGuestQuantities(
+          items.reduce<Record<number, number>>((acc, item) => {
+            acc[item.productId] = item.quantity;
+            return acc;
+          }, {}),
+        );
+      };
+
+      syncGuestQuantities();
+      const unsubscribe = subscribeToGuestCart(syncGuestQuantities);
+
+      const loadProducts = async () => {
+        try {
+          const products = await getCatalogProducts();
+          setCatalogProducts(products);
+        } catch {
+          setCatalogProducts([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      void loadProducts();
+      return unsubscribe;
     }
 
     const loadData = async () => {
@@ -72,43 +102,77 @@ export function CartScreen() {
       }
     };
 
-    loadData();
+    void loadData();
   }, [initialized, isAuthenticated, setTotalItems]);
 
-  useEffect(() => {
-    if (initialized && !isAuthenticated) {
-      router.push("/auth/login?redirect=/cart");
-    }
-  }, [initialized, isAuthenticated, router]);
-
   const cartItemsWithMetadata: CartItemWithMeta[] = useMemo(() => {
-    if (!cart?.items) return [];
-    return cart.items.map((item) => {
-      const product = catalogProducts.find((p) => p.id === item.productId) as
-        | (CatalogProductListItemDto & { author?: string })
-        | undefined;
-      return {
-        id: item.id,
-        productId: item.productId,
-        quantity: item.quantity,
-        priceAtMoment: item.priceAtMoment,
-        lineTotal: item.lineTotal,
-        name: product?.name || `Товар #${item.productId}`,
-        imageUrl: product?.imageUrls?.[0] || "",
-        slug: product?.slug || "",
-        author: product?.author || "Невідомий автор",
-        stockStatus:
-          product?.availabilityStatus === "InStock" || (product?.stock ?? 0) > 0
-            ? "В наявності"
-            : "Немає в наявності",
-      };
-    });
-  }, [cart, catalogProducts]);
+    if (!initialized) return [];
+
+    if (isAuthenticated) {
+      if (!cart?.items) return [];
+      return cart.items.map((item) => {
+        const product = catalogProducts.find((p) => p.id === item.productId) as
+          | (CatalogProductListItemDto & { author?: string })
+          | undefined;
+        return {
+          id: item.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          priceAtMoment: item.priceAtMoment,
+          lineTotal: item.lineTotal,
+          name: product?.name || `Товар #${item.productId}`,
+          imageUrl: product?.imageUrls?.[0] || "",
+          slug: product?.slug || "",
+          author: product?.author || "Невідомий автор",
+          stockStatus:
+            product?.availabilityStatus === "InStock" || (product?.stock ?? 0) > 0
+              ? "В наявності"
+              : "Немає в наявності",
+        };
+      });
+    }
+
+    return Object.entries(guestQuantities)
+      .map(([productIdText, quantity]) => {
+        const productId = Number(productIdText);
+        const product = catalogProducts.find((p) => p.id === productId) as
+          | (CatalogProductListItemDto & { author?: string })
+          | undefined;
+
+        if (!product) {
+          return null;
+        }
+
+        const priceAtMoment = product.price;
+        return {
+          id: productId,
+          productId,
+          quantity,
+          priceAtMoment,
+          lineTotal: priceAtMoment * quantity,
+          name: product.name,
+          imageUrl: product.imageUrls?.[0] || "",
+          slug: product.slug,
+          author: product.author || "Невідомий автор",
+          stockStatus:
+            product.availabilityStatus === "InStock" || (product.stock ?? 0) > 0
+              ? "В наявності"
+              : "Немає в наявності",
+        } satisfies CartItemWithMeta;
+      })
+      .filter((item): item is CartItemWithMeta => item !== null);
+  }, [cart, catalogProducts, guestQuantities, initialized, isAuthenticated]);
 
   const handleUpdateQty = useCallback(
     async (itemId: number, currentQty: number, delta: number) => {
       const newQty = currentQty + delta;
       if (newQty < 1) return;
+
+      if (!isAuthenticated) {
+        setGuestCartItemQuantity(itemId, newQty);
+        return;
+      }
+
       try {
         const updatedCart = await updateCartItemQuantity(itemId, newQty);
         setCart(updatedCart);
@@ -116,19 +180,29 @@ export function CartScreen() {
       } catch {
       }
     },
-    [setTotalItems],
+    [isAuthenticated, setTotalItems],
   );
 
-  const handleDeleteItem = useCallback(async (itemId: number) => {
-    try {
-      const updatedCart = await removeCartItem(itemId);
-      setCart(updatedCart);
-      setTotalItems(updatedCart.totalItems);
-    } catch {
-    }
-  }, [setTotalItems]);
+  const handleDeleteItem = useCallback(
+    async (itemId: number) => {
+      if (!isAuthenticated) {
+        removeGuestCartItem(itemId);
+        return;
+      }
 
-  const totalAmount = cart?.totalAmount ?? 0;
+      try {
+        const updatedCart = await removeCartItem(itemId);
+        setCart(updatedCart);
+        setTotalItems(updatedCart.totalItems);
+      } catch {
+      }
+    },
+    [isAuthenticated, setTotalItems],
+  );
+
+  const totalAmount = isAuthenticated
+    ? cart?.totalAmount ?? 0
+    : cartItemsWithMetadata.reduce((sum, item) => sum + item.lineTotal, 0);
 
   if (loading) {
     return (
@@ -145,7 +219,7 @@ export function CartScreen() {
     );
   }
 
-  if (!cart || cartItemsWithMetadata.length === 0) {
+  if (cartItemsWithMetadata.length === 0) {
     return (
       <PageLayout headerProps={{ cartHref: "/cart" }}>
         <div className={styles.root}>
@@ -208,6 +282,12 @@ export function CartScreen() {
               </svg>
             </Link>
           </div>
+
+          {!isAuthenticated ? (
+            <p className={styles.guestNotice}>
+              Ви переглядаєте кошик як гість. Увійдіть або зареєструйтесь, щоб оформити замовлення.
+            </p>
+          ) : null}
 
           <div className={styles.colsContainer}>
             <div className={styles.leftCol}>
@@ -324,7 +404,10 @@ export function CartScreen() {
                   <span className={styles.totalsLabel}>Разом</span>
                   <span className={styles.totalsAmount}>{formatCartPrice(totalAmount)}грн</span>
                 </div>
-                <Link href="/checkout" className={styles.ctaBtn}>
+                <Link
+                  href={isAuthenticated ? "/checkout" : "/auth?redirect=/checkout"}
+                  className={styles.ctaBtn}
+                >
                   Оформити замовлення
                 </Link>
               </div>

@@ -27,7 +27,7 @@ import {
   type NovaPoshtaWarehouse,
 } from "../api/checkout.api";
 import type { CatalogProductListItemDto } from "@/features/storefront/model/catalog.types";
-import { PageLayout, Spinner, Typography, Button } from "@/shared/ui";
+import { PageLayout, Spinner, Button } from "@/shared/ui";
 import styles from "./CheckoutScreen.module.css";
 
 function generateUUID(): string {
@@ -122,7 +122,7 @@ export function CheckoutScreen() {
 
   const [wrapAsGift, setWrapAsGift] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"Card" | "Cash">("Card");
-  const [notes, setNotes] = useState("");
+  const [notes] = useState("");
 
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const cityDropdownRef = useRef<HTMLDivElement>(null);
@@ -150,7 +150,7 @@ export function CheckoutScreen() {
 
   useEffect(() => {
     if (initialized && !isAuthenticated) {
-      router.push("/auth/login?redirect=/checkout");
+      router.push("/auth?redirect=/checkout");
       return;
     }
     if (isAuthenticated) {
@@ -520,7 +520,7 @@ export function CheckoutScreen() {
                 <button
                   type="button"
                   className={styles.pinkBtn}
-                  onClick={() => router.push("/auth/login?redirect=/checkout")}
+                  onClick={() => router.push("/auth?redirect=/checkout")}
                 >
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <path
@@ -954,33 +954,41 @@ export function CheckoutScreen() {
                   <div className={styles.paymentIcons}>
                     {/* Mastercard */}
                     <div className={styles.paymentIconCard}>
-                      <img
+                      <Image
                         src="https://upload.wikimedia.org/wikipedia/commons/0/04/Mastercard-logo.png"
                         alt="Mastercard"
+                        width={58}
+                        height={40}
                         className={styles.paymentLogoImg}
                       />
                     </div>
                     {/* Visa */}
                     <div className={styles.paymentIconCard}>
-                      <img
+                      <Image
                         src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTAPvfATaZfmrEIr1LZMPUn8tZzXXXtgVm3KDml0IHowQ&s=10"
                         alt="Visa"
+                        width={58}
+                        height={40}
                         className={styles.paymentLogoImg}
                       />
                     </div>
                     {/* Apple Pay */}
                     <div className={styles.paymentIconCard}>
-                      <img
+                      <Image
                         src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRBy5P3IYlnd7aUxExdO2H60Herj-2IXHU5ucHgSTndlw&s=10"
                         alt="Apple Pay"
+                        width={58}
+                        height={40}
                         className={styles.paymentLogoImg}
                       />
                     </div>
                     {/* Google Pay */}
                     <div className={styles.paymentIconCard}>
-                      <img
+                      <Image
                         src="https://cdn-icons-png.flaticon.com/512/6124/6124998.png"
                         alt="Google Pay"
+                        width={58}
+                        height={40}
                         className={styles.paymentLogoImg}
                       />
                     </div>
@@ -1026,7 +1034,7 @@ export function CheckoutScreen() {
               </div>
 
               <div className={styles.orderItems}>
-                {cartItemsWithMetadata.map((item, idx) => (
+                {cartItemsWithMetadata.map((item) => (
                   <div key={item.id} className={styles.orderItem}>
                     <div className={styles.orderItemTop}>
                       <div className={styles.orderItemContent}>
