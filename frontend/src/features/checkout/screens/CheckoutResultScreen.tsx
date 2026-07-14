@@ -211,7 +211,7 @@ export function CheckoutResultScreen() {
                 </svg>
               </div>
               <h1 className={styles.title}>Оплачено успішно!</h1>
-              <p className={styles.subtitle}>Дякуємо за покупку. Ваше замовлення прийнято в обобку.</p>
+              <p className={styles.subtitle}>Дякуємо за покупку. Ваше замовлення прийнято в обробку.</p>
             </>
           )}
 
