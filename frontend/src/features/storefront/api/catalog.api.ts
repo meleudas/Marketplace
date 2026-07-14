@@ -2,6 +2,7 @@ import { apiClient } from "@/shared/api/http.client";
 import type {
   CatalogCategoryDto,
   CatalogCompanyDto,
+  CatalogFacetOptionDto,
   CatalogProductDetailDto,
   CatalogProductListItemDto,
   PersonalizedRecommendationsResultDto,
@@ -72,6 +73,32 @@ export const getPersonalizedRecommendations = async (
   );
 
   return response.data;
+};
+
+export interface GetCatalogAuthorsParams {
+  categoryIds?: number[];
+  companyId?: string;
+}
+
+export const getCatalogAuthors = async (
+  params: GetCatalogAuthorsParams = {},
+): Promise<CatalogFacetOptionDto[]> => {
+  const searchParams = new URLSearchParams();
+
+  if (params.companyId) {
+    searchParams.set("companyId", params.companyId);
+  }
+
+  for (const categoryId of params.categoryIds ?? []) {
+    searchParams.append("categoryIds", String(categoryId));
+  }
+
+  const query = searchParams.toString();
+  const response = await apiClient.get<unknown>(
+    query ? `/catalog/authors?${query}` : "/catalog/authors",
+  );
+
+  return extractList<CatalogFacetOptionDto>(response.data);
 };
 
 export interface SearchCatalogProductsParams {

@@ -13,6 +13,7 @@ interface CatalogProductGridProps {
   refreshing: boolean;
   error: string | null;
   products: CatalogProductListItemDto[];
+  pageSize: number;
   totalPages: number;
   currentPage: number;
   onPageChange: (page: number) => void;
@@ -23,6 +24,7 @@ export function CatalogProductGrid({
   refreshing,
   error,
   products,
+  pageSize,
   totalPages,
   currentPage,
   onPageChange,
@@ -34,7 +36,7 @@ export function CatalogProductGrid({
   if (loading) {
     content = (
       <div className={styles.skeletonGrid} aria-hidden="true">
-        {Array.from({ length: 8 }, (_, index) => (
+        {Array.from({ length: pageSize }, (_, index) => (
           <ProductCardSkeleton key={index} />
         ))}
       </div>

@@ -4,7 +4,7 @@ import {
   DEFAULT_CATALOG_MIN_PRICE,
   resolveAppliedPriceFilter,
 } from "@/features/catalog/lib/catalog-filter-options";
-import { toggleArrayFilter } from "@/features/catalog/lib/catalog-filter-utils";
+import { toggleArrayFilter, toggleSingleFilter } from "@/features/catalog/lib/catalog-filter-utils";
 import { getChildCategories, getRouteCategorySlugs } from "@/features/storefront/lib/catalog-category-filter";
 import type { CatalogCategoryDto } from "@/features/storefront/model/catalog.types";
 
@@ -96,6 +96,55 @@ export function useCatalogFilters({
     setAppliedFormat(null);
   };
 
+  const notifyRouteMismatch = (nextCategorySlugs: string[]) => {
+    const currentRouteCategorySlug = selectedSubcategorySlug ?? selectedRootSlug;
+    const nextSingleCategorySlug = nextCategorySlugs.length === 1 ? nextCategorySlugs[0] : null;
+    if (currentRouteCategorySlug && currentRouteCategorySlug !== nextSingleCategorySlug) {
+      onRouteCategoryMismatch();
+    }
+  };
+
+  /** Instant-apply toggles for the always-visible desktop sidebar (no draft/apply step). */
+  const toggleAppliedRootCategory = (slug: string) => {
+    const category = categories.find((item) => item.slug === slug);
+    const childSlugs = category
+      ? getChildCategories(categories, category.id).map((child) => child.slug)
+      : [];
+
+    const withoutChildren = appliedCategorySlugs.filter((value) => !childSlugs.includes(value));
+    const next = toggleArrayFilter(withoutChildren, slug);
+    setAppliedCategorySlugs(next);
+    notifyRouteMismatch(next);
+  };
+
+  const toggleAppliedSubcategory = (rootSlug: string, subcategorySlug: string) => {
+    const withoutRoot = appliedCategorySlugs.filter((value) => value !== rootSlug);
+    const next = toggleArrayFilter(withoutRoot, subcategorySlug);
+    setAppliedCategorySlugs(next);
+    notifyRouteMismatch(next);
+  };
+
+  const toggleAppliedAuthor = (author: string) => {
+    setAppliedAuthors((current) => toggleArrayFilter(current, author));
+  };
+
+  const toggleAppliedFormatValue = (format: string) => {
+    setAppliedFormat((current) => toggleSingleFilter(current, format));
+  };
+
+  const applyAppliedPriceRange = (minPrice: string, maxPrice: string) => {
+    setAppliedMinPrice(resolveAppliedPriceFilter(minPrice, DEFAULT_CATALOG_MIN_PRICE));
+    setAppliedMaxPrice(resolveAppliedPriceFilter(maxPrice, DEFAULT_CATALOG_MAX_PRICE));
+  };
+
+  const resetAppliedFilters = () => {
+    setAppliedAuthors([]);
+    setAppliedCategorySlugs([]);
+    setAppliedFormat(null);
+    setAppliedMinPrice("");
+    setAppliedMaxPrice("");
+  };
+
   return {
     filtersOpen,
     setFiltersOpen,
@@ -127,5 +176,11 @@ export function useCatalogFilters({
     removeAppliedAuthor,
     removeAppliedCategorySlug,
     removeAppliedFormat,
+    toggleAppliedRootCategory,
+    toggleAppliedSubcategory,
+    toggleAppliedAuthor,
+    toggleAppliedFormatValue,
+    applyAppliedPriceRange,
+    resetAppliedFilters,
   };
 }
