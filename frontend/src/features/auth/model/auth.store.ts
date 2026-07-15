@@ -15,6 +15,9 @@ import {
   resetPassword,
 } from "@/features/auth/api/auth.api";
 import { isTwoFactorRequiredError } from "@/features/auth/api/is-two-factor-required-error";
+import { addCartItem } from "@/features/cart/api/cart.api";
+import { clearGuestCart, getGuestCart, setGuestCart } from "@/features/cart/lib/guest-cart.storage";
+import { useCartStore } from "@/features/cart/model/cart.store";
 import { clearAccessToken, getAccessToken, setAccessToken } from "@/shared/lib/token.storage";
 import type { ProblemDetails } from "@/shared/types/api.types";
 import type {
@@ -49,6 +52,30 @@ const getErrorMessage = (error: unknown): string => {
   }
 
   return axiosError.message || "Невідома помилка";
+};
+
+const mergeGuestCartIntoBackend = async (): Promise<void> => {
+  const guestItems = getGuestCart();
+  if (guestItems.length === 0) {
+    return;
+  }
+
+  const remaining = [];
+  for (const item of guestItems) {
+    try {
+      await addCartItem({ productId: item.productId, quantity: item.quantity });
+    } catch {
+      remaining.push(item);
+    }
+  }
+
+  if (remaining.length > 0) {
+    setGuestCart(remaining);
+  } else {
+    clearGuestCart();
+  }
+
+  await useCartStore.getState().loadCart();
 };
 
 const isRegistrationConfirmationRequired = (error: unknown): boolean => {
@@ -120,6 +147,7 @@ export const useAuth = create<AuthStore>((set, get) => ({
         user,
         isAuthenticated: true,
       });
+      await mergeGuestCartIntoBackend();
 
       return { success: true, message: "Вхід виконано успішно." };
     } catch (error) {
@@ -161,6 +189,7 @@ export const useAuth = create<AuthStore>((set, get) => ({
         user,
         isAuthenticated: true,
       });
+      await mergeGuestCartIntoBackend();
 
       return { success: true, message: "Вхід через Google виконано успішно." };
     } catch (error) {

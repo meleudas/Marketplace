@@ -83,6 +83,12 @@ export interface PersonalizedRecommendationsResultDto {
   items: CatalogProductListItemDto[];
 }
 
+export interface CatalogFacetOptionDto {
+  value: string;
+  label: string;
+  count: number;
+}
+
 export interface CatalogProductImageDto {
   imageUrl: string;
   thumbnailUrl: string;

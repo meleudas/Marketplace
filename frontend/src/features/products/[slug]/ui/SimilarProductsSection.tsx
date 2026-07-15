@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAddToCart } from "@/features/cart/hooks/useAddToCart";
 import { getSimilarProductsBySlug } from "@/features/storefront/api/catalog.api";
 import { mapProductToRailCard, type ProductRailCard } from "@/features/home/lib/map-product-to-rail-card";
 import { ProductRailItems } from "@/features/home/ui/ProductRailItems";
@@ -15,6 +16,7 @@ const SIMILAR_PRODUCTS_LIMIT = 15;
 export function SimilarProductsSection({ slug }: SimilarProductsSectionProps) {
   const [items, setItems] = useState<ProductRailCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const { addToCart, addingProductId } = useAddToCart();
 
   useEffect(() => {
     let isCancelled = false;
@@ -45,8 +47,17 @@ export function SimilarProductsSection({ slug }: SimilarProductsSectionProps) {
   }, [slug]);
 
   return (
-    <RecommendationsRail title="Схожі книги" loading={loading}>
-      <ProductRailItems items={items} />
+    <RecommendationsRail
+      title="Схожі книги"
+      variant="similar"
+      loading={loading}
+      itemCount={items.length}
+    >
+      <ProductRailItems
+        items={items}
+        onAddToCart={addToCart}
+        addingProductId={addingProductId}
+      />
     </RecommendationsRail>
   );
 }

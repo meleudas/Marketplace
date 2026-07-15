@@ -1,8 +1,5 @@
-import {
-  AUTHOR_FILTER_OPTIONS,
-  FORMAT_FILTER_OPTIONS,
-} from "@/features/catalog/lib/catalog-filter-options";
-import type { CatalogCategoryDto } from "@/features/storefront/model/catalog.types";
+import { FORMAT_FILTER_OPTIONS } from "@/features/catalog/lib/catalog-filter-options";
+import type { CatalogCategoryDto, CatalogFacetOptionDto } from "@/features/storefront/model/catalog.types";
 import { CloseIcon } from "@/shared/ui";
 import buttonStyles from "@/shared/ui/Button/Button.module.css";
 import iconStyles from "@/shared/ui/icons/Icon.module.css";
@@ -11,6 +8,7 @@ import styles from "../screens/CatalogScreen.module.css";
 interface CatalogSelectedFiltersProps {
   loading: boolean;
   categories: CatalogCategoryDto[];
+  authorOptions: CatalogFacetOptionDto[];
   routeCategorySlugs: string[];
   appliedCategorySlugs: string[];
   appliedAuthors: string[];
@@ -28,6 +26,7 @@ type SelectedFilterItem =
 export function CatalogSelectedFilters({
   loading,
   categories,
+  authorOptions = [],
   routeCategorySlugs,
   appliedCategorySlugs,
   appliedAuthors,
@@ -61,7 +60,7 @@ export function CatalogSelectedFilters({
     }));
   const authorItems = appliedAuthors.map<SelectedFilterItem>((author) => ({
     key: `author-${author}`,
-    label: AUTHOR_FILTER_OPTIONS.find((option) => option.value === author)?.label ?? author,
+    label: authorOptions.find((option) => option.value === author)?.label ?? author,
     type: "author",
     value: author,
   }));

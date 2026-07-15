@@ -1,9 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   getCatalogCategories,
   getCatalogNewProducts,
@@ -18,7 +16,9 @@ import {
   type ProductRailCard,
 } from "@/features/home/lib/map-product-to-rail-card";
 import { useAuth } from "@/features/auth/model/auth.store";
-import { ChevronDownIcon, Button, CatalogMenu, PageLayout, ProductCard, SideDecorShell, Spinner } from "@/shared/ui";
+import { useAddToCart } from "@/features/cart/hooks/useAddToCart";
+import { AddToCartDialog } from "@/features/cart/ui/AddToCartDialog";
+import { ChevronDownIcon, Button, PageLayout, ProductCard, SideDecorShell, Spinner } from "@/shared/ui";
 import { ProductRailItems } from "../ui/ProductRailItems";
 import { RecommendationsRail } from "../ui/RecommendationsRail";
 import styles from "./HomeScreen.module.css";
@@ -27,11 +27,10 @@ const HOME_RAIL_PAGE_SIZE = 15;
 const FEED_PAGE_SIZE = 24;
 
 export function HomeScreen() {
-  const router = useRouter();
+  const { addToCart, addingProductId, addedProduct, dismissAddedDialog } = useAddToCart();
   const isAuthenticated = useAuth((state) => state.isAuthenticated);
   const authInitialized = useAuth((state) => state.initialized);
   const loadMe = useAuth((state) => state.loadMe);
-  const [catalogOpen, setCatalogOpen] = useState(false);
   const [categories, setCategories] = useState<CatalogCategoryDto[]>([]);
   const [recommendations, setRecommendations] = useState<ProductRailCard[]>([]);
   const [popular, setPopular] = useState<ProductRailCard[]>([]);
@@ -196,162 +195,162 @@ export function HomeScreen() {
       headerProps={{
         homeHref: "/",
         userHref: "/me",
-        onMenuClick: () => setCatalogOpen(true),
       }}
       footerProps={{ homeHref: "/" }}
     >
       <SideDecorShell contentClassName={styles.homeContent}>
-      <section className={styles.promoBanner} aria-label="Рекламний банер">
-        <div className={styles.promoContent}>
-          <p className={styles.promoEyebrow}>Не пропусти!</p>
-          <p className={styles.promoQuote}>
-            {"“"}Літературне чаювання{"”"}
-          </p>
-          <p className={styles.promoDate}>
-            11:00 - Середа
-            <br />
-            15 квітня 2026
-          </p>
-        </div>
-        <Image
-          className={styles.promoCat}
-          src="/promo-cat.svg"
-          alt=""
-          width={85}
-          height={98}
-        />
-      </section>
+        <section className={styles.promoBanner} aria-label="Рекламний банер">
+          <div className={styles.promoContent}>
+            <p className={styles.promoEyebrow}>Не пропусти!</p>
+            <p className={styles.promoQuote}>
+              {"“"}Літературне чаювання{"”"}
+            </p>
+            <p className={styles.promoDate}>
+              11:00 - Середа
+              <br />
+              15 квітня 2026
+            </p>
+          </div>
+          <Image
+            className={styles.promoCat}
+            src="/promo-cat.svg"
+            alt=""
+            width={85}
+            height={98}
+          />
+        </section>
 
-      {authInitialized && isAuthenticated ? (
+        {authInitialized && isAuthenticated ? (
+          <RecommendationsRail
+            title="Рекомендовані"
+            variant="personal"
+            loading={recommendationsLoading}
+            viewAllHref="/catalog"
+          >
+            <ProductRailItems
+              items={recommendations}
+              onAddToCart={addToCart}
+              addingProductId={addingProductId}
+            />
+          </RecommendationsRail>
+        ) : null}
+
         <RecommendationsRail
-          title="Рекомендовані"
-          variant="personal"
-          loading={recommendationsLoading}
+          title="Популярні"
+          variant="popular"
+          loading={popularLoading}
+          viewAllHref="/catalog?sort=relevance"
+        >
+          <ProductRailItems
+            items={popular}
+            onAddToCart={addToCart}
+            addingProductId={addingProductId}
+          />
+        </RecommendationsRail>
+
+        <RecommendationsRail
+          title="Новинки"
+          variant="new"
+          loading={newProductsLoading}
+          viewAllHref="/catalog?sort=newest"
+        >
+          <ProductRailItems
+            items={newProducts}
+            onAddToCart={addToCart}
+            addingProductId={addingProductId}
+          />
+        </RecommendationsRail>
+
+        <RecommendationsRail
+          title="Акції"
+          variant="sale"
+          loading={onSaleLoading}
           viewAllHref="/catalog"
         >
-          <ProductRailItems items={recommendations} />
-        </RecommendationsRail>
-      ) : null}
-
-      <RecommendationsRail
-        title="Популярні"
-        variant="popular"
-        loading={popularLoading}
-        viewAllHref="/catalog?sort=relevance"
-      >
-        <ProductRailItems items={popular} />
-      </RecommendationsRail>
-
-      <RecommendationsRail
-        title="Новинки"
-        variant="new"
-        loading={newProductsLoading}
-        viewAllHref="/catalog?sort=newest"
-      >
-        <ProductRailItems items={newProducts} />
-      </RecommendationsRail>
-
-      <RecommendationsRail
-        title="Акції"
-        variant="sale"
-        loading={onSaleLoading}
-        viewAllHref="/catalog"
-      >
-        <ProductRailItems items={onSale} />
-      </RecommendationsRail>
-
-      <section className={styles.discountPromo} aria-label="Знижка на перше замовлення">
-        <span className={styles.discountPromoFrame}>
-          <Image
-            src="/first-order-discount.png"
-            alt="Отримай -15% на перше замовлення. Реєструйся та отримуй більше оновлення від придбання книг."
-            className={styles.discountPromoImage}
-            width={706}
-            height={424}
-            sizes="(max-width: 480px) 100vw, (max-width: 1023px) 480px, 560px"
+          <ProductRailItems
+            items={onSale}
+            onAddToCart={addToCart}
+            addingProductId={addingProductId}
           />
-        </span>
-      </section>
+        </RecommendationsRail>
 
-      <section className={styles.feedSection} aria-label="Спеціально для вас">
-        <div className={styles.feedHeader}>
-          <h2 className={styles.feedTitle}>Спеціально для вас</h2>
+        <section className={styles.discountPromo} aria-label="Знижка на перше замовлення">
+          <span className={styles.discountPromoFrame}>
+            <Image
+              src="/first-order-discount.png"
+              alt="Отримай -15% на перше замовлення. Реєструйся та отримуй більше оновлення від придбання книг."
+              className={styles.discountPromoImage}
+              width={706}
+              height={424}
+              sizes="(max-width: 480px) 100vw, (max-width: 1023px) 480px, 560px"
+            />
+          </span>
+        </section>
 
-          <div className={styles.tagPillsList} role="tablist">
-            {categories
-              .filter((c) => c.parentId === null && c.productCount > 0)
-              .map((cat) => (
-                <button
-                  type="button"
-                  key={cat.id}
-                  role="tab"
-                  aria-selected={selectedCategory === cat.id}
-                  className={`${styles.tagPill} ${selectedCategory === cat.id ? styles.tagPillActive : ""}`}
-                  onClick={() => setSelectedCategory(cat.id)}
-                >
-                  #{cat.name}
-                </button>
+        <section className={styles.feedSection} aria-label="Спеціально для вас">
+          <div className={styles.feedHeader}>
+            <h2 className={styles.feedTitle}>Спеціально для вас</h2>
+
+            <div className={styles.tagPillsList} role="tablist">
+              {categories
+                .filter((c) => c.parentId === null && c.productCount > 0)
+                .map((cat) => (
+                  <button
+                    type="button"
+                    key={cat.id}
+                    role="tab"
+                    aria-selected={selectedCategory === cat.id}
+                    className={`${styles.tagPill} ${selectedCategory === cat.id ? styles.tagPillActive : ""}`}
+                    onClick={() => setSelectedCategory(cat.id)}
+                  >
+                    #{cat.name}
+                  </button>
+                ))}
+            </div>
+          </div>
+
+          {feedItems.length > 0 ? (
+            <div className={styles.feedGrid}>
+              {feedItems.map((item) => (
+                <div key={item.id} className={styles.feedCardLink}>
+                  <ProductCard
+                    product={item}
+                    href={item.href}
+                    onAddToCart={addToCart}
+                    isAddingToCart={addingProductId === item.id}
+                  />
+                </div>
               ))}
-          </div>
-        </div>
+            </div>
+          ) : !feedLoading ? (
+            <div className={styles.feedEmpty}>Немає товарів у цій категорії</div>
+          ) : null}
 
-        {feedItems.length > 0 ? (
-          <div className={styles.feedGrid}>
-            {feedItems.map((item) => (
-              <Link
-                key={item.id}
-                href={item.href}
-                className={styles.feedCardLink}
+          {feedLoading && (
+            <div className={styles.feedLoading}>
+              <Spinner />
+            </div>
+          )}
+
+          {!feedLoading && hasMore && feedItems.length > 0 ? (
+            <div className={styles.loadMoreWrap}>
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={handleLoadMoreFeed}
+                leadingIcon={<ChevronDownIcon className={styles.loadMoreIcon} />}
               >
-                <ProductCard product={item} />
-              </Link>
-            ))}
-          </div>
-        ) : !feedLoading ? (
-          <div className={styles.feedEmpty}>Немає товарів у цій категорії</div>
-        ) : null}
-
-        {feedLoading && (
-          <div className={styles.feedLoading}>
-            <Spinner />
-          </div>
-        )}
-
-        {!feedLoading && hasMore && feedItems.length > 0 ? (
-          <div className={styles.loadMoreWrap}>
-            <Button
-              variant="secondary"
-              size="lg"
-              onClick={handleLoadMoreFeed}
-              leadingIcon={<ChevronDownIcon className={styles.loadMoreIcon} />}
-            >
-              Показати ще
-            </Button>
-          </div>
-        ) : null}
-      </section>
+                Показати ще
+              </Button>
+            </div>
+          ) : null}
+        </section>
       </SideDecorShell>
 
-      <CatalogMenu
-        open={catalogOpen}
-        categories={categories.map((category) => ({
-          id: category.id,
-          name: category.name,
-          slug: category.slug,
-          parentId: category.parentId,
-          sortOrder: category.sortOrder,
-        }))}
-        onClose={() => setCatalogOpen(false)}
-        onCategorySelect={(slug, format) => {
-          const formatParam =
-            format === "all" ? "" : `?format=${encodeURIComponent(format)}`;
-          router.push(`/catalog/${slug}${formatParam}`);
-        }}
-        onShowAll={(format) => {
-          const formatParam =
-            format === "all" ? "" : `?format=${encodeURIComponent(format)}`;
-          router.push(`/catalog${formatParam}`);
-        }}
+      <AddToCartDialog
+        open={addedProduct !== null}
+        product={addedProduct}
+        onClose={dismissAddedDialog}
       />
     </PageLayout>
   );

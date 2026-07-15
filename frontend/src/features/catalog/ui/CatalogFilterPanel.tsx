@@ -1,13 +1,12 @@
 import Image from "next/image";
 import {
-  AUTHOR_FILTER_OPTIONS,
   DEFAULT_CATALOG_MAX_PRICE,
   DEFAULT_CATALOG_MIN_PRICE,
   FORMAT_FILTER_OPTIONS,
 } from "@/features/catalog/lib/catalog-filter-options";
 import { toggleArrayFilter, toggleSingleFilter } from "@/features/catalog/lib/catalog-filter-utils";
 import { getChildCategories } from "@/features/storefront/lib/catalog-category-filter";
-import type { CatalogCategoryDto } from "@/features/storefront/model/catalog.types";
+import type { CatalogCategoryDto, CatalogFacetOptionDto } from "@/features/storefront/model/catalog.types";
 import { Button, Checkbox, CloseIcon } from "@/shared/ui";
 import iconStyles from "@/shared/ui/icons/Icon.module.css";
 import styles from "../screens/CatalogScreen.module.css";
@@ -19,6 +18,8 @@ interface CatalogFilterPanelProps {
   open: boolean;
   rootCategories: CatalogCategoryDto[];
   categories: CatalogCategoryDto[];
+  authorOptions: CatalogFacetOptionDto[];
+  authorsLoading: boolean;
   draftAuthors: string[];
   draftCategorySlugs: string[];
   draftFormat: string | null;
@@ -42,6 +43,8 @@ export function CatalogFilterPanel({
   open,
   rootCategories,
   categories,
+  authorOptions = [],
+  authorsLoading,
   draftAuthors,
   draftCategorySlugs,
   draftFormat,
@@ -68,8 +71,8 @@ export function CatalogFilterPanel({
     ? rootCategories
     : rootCategories.slice(0, CATEGORY_FILTER_PREVIEW_LIMIT);
   const displayedAuthorOptions = showAllAuthors
-    ? AUTHOR_FILTER_OPTIONS
-    : AUTHOR_FILTER_OPTIONS.slice(0, FILTER_PREVIEW_LIMIT);
+    ? authorOptions
+    : authorOptions.slice(0, FILTER_PREVIEW_LIMIT);
 
   const shouldShowSubcategories = (rootCategory: CatalogCategoryDto): boolean => {
     const childSlugs = getChildCategories(categories, rootCategory.id).map(
@@ -151,18 +154,24 @@ export function CatalogFilterPanel({
               Автор
             </h3>
             <div className={styles.filterList}>
-              {displayedAuthorOptions.map((option) => (
-                <Checkbox
-                  key={option.value}
-                  label={option.label}
-                  checked={draftAuthors.includes(option.value)}
-                  onCheckedChange={() =>
-                    onDraftAuthorsChange((current) => toggleArrayFilter(current, option.value))
-                  }
-                />
-              ))}
+              {authorsLoading ? (
+                <p className={styles.filterLoadingText}>Завантаження авторів...</p>
+              ) : displayedAuthorOptions.length > 0 ? (
+                displayedAuthorOptions.map((option) => (
+                  <Checkbox
+                    key={option.value}
+                    label={`${option.label} (${option.count})`}
+                    checked={draftAuthors.includes(option.value)}
+                    onCheckedChange={() =>
+                      onDraftAuthorsChange((current) => toggleArrayFilter(current, option.value))
+                    }
+                  />
+                ))
+              ) : (
+                <p className={styles.filterLoadingText}>Авторів не знайдено</p>
+              )}
             </div>
-            {AUTHOR_FILTER_OPTIONS.length > FILTER_PREVIEW_LIMIT ? (
+            {authorOptions.length > FILTER_PREVIEW_LIMIT ? (
               <button
                 type="button"
                 className={styles.showAll}

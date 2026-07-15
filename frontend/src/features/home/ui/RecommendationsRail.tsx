@@ -3,6 +3,7 @@
 import { Children, useState } from "react";
 import {
   Button,
+  BookIcon,
   ChevronDownIcon,
   PercentIcon,
   PlusIcon,
@@ -16,18 +17,19 @@ import type { ComponentType } from "react";
 import type { IconProps } from "@/shared/ui";
 import type { ReactNode } from "react";
 
-export type RecommendationsRailVariant = "personal" | "popular" | "new" | "sale";
+export type RecommendationsRailVariant = "personal" | "popular" | "new" | "sale" | "similar";
 
 interface RecommendationsRailProps {
   title: string;
   variant?: RecommendationsRailVariant;
   loading?: boolean;
   viewAllHref?: string;
+  itemCount?: number;
   children?: ReactNode;
 }
 
-const COLLAPSED_SKELETON_COUNT = 5;
-const EXPANDED_SKELETON_COUNT = 15;
+const COLLAPSED_VISIBLE_COUNT = 5;
+const EXPANDED_VISIBLE_COUNT = 15;
 
 const VARIANT_CONFIG: Record<
   RecommendationsRailVariant,
@@ -37,25 +39,33 @@ const VARIANT_CONFIG: Record<
   popular: { icon: StarIcon, eyebrow: "Обирають найчастіше" },
   new: { icon: PlusIcon, eyebrow: "Щойно з’явилось" },
   sale: { icon: PercentIcon, eyebrow: "Обмежена пропозиція" },
+  similar: { icon: BookIcon, eyebrow: "На основі цієї книги" },
 };
 
 export function RecommendationsRail({
   title,
   variant = "popular",
   loading = false,
+  itemCount: itemCountProp,
   children,
 }: RecommendationsRailProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(variant === "similar");
+  const alwaysExpanded = variant === "similar";
 
   if (!loading && !children) {
     return null;
   }
 
-  const itemCount = loading ? EXPANDED_SKELETON_COUNT : Children.count(children);
-  const showToggle = !loading && itemCount > 0;
-  const skeletonCount = expanded ? EXPANDED_SKELETON_COUNT : COLLAPSED_SKELETON_COUNT;
+  const itemCount = loading
+    ? EXPANDED_VISIBLE_COUNT
+    : (itemCountProp ?? Children.count(children));
+  const showToggle = !loading && !alwaysExpanded && itemCount > COLLAPSED_VISIBLE_COUNT;
+  const skeletonCount = expanded ? EXPANDED_VISIBLE_COUNT : COLLAPSED_VISIBLE_COUNT;
 
-  const scrollerClassName = [styles.scroller, !expanded ? styles.scrollerCollapsed : ""]
+  const scrollerClassName = [
+    styles.scroller,
+    !expanded && !alwaysExpanded ? styles.scrollerCollapsed : "",
+  ]
     .filter(Boolean)
     .join(" ");
 
