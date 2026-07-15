@@ -1,5 +1,6 @@
 # Production stack: compiled API + Next.js standalone (no source volume mounts).
 # Usage: docker compose -f docker-compose.prod.yml up -d --build
+# With Elasticsearch: docker compose -f docker-compose.prod.yml -f docker-compose.elasticsearch.yml up -d --build
 #
 # Required: copy and fill backend/.env (JWT, SendGrid, OAuth, LiqPay, etc.).
 # Secrets policy: docs/platform-engineering/12-production-secrets-policy.md
@@ -25,9 +26,11 @@ services:
       ConnectionStrings__Database: "Host=postgres;Port=5432;Database=marketplace;Username=postgres;Password=${POSTGRES_PASSWORD:-postgres}"
       ConnectionStrings__Redis: "redis:6379"
       ConnectionStrings__ClickHouse: "http://clickhouse:8123"
-      Elasticsearch__Enabled: "true"
-      Elasticsearch__Url: "http://elasticsearch:9200"
-      Elasticsearch__ProductsIndex: "products-v2"
+      # Enable via: docker compose -f docker-compose.prod.yml -f docker-compose.elasticsearch.yml up -d
+      # Or point Elasticsearch__Url at an external/OpenSearch cluster in backend/.env and set Enabled=true.
+      Elasticsearch__Enabled: "${ELASTICSEARCH__ENABLED:-false}"
+      Elasticsearch__Url: "${ELASTICSEARCH__URL:-http://elasticsearch:9200}"
+      Elasticsearch__ProductsIndex: "${ELASTICSEARCH__PRODUCTSINDEX:-products-v2}"
       AwsSes__Enabled: "${AWSSES__ENABLED:-true}"
       AwsSes__Region: "${AWSSES__REGION:-eu-central-1}"
       AwsSes__FromEmail: "${AWSSES__FROMEMAIL:-}"
@@ -61,8 +64,6 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
-      elasticsearch:
         condition: service_started
       minio:
         condition: service_healthy
@@ -118,17 +119,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - marketplace
-
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
-    restart: unless-stopped
-    environment:
-      discovery.type: single-node
-      xpack.security.enabled: "false"
-      logger.level: warn
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
     networks:
       - marketplace
 

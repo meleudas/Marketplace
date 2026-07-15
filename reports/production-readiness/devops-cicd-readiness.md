@@ -9,8 +9,9 @@
 ## Evidence
 
 - CI workflow: [.github/workflows/backend-ci.yml](../../.github/workflows/backend-ci.yml) — 25+ jobs
-- Prod deploy: [docker-compose.prod.yml](../../docker-compose.prod.yml)
+- Prod deploy: [docker-compose.prod.yml](../../docker-compose.prod.yml) (+ optional [docker-compose.elasticsearch.yml](../../docker-compose.elasticsearch.yml))
 - Dev/local: [docker-compose.yml](../../docker-compose.yml), [docker-compose.dev.yml](../../docker-compose.dev.yml)
+- Elasticsearch: [docker-compose.elasticsearch.yml](../../docker-compose.elasticsearch.yml)
 - Observability: [docker-compose.monitoring.yml](../../docker-compose.monitoring.yml) + [docker-compose.observability.yml](../../docker-compose.observability.yml)
 - Build: [evidence/build-release.log](./evidence/build-release.log) — Release PASS
 

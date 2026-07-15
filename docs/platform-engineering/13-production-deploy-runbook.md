@@ -34,8 +34,16 @@ export ASPNETCORE_ENVIRONMENT=Production
 dotnet run --project backend/src/Marketplace.API -- --validate-config-only
 
 # Збірка та старт
+# Без пошуку (DB fallback): тільки prod compose
 docker compose -f docker-compose.prod.yml pull   # якщо images у registry
 docker compose -f docker-compose.prod.yml up -d --build
+
+# З локальним Elasticsearch:
+# $env:ELASTICSEARCH__ENABLED = "true"
+# docker compose -f docker-compose.prod.yml -f docker-compose.elasticsearch.yml up -d --build
+# Або зовнішній ES/OpenSearch через backend/.env:
+#   Elasticsearch__Enabled=true
+#   Elasticsearch__Url=https://...
 
 # Smoke
 curl -fsS http://localhost:8080/health

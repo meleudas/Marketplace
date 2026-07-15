@@ -17,9 +17,12 @@ export ASPNETCORE_ENVIRONMENT=Staging
 export LIQPAY_SANDBOX_PUBLIC=...
 export LIQPAY_SANDBOX_PRIVATE=...
 export NOVAPOSHTA_API_KEY=...
-docker compose -f docker-compose.dev.yml up -d
+export ELASTICSEARCH__ENABLED=true
+docker compose -f docker-compose.dev.yml -f docker-compose.elasticsearch.yml up -d
 dotnet run --project backend/src/Marketplace.API
 ```
+
+> Elasticsearch опційний: без `-f docker-compose.elasticsearch.yml` і `ELASTICSEARCH__ENABLED=true` каталог працює через DB fallback.
 
 ## Staging E2E тести
 

@@ -6,7 +6,9 @@
 
 ## 2. As-is
 
-[`docker-compose.dev.yml`](../../docker-compose.dev.yml) — api, postgres, redis, elasticsearch, minio.
+[`docker-compose.dev.yml`](../../docker-compose.dev.yml) — api, postgres, redis, minio.
+
+Elasticsearch (product search) — [`docker-compose.elasticsearch.yml`](../../docker-compose.elasticsearch.yml) (опційний overlay).
 
 ClickHouse (analytics) — [`docker-compose.clickhouse.yml`](../../docker-compose.clickhouse.yml) (опційний overlay).
 
@@ -17,6 +19,22 @@ ClickHouse (analytics) — [`docker-compose.clickhouse.yml`](../../docker-compos
 Профілі в окремому compose; API з OTLP env через [`docker-compose.observability.yml`](../../docker-compose.observability.yml).
 
 ## 4. Покрокова інтеграція
+
+### Elasticsearch (product search)
+
+```powershell
+# тільки Elasticsearch
+docker compose -f docker-compose.elasticsearch.yml up -d
+
+# разом із dev stack
+$env:ELASTICSEARCH__ENABLED = "true"
+docker compose -f docker-compose.dev.yml -f docker-compose.elasticsearch.yml up -d --build
+# HTTP http://localhost:9200
+```
+
+Без цього overlay API працює з `Elasticsearch__Enabled=false` і використовує DB fallback для каталогу. Для зовнішнього кластера (або AWS OpenSearch) задай `Elasticsearch__Url` / `Elasticsearch__Enabled` у `backend/.env`.
+
+Або додай у root `.env`: `ELASTICSEARCH__ENABLED=true` перед `docker compose ... -f docker-compose.elasticsearch.yml`.
 
 ### ClickHouse (analytics)
 
@@ -35,7 +53,8 @@ docker compose -f docker-compose.dev.yml -f docker-compose.clickhouse.yml up -d 
 
 ```powershell
 # з кореня репозиторію (API з OTEL_ENABLED через override)
-docker compose -f docker-compose.dev.yml -f docker-compose.monitoring.yml -f docker-compose.observability.yml --profile observability up -d --build
+$env:ELASTICSEARCH__ENABLED = "true"
+docker compose -f docker-compose.dev.yml -f docker-compose.elasticsearch.yml -f docker-compose.monitoring.yml -f docker-compose.observability.yml --profile observability up -d --build
 ```
 
 ### Тільки observability (API вже запущений)
@@ -56,6 +75,7 @@ docker compose -f docker-compose.dev.yml -f docker-compose.monitoring.yml --prof
 | Сервіс | URL |
 |--------|-----|
 | API | http://localhost:8080 |
+| Elasticsearch | http://localhost:9200 (окремий compose) |
 | Grafana | http://localhost:3001 |
 | Prometheus | http://localhost:9090 |
 | Jaeger UI | http://localhost:16686 |

@@ -11,8 +11,24 @@
 - `postgres`
 - `redis`
 - `frontend` (лише з профілем `frontend`, див. корінь репозиторію `docker-compose.yml`)
+- **Elasticsearch** (опційний overlay): [`docker-compose.elasticsearch.yml`](../docker-compose.elasticsearch.yml)
+- **ClickHouse** (опційний overlay): [`docker-compose.clickhouse.yml`](../docker-compose.clickhouse.yml)
 - **Observability** (profile `observability`): `otel-collector`, `prometheus`, `jaeger`, `grafana` — [`docker-compose.monitoring.yml`](../docker-compose.monitoring.yml)
 - **SonarQube CE** (profile `sonar`): `sonarqube`, `sonarqube-db` — той самий файл
+
+### Elasticsearch (корінь репозиторію)
+
+```powershell
+# тільки ES
+docker compose -f docker-compose.elasticsearch.yml up -d
+
+# разом з дев-стеком (увімкне пошук для API)
+$env:ELASTICSEARCH__ENABLED = "true"
+docker compose -f docker-compose.dev.yml -f docker-compose.elasticsearch.yml up -d --build
+# http://localhost:9200
+```
+
+Без overlay API працює з DB fallback (`Elasticsearch__Enabled=false`).
 
 ### Observability stack (корінь репозиторію)
 
@@ -30,6 +46,7 @@ docker compose -f docker-compose.dev.yml -f docker-compose.monitoring.yml --prof
 
 | UI | URL |
 |----|-----|
+| Elasticsearch | http://localhost:9200 |
 | Grafana | http://localhost:3001 |
 | Prometheus | http://localhost:9090 |
 | Jaeger | http://localhost:16686 |

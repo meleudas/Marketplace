@@ -27,7 +27,7 @@
 
 ## Що готово
 
-- Повний prod compose з postgres, redis, elasticsearch, minio, clickhouse, otel-collector.
+- Повний prod compose з postgres, redis, minio, clickhouse; Elasticsearch — опційний overlay [`docker-compose.elasticsearch.yml`](../../docker-compose.elasticsearch.yml) або зовнішній кластер через env.
 - `Database__AutoMigrate: true` у prod compose для автоматичних міграцій при старті.
 - ClickHouse schema з `allow_nullable_key` для CH 24.8 ([ClickHouseAnalyticsWarehouseWriter.cs](../../backend/src/Marketplace.Infrastructure/External/Analytics/ClickHouseAnalyticsWarehouseWriter.cs)).
 - Outbox/inbox/idempotency з DLQ metrics і container coverage.
