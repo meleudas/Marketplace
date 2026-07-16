@@ -223,6 +223,6 @@
 1. `GET /health/ready` — якщо `503`, перевірити `checks.postgres` (DB connectivity, migrations).
 2. Redis degraded — перевірити `ConnectionStrings:Redis`, redeploy після відновлення; моніторити cache miss ratio.
 3. Elasticsearch degraded — `Elasticsearch:Enabled=false` тимчасово або відновити кластер; перевірити `catalog_search_fallback_total`.
-4. Storage degraded — MinIO/S3 credentials, `Storage:Endpoint`, bucket policy.
+4. Storage degraded — для MinIO: credentials/`Storage:Endpoint`; для AwsS3: IAM role / bucket policy / `Storage:Region` / `Storage:Bucket`.
 5. Queue degraded — `GET /admin/outbox` stats, DLQ replay; перевірити Hangfire worker + `outbox_dispatch_errors_total`.
 6. Liveness (`/health`, `/health/live`) лише для restart pod — не використовувати для traffic routing.

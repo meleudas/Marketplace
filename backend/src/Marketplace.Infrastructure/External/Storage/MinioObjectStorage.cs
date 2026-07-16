@@ -31,6 +31,12 @@ public sealed class MinioObjectStorage : IObjectStorage
 
         if (!exists)
         {
+            if (!_options.CreateBucketIfMissing)
+            {
+                throw new InvalidOperationException(
+                    $"Storage bucket '{_options.Bucket}' was not found and CreateBucketIfMissing=false.");
+            }
+
             await _client.MakeBucketAsync(
                 new MakeBucketArgs().WithBucket(_options.Bucket),
                 ct);

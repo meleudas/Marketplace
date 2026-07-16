@@ -145,7 +145,7 @@ public sealed class ApiRegressionIdempotencyTests
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
 
-        var result = await controller.Webhook(new LiqPayWebhookRequest("data", "signature"), CancellationToken.None);
+        var result = await controller.WebhookJson(new LiqPayWebhookRequest("data", "signature"), CancellationToken.None);
 
         Assert.IsType<OkResult>(result);
         Assert.IsType<HandleLiqPayWebhookCommand>(sender.LastRequest);
@@ -166,7 +166,7 @@ public sealed class ApiRegressionIdempotencyTests
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
 
-        var result = await controller.Webhook(new LiqPayWebhookRequest("data", "signature"), CancellationToken.None);
+        var result = await controller.WebhookJson(new LiqPayWebhookRequest("data", "signature"), CancellationToken.None);
 
         var statusCode = Assert.IsType<StatusCodeResult>(result);
         Assert.Equal(401, statusCode.StatusCode);

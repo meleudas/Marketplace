@@ -19,7 +19,8 @@
 | AWS SES | `AWSSES__ENABLED`, `AWSSES__REGION`, `AWSSES__FROMEMAIL` | Якщо `APPNOTIFICATIONS__EMAILENABLED=true` і SES — основний провайдер | IAM role на ECS/EC2 (без secret key) |
 | SendGrid | `SENDGRID__APIKEY` | Fallback email, якщо SES вимкнено | За політикою SendGrid |
 | Web Push VAPID | `WEBPUSH__PUBLICKEY`, `WEBPUSH__PRIVATEKEY` | Якщо `WEBPUSH__ENABLED=true` | Рідко; invalidate subscriptions |
-| MinIO/S3 | `STORAGE__ACCESSKEY`, `STORAGE__SECRETKEY` | Якщо `STORAGE__ENABLED=true` | Кожні 90 днів |
+| MinIO | `STORAGE__ACCESSKEY`, `STORAGE__SECRETKEY` | Якщо `STORAGE__ENABLED=true` і `STORAGE__PROVIDER=Minio` | Кожні 90 днів |
+| AWS S3 | `STORAGE__PROVIDER=AwsS3`, `STORAGE__BUCKET`, `STORAGE__REGION` | Якщо `STORAGE__ENABLED=true` і Provider=AwsS3; Access/Secret **не потрібні** при IAM Role на ECS/EC2/EKS | IAM role (без static keys) |
 | Nova Poshta | `NOVAPOSHTA__APIKEY` | Якщо `SHIPPING__NOVAPOSHTAENABLED=true` | За політикою NP |
 | Postgres | `POSTGRES_PASSWORD` | Так (compose) | Scheduled + on incident |
 | ClickHouse | `CLICKHOUSE_PASSWORD` | Якщо ClickHouse enabled | Scheduled |
@@ -30,7 +31,8 @@
 |------|------------|
 | `Jwt:SecretKey` | `ChangeThis`, `DevSecret`, `AtLeast32`, `YourSecret`, `ReplaceMe` |
 | `LiqPay:*` | `sandbox_test`, `sandbox`, `test` |
-| `Storage:*` | `minioadmin` / `minioadmin` pair |
+| `Storage:*` (Provider=Minio) | `minioadmin` / `minioadmin` pair |
+| `Storage:Provider` | значення поза `Minio` / `AwsS3` |
 | `GoogleAuth` | Напівконфіг (лише ClientId або лише ClientSecret) |
 
 ## Pre-deploy checklist

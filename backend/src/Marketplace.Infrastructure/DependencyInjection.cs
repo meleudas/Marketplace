@@ -462,10 +462,18 @@ public static class DependencyInjection
         services.AddScoped<ISmsSender>(sp => sp.GetRequiredService<LoggingSmsSender>());
 
         var storageOptions = configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>() ?? new StorageOptions();
-        if (storageOptions.Enabled)
-            services.AddSingleton<IObjectStorage, MinioObjectStorage>();
-        else
+        if (!storageOptions.Enabled)
+        {
             services.AddSingleton<IObjectStorage, DisabledObjectStorage>();
+        }
+        else if (storageOptions.IsAwsS3())
+        {
+            services.AddSingleton<IObjectStorage, AwsS3ObjectStorage>();
+        }
+        else
+        {
+            services.AddSingleton<IObjectStorage, MinioObjectStorage>();
+        }
 
         return services;
     }

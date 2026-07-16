@@ -103,7 +103,7 @@ public sealed class SecurityRegressionTests
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
 
-        var result = await controller.Webhook(new LiqPayWebhookRequest("bad", "bad"), CancellationToken.None);
+        var result = await controller.WebhookJson(new LiqPayWebhookRequest("bad", "bad"), CancellationToken.None);
 
         Assert.IsType<UnauthorizedResult>(result);
     }

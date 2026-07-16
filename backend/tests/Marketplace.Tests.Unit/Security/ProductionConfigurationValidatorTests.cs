@@ -79,6 +79,7 @@ public sealed class ProductionConfigurationValidatorTests
     var values = new Dictionary<string, string?>(ValidProductionConfig, StringComparer.OrdinalIgnoreCase)
     {
       ["Storage:Enabled"] = "true",
+      ["Storage:Provider"] = "Minio",
       ["Storage:AccessKey"] = "minioadmin",
       ["Storage:SecretKey"] = "minioadmin"
     };
@@ -87,6 +88,67 @@ public sealed class ProductionConfigurationValidatorTests
     var errors = ProductionConfigurationValidator.CollectErrors(config);
 
     Assert.Contains(errors, e => e.Contains("Storage", StringComparison.Ordinal));
+  }
+
+  [Fact]
+  [Trait("Suite", "Security")]
+  public void CollectErrors_Passes_When_AwsS3_Uses_Iam_Without_Static_Keys()
+  {
+    var values = new Dictionary<string, string?>(ValidProductionConfig, StringComparer.OrdinalIgnoreCase)
+    {
+      ["Storage:Enabled"] = "true",
+      ["Storage:Provider"] = "AwsS3",
+      ["Storage:Bucket"] = "marketplace-media-prod",
+      ["Storage:Region"] = "eu-central-1",
+      ["Storage:AccessKey"] = "",
+      ["Storage:SecretKey"] = "",
+      ["Storage:CreateBucketIfMissing"] = "false"
+    };
+    var config = BuildConfig(values);
+
+    var errors = ProductionConfigurationValidator.CollectErrors(config);
+
+    Assert.DoesNotContain(errors, e => e.Contains("Storage", StringComparison.Ordinal));
+  }
+
+  [Fact]
+  [Trait("Suite", "Security")]
+  public void CollectErrors_Fails_When_AwsS3_Has_Partial_Static_Keys()
+  {
+    var values = new Dictionary<string, string?>(ValidProductionConfig, StringComparer.OrdinalIgnoreCase)
+    {
+      ["Storage:Enabled"] = "true",
+      ["Storage:Provider"] = "AwsS3",
+      ["Storage:Bucket"] = "marketplace-media-prod",
+      ["Storage:Region"] = "eu-central-1",
+      ["Storage:AccessKey"] = "AKIAEXAMPLE",
+      ["Storage:SecretKey"] = ""
+    };
+    var config = BuildConfig(values);
+
+    var errors = ProductionConfigurationValidator.CollectErrors(config);
+
+    Assert.Contains(errors, e => e.Contains("AccessKey and SecretKey", StringComparison.Ordinal));
+  }
+
+  [Fact]
+  [Trait("Suite", "Security")]
+  public void CollectErrors_Fails_When_AwsS3_Missing_Region()
+  {
+    var values = new Dictionary<string, string?>(ValidProductionConfig, StringComparer.OrdinalIgnoreCase)
+    {
+      ["Storage:Enabled"] = "true",
+      ["Storage:Provider"] = "AwsS3",
+      ["Storage:Bucket"] = "marketplace-media-prod",
+      ["Storage:Region"] = "",
+      ["Storage:AccessKey"] = "",
+      ["Storage:SecretKey"] = ""
+    };
+    var config = BuildConfig(values);
+
+    var errors = ProductionConfigurationValidator.CollectErrors(config);
+
+    Assert.Contains(errors, e => e.Contains("Region", StringComparison.Ordinal));
   }
 
   [Fact]

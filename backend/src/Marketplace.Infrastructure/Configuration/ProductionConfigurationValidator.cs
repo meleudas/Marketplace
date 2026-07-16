@@ -141,11 +141,41 @@ public static class ProductionConfigurationValidator
         if (!enabled)
             return;
 
-        var accessKey = configuration[$"{StorageOptions.SectionName}:AccessKey"];
-        var secretKey = configuration[$"{StorageOptions.SectionName}:SecretKey"];
+        var options = configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>() ?? new StorageOptions();
+        if (string.IsNullOrWhiteSpace(options.Bucket))
+            errors.Add($"{StorageOptions.SectionName}:Bucket is required when Enabled=true.");
 
-        if (string.Equals(accessKey, "minioadmin", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(secretKey, "minioadmin", StringComparison.OrdinalIgnoreCase))
+        if (options.IsAwsS3())
+        {
+            if (string.IsNullOrWhiteSpace(options.Region))
+                errors.Add($"{StorageOptions.SectionName}:Region is required when Provider=AwsS3.");
+
+            var hasAccessKey = !string.IsNullOrWhiteSpace(options.AccessKey);
+            var hasSecretKey = !string.IsNullOrWhiteSpace(options.SecretKey);
+            if (hasAccessKey != hasSecretKey)
+            {
+                errors.Add(
+                    $"{StorageOptions.SectionName}:AccessKey and SecretKey must both be set or both omitted for Provider=AwsS3 (omit both to use IAM role).");
+            }
+
+            return;
+        }
+
+        if (!options.IsMinio())
+        {
+            errors.Add(
+                $"{StorageOptions.SectionName}:Provider must be '{StorageProviders.Minio}' or '{StorageProviders.AwsS3}'.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(options.AccessKey) || string.IsNullOrWhiteSpace(options.SecretKey))
+        {
+            errors.Add($"{StorageOptions.SectionName}:AccessKey and SecretKey are required when Provider=Minio.");
+            return;
+        }
+
+        if (string.Equals(options.AccessKey, "minioadmin", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(options.SecretKey, "minioadmin", StringComparison.OrdinalIgnoreCase))
         {
             errors.Add($"{StorageOptions.SectionName} must not use default minioadmin credentials in Production.");
         }
