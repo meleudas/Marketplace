@@ -27,7 +27,7 @@ test.describe("Auth session restore", () => {
     const credentials = await getVerifiedTestCredentials();
     await loginViaUi(page, credentials);
     await page.reload();
-    await expect(page).toHaveURL(/\/home$/);
+    await expect(page).toHaveURL(/\/($|\?)/);
     await expectAccessTokenExists(page);
   });
 
@@ -38,19 +38,19 @@ test.describe("Auth session restore", () => {
     await loginViaUi(page, credentials);
     await page.goto("/me");
 
-    await expect(page.getByRole("heading", { name: "My profile" })).toBeVisible();
-    await expect(page.getByText("Email verified:")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Open settings" })).toBeVisible();
-    await expect(page.getByText("You need to sign in first")).not.toBeVisible();
+    await expect(page.getByRole("heading", { name: "Персональні дані" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Контакти" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Вийти з профілю" })).toBeVisible();
+    await expect(page.getByText("Увійдіть, щоб переглянути свій профіль")).not.toBeVisible();
   });
 
-  test("user revisits / and is redirected to /home", async ({ page }) => {
+  test("user revisits / and stays on home", async ({ page }) => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
     const credentials = await getVerifiedTestCredentials();
     await loginViaUi(page, credentials);
     await page.goto("/");
-    await expect(page).toHaveURL(/\/home$/);
+    await expect(page).toHaveURL(/\/($|\?)/);
   });
 
   test("session restore calls /users/me with Bearer token via loadMe", async ({ page }) => {
@@ -58,6 +58,7 @@ test.describe("Auth session restore", () => {
 
     const credentials = await getVerifiedTestCredentials();
     await loginViaUi(page, credentials);
+    await page.goto("/me");
 
     const meResponsePromise = page.waitForResponse(
       (response) =>
@@ -66,13 +67,13 @@ test.describe("Auth session restore", () => {
         response.status() === 200,
     );
 
-    await page.goto("/me");
+    await page.reload();
     const meResponse = await meResponsePromise;
 
     const authHeader = getAuthorizationHeader(meResponse.request().headers());
     expect(authHeader).toMatch(/^Bearer .+/);
 
-    await expect(page.getByText("You need to sign in first")).not.toBeVisible();
-    await expect(page.getByRole("link", { name: "Open settings" })).toBeVisible();
+    await expect(page.getByText("Увійдіть, щоб переглянути свій профіль")).not.toBeVisible();
+    await expect(page.getByRole("heading", { name: "Персональні дані" })).toBeVisible();
   });
 });

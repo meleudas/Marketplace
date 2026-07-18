@@ -21,18 +21,19 @@ test.describe("Auth register and confirm email", () => {
 
   test("user can switch from login to register", async ({ page }) => {
     await waitForAuthUi(page);
-    await page.getByRole("button", { name: "Register" }).click();
-    await expect(page.getByRole("heading", { name: "Register" })).toBeVisible();
-    await expect(page.getByLabel("Username")).toBeVisible();
+    await page.getByRole("link", { name: "Створити" }).click();
+    await expect(page).toHaveURL(/\/auth\/register/);
+    await expect(page.getByRole("heading", { name: "Створіть акаунт" })).toBeVisible();
+    await expect(page.locator("#register-userName")).toBeVisible();
   });
 
   test("register form shows validation errors", async ({ page }) => {
     await openRegisterForm(page);
-    await page.getByRole("button", { name: "Register", exact: true }).click();
+    await page.getByRole("button", { name: "Створити акаунт", exact: true }).click();
 
-    await expect(page.getByText("Username is required")).toBeVisible();
-    await expect(page.getByText("Enter a valid email")).toBeVisible();
-    await expect(page.getByText("Password is required")).toBeVisible();
+    await expect(page.getByText("Ім'я користувача є обов'язковим")).toBeVisible();
+    await expect(page.getByText("Введіть дійсну електронну адресу")).toBeVisible();
+    await expect(page.getByText("Пароль є обов'язковим")).toBeVisible();
   });
 
   test("register with valid data shows confirm-email success message", async ({ page }) => {
@@ -47,7 +48,7 @@ test.describe("Auth register and confirm email", () => {
       password: registrationPassword,
     });
 
-    const successMessage = page.getByText(/confirm your email|Підтвердіть пошту/i);
+    const successMessage = page.getByText(/Підтвердьте пошту|Підтвердіть пошту|confirm your email/i);
     const errorMessage = page.locator('[class*="errorMessage"]');
 
     await expect(successMessage.or(errorMessage)).toBeVisible({ timeout: 10_000 });
@@ -70,8 +71,8 @@ test.describe("Auth register and confirm email", () => {
       password: registrationPassword,
     });
 
-    await expect(page.getByRole("heading", { name: "Register" })).toBeVisible();
-    await expect(page).not.toHaveURL(/\/home$/);
+    await expect(page.getByRole("heading", { name: "Створіть акаунт" })).toBeVisible();
+    await expect(page).toHaveURL(/\/auth\/register/);
   });
 
   test("after register localStorage accessToken should not exist", async ({ page }) => {

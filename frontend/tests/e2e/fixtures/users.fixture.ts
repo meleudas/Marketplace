@@ -1,22 +1,22 @@
 /**
  * Test user credentials loaded from environment variables.
- * Defaults match `backend/scripts/seed-test-data.sql` (db-seed).
+ * Defaults match `UserSeeder` (app startup seed): password `BookMarket1!`.
  *
  * Do not commit real production credentials.
  */
 export const testUsers = {
   verified: {
-    email: process.env.E2E_VERIFIED_EMAIL ?? process.env.E2E_USER_EMAIL ?? "buyer@marketplace.test",
+    email: process.env.E2E_VERIFIED_EMAIL ?? process.env.E2E_USER_EMAIL ?? "user50@bookmarket.ua",
     password:
-      process.env.E2E_VERIFIED_PASSWORD ?? process.env.E2E_USER_PASSWORD ?? "Admin123!",
+      process.env.E2E_VERIFIED_PASSWORD ?? process.env.E2E_USER_PASSWORD ?? "BookMarket1!",
   },
   admin: {
-    email: process.env.E2E_ADMIN_EMAIL ?? "admin@marketplace.test",
-    password: process.env.E2E_ADMIN_PASSWORD ?? "Admin123!",
+    email: process.env.E2E_ADMIN_EMAIL ?? "admin@bookmarket.ua",
+    password: process.env.E2E_ADMIN_PASSWORD ?? "BookMarket1!",
   },
   twoFactor: {
-    email: process.env.E2E_2FA_EMAIL ?? "twofa@marketplace.test",
-    password: process.env.E2E_2FA_PASSWORD ?? "Admin123!",
+    email: process.env.E2E_2FA_EMAIL ?? "twofa@bookmarket.ua",
+    password: process.env.E2E_2FA_PASSWORD ?? "BookMarket1!",
   },
 } as const;
 

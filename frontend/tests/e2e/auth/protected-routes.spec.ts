@@ -10,13 +10,13 @@ test.describe("Auth protected routes - guest", () => {
 
   test("/me shows sign-in prompt for guest", async ({ page }) => {
     await page.goto("/me");
-    await expect(page.getByText("You need to sign in first")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
+    await expect(page.getByText("Увійдіть, щоб переглянути свій профіль")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Увійти" })).toBeVisible();
   });
 
   test("/settings redirects guest to /", async ({ page }) => {
     await page.goto("/settings");
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/($|\?)/);
   });
 
   test("/workspace shows unauthenticated message for guest", async ({ page }) => {
@@ -29,10 +29,10 @@ test.describe("Auth protected routes - guest", () => {
     await expect(page.getByText("You need to sign in before opening admin tools.")).toBeVisible();
   });
 
-  test("/home is accessible as guest", async ({ page }) => {
-    await page.goto("/home");
-    await expect(page).toHaveURL(/\/home$/);
-    await expect(page.getByRole("button", { name: "Фільтри" })).toBeVisible();
+  test("/ is accessible as guest", async ({ page }) => {
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/($|\?)/);
+    await expect(page.getByRole("link", { name: "BOOK TOP — на головну" })).toBeVisible();
   });
 });
 
@@ -47,8 +47,8 @@ test.describe("Auth protected routes - authenticated", () => {
     const credentials = await getVerifiedTestCredentials();
     await loginViaUi(page, credentials);
     await page.goto("/me");
-    await expect(page.getByRole("heading", { name: "My profile" })).toBeVisible();
-    await expect(page.getByText("You need to sign in first")).not.toBeVisible();
+    await expect(page.getByRole("heading", { name: "Персональні дані" })).toBeVisible();
+    await expect(page.getByText("Увійдіть, щоб переглянути свій профіль")).not.toBeVisible();
   });
 
   test("authenticated user can open /settings", async ({ page }) => {
