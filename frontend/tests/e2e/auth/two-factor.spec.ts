@@ -47,7 +47,7 @@ test.describe("Auth email 2FA login", () => {
 
     await page.locator("#login-two-factor-code").fill("000000");
     await page.getByRole("button", { name: "Підтвердити і увійти" }).click();
-    await expect(page.locator('[class*="errorMessage"]')).toHaveText(/Invalid 2FA code/i);
+    await expect(page.locator("main [role='alert']")).toHaveText(/Invalid 2FA code/i);
   });
 
   test("Use different account returns to email and password step", async ({ page }) => {

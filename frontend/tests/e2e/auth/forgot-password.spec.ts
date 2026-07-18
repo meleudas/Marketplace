@@ -34,7 +34,7 @@ test.describe("Auth forgot password", () => {
     await page.getByRole("button", { name: "Надіслати код скидання" }).click();
 
     const successMessage = page.getByText(/Код для скидання пароля надіслано/i);
-    const errorMessage = page.locator('[class*="errorMessage"]');
+    const errorMessage = page.locator("main [role='alert']");
 
     const result = await Promise.race([
       successMessage

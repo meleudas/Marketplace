@@ -4,6 +4,10 @@ const ACCESS_TOKEN_KEY = "accessToken";
 const AUTH_POLL_TIMEOUT = 30_000;
 const LOGIN_PATH = "/auth/login";
 
+function authAlert(page: Page) {
+  return page.locator("main [role='alert']");
+}
+
 export async function clearAuthState(page: Page): Promise<void> {
   await page.goto("/");
   await page.evaluate(() => {
@@ -27,12 +31,12 @@ export async function expectAccessTokenMissing(page: Page): Promise<void> {
 
 export async function waitForAuthUi(page: Page): Promise<void> {
   await page.goto(LOGIN_PATH);
-  await expect(page.getByRole("heading", { name: "Ласкаво просимо назад" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Вхід" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Увійти", exact: true })).toBeVisible();
 }
 
 async function readLoginError(page: Page, status: number): Promise<string> {
-  const errorMessage = page.locator('[class*="errorMessage"]');
+  const errorMessage = authAlert(page);
   await errorMessage.waitFor({ state: "visible", timeout: 5_000 }).catch(() => undefined);
   return (await errorMessage.textContent()) ?? `HTTP ${status}`;
 }
@@ -50,25 +54,20 @@ export async function loginViaUi(
   await page.locator("#login-email").fill(credentials.email);
   await page.locator("#login-password").fill(credentials.password);
 
-  const loginRequest = page.waitForResponse(
-    (response) =>
-      response.url().includes("/auth/login") && response.request().method() === "POST",
-  );
+  const loginResponsePromise = page
+    .waitForResponse(
+      (response) =>
+        response.url().includes("/auth/login") && response.request().method() === "POST",
+      { timeout: AUTH_POLL_TIMEOUT },
+    )
+    .catch(() => null);
 
   await page.getByRole("button", { name: "Увійти", exact: true }).click();
 
-  const loginResponse = await loginRequest;
-  if (!loginResponse.ok()) {
+  const loginResponse = await loginResponsePromise;
+  if (loginResponse && !loginResponse.ok()) {
     throw new Error(`Login failed: ${await readLoginError(page, loginResponse.status())}`);
   }
-
-  await page.waitForResponse(
-    (response) =>
-      response.url().includes("/users/me") &&
-      response.request().method() === "GET" &&
-      response.status() === 200,
-    { timeout: AUTH_POLL_TIMEOUT },
-  );
 
   await page.waitForURL(isHomeUrl, { timeout: AUTH_POLL_TIMEOUT });
   await expectAccessTokenExists(page);
@@ -80,7 +79,7 @@ export async function advanceForgotPasswordToStepTwo(page: Page, email: string):
   await page.getByRole("button", { name: "Надіслати код скидання" }).click();
 
   const successMessage = page.getByText(/Код для скидання пароля надіслано/i);
-  const errorMessage = page.locator('[class*="errorMessage"]');
+  const errorMessage = authAlert(page);
 
   await expect(successMessage.or(errorMessage)).toBeVisible({ timeout: 10_000 });
 

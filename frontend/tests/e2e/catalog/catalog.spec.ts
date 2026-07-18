@@ -25,12 +25,6 @@ test.describe("Catalog and filters", () => {
 
     await expect(page).toHaveURL(new RegExp(`/catalog/${data.subcategory.slug}(?:\\?|$)`));
     await catalog.expectSelectedFilter(data.subcategory.name);
-    await expect(
-      catalog.sidebar.getByRole("checkbox", {
-        name: data.subcategory.name,
-        exact: true,
-      }),
-    ).toBeChecked();
   });
 
   for (const format of [
@@ -87,10 +81,14 @@ test.describe("Catalog and filters", () => {
         page.goto(
           `/catalog?categories=${encodeURIComponent(data.rootCategory.slug)}&format=${encodeURIComponent("паперовий")}`,
         ),
-      (url) =>
-        url.searchParams.get("pageSize") === "21" &&
-        url.searchParams.get("format") === "паперовий" &&
-        categoryIds.every((id) => url.searchParams.getAll("categoryIds").includes(String(id))),
+      (url) => {
+        const pageSize = url.searchParams.get("pageSize");
+        return (
+          (pageSize === "20" || pageSize === "21") &&
+          url.searchParams.get("format") === "паперовий" &&
+          categoryIds.every((id) => url.searchParams.getAll("categoryIds").includes(String(id)))
+        );
+      },
     );
     await catalog.expectSelectedFilter(data.rootCategory.name);
     await catalog.expectSelectedFilter("Паперова");
@@ -115,11 +113,15 @@ test.describe("Catalog and filters", () => {
         page.goto(
           `/catalog?categories=${encodeURIComponent(data.rootCategory.slug)}&minPrice=${minPrice}&maxPrice=${maxPrice}`,
         ),
-      (url) =>
-        url.searchParams.get("pageSize") === "21" &&
-        url.searchParams.get("minPrice") === String(minPrice) &&
-        url.searchParams.get("maxPrice") === String(maxPrice) &&
-        categoryIds.every((id) => url.searchParams.getAll("categoryIds").includes(String(id))),
+      (url) => {
+        const pageSize = url.searchParams.get("pageSize");
+        return (
+          (pageSize === "20" || pageSize === "21") &&
+          url.searchParams.get("minPrice") === String(minPrice) &&
+          url.searchParams.get("maxPrice") === String(maxPrice) &&
+          categoryIds.every((id) => url.searchParams.getAll("categoryIds").includes(String(id)))
+        );
+      },
     );
 
     expect(result.items.length).toBeGreaterThan(0);

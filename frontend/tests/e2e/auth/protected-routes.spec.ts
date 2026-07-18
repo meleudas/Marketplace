@@ -32,7 +32,9 @@ test.describe("Auth protected routes - guest", () => {
   test("/ is accessible as guest", async ({ page }) => {
     await page.goto("/");
     await expect(page).toHaveURL(/\/($|\?)/);
-    await expect(page.getByRole("link", { name: "BOOK TOP — на головну" })).toBeVisible();
+    await expect(
+      page.getByRole("banner").getByRole("link", { name: "BOOK TOP — на головну" }),
+    ).toBeVisible();
   });
 });
 

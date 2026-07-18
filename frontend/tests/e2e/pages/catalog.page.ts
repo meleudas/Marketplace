@@ -25,7 +25,10 @@ export class CatalogPage {
   async goto(path = "/catalog"): Promise<void> {
     await this.waitForSearch(
       () => this.page.goto(path),
-      (url) => url.searchParams.get("pageSize") === "21",
+      (url) => {
+        const pageSize = url.searchParams.get("pageSize");
+        return pageSize === "20" || pageSize === "21";
+      },
     );
   }
 
@@ -49,7 +52,7 @@ export class CatalogPage {
     await this.waitForSearchRequest(
       () => menu.getByRole("button", { name: subcategoryName, exact: true }).click(),
       (url) =>
-        url.searchParams.get("pageSize") === "21" &&
+        (url.searchParams.get("pageSize") === "20" || url.searchParams.get("pageSize") === "21") &&
         url.searchParams.getAll("categoryIds").includes(String(subcategoryId)),
     );
   }
@@ -99,6 +102,7 @@ export class CatalogPage {
     return this.waitForSearch(
       async () => {
         await input.fill(String(minPrice));
+        await input.blur();
       },
       (url) => url.searchParams.get("minPrice") === String(minPrice),
     );

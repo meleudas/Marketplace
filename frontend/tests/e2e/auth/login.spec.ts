@@ -15,7 +15,7 @@ test.describe("Auth login", () => {
 
   test("guest can open /auth/login and see the auth UI", async ({ page }) => {
     await page.goto("/auth/login");
-    await expect(page.getByRole("heading", { name: "Ласкаво просимо назад" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Вхід" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Увійти", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Продовжити через Google" })).toBeVisible();
   });
@@ -23,7 +23,7 @@ test.describe("Auth login", () => {
   test("guest can open /auth and is redirected to /auth/login", async ({ page }) => {
     await page.goto("/auth");
     await expect(page).toHaveURL(/\/auth\/login/);
-    await expect(page.getByRole("heading", { name: "Ласкаво просимо назад" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Вхід" })).toBeVisible();
   });
 
   test("login form shows validation errors for empty email and password", async ({ page }) => {

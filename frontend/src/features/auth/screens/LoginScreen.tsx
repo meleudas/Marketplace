@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -10,7 +11,17 @@ import { Button, PageLayout, SideDecorShell, TextField } from "@/shared/ui";
 import { GoogleIcon } from "@/shared/ui/icons";
 import styles from "./LoginScreen.module.css";
 
+function resolvePostLoginPath(redirectTarget: string | null): string {
+  if (redirectTarget?.startsWith("/") && !redirectTarget.startsWith("//")) {
+    return redirectTarget;
+  }
+
+  return "/";
+}
+
 export function LoginScreen() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const login = useAuth((state) => state.login);
   const startGoogleLogin = useAuth((state) => state.startGoogleLogin);
   const loading = useAuth((state) => state.loading);
@@ -68,10 +79,7 @@ export function LoginScreen() {
       return;
     }
 
-    setSuccess(result.message);
-    setIsTwoFactorStep(false);
-    resetField("twoFactorCode");
-    resetField("password");
+    router.replace(resolvePostLoginPath(searchParams.get("redirect")));
   };
 
   const handleBackToCredentials = () => {
@@ -95,7 +103,14 @@ export function LoginScreen() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleSubmit(onSubmit)(event);
+            }}
+            className={styles.form}
+            noValidate
+          >
             {!isTwoFactorStep ? (
               <>
                 <TextField

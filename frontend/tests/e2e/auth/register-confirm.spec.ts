@@ -49,7 +49,7 @@ test.describe("Auth register and confirm email", () => {
     });
 
     const successMessage = page.getByText(/Підтвердьте пошту|Підтвердіть пошту|confirm your email/i);
-    const errorMessage = page.locator('[class*="errorMessage"]');
+    const errorMessage = page.locator("main [role='alert']");
 
     await expect(successMessage.or(errorMessage)).toBeVisible({ timeout: 10_000 });
 
