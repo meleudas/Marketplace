@@ -24,6 +24,7 @@ export {
   FilterIcon,
   GiftIcon,
   InstagramIcon,
+  LogOutIcon,
   MenuIcon,
   MicrophoneIcon,
   MinusIcon,

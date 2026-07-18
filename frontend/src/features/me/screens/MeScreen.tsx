@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/features/auth/model/auth.store";
 import { PageLayout } from "@/shared/ui/PageLayout";
@@ -9,6 +10,7 @@ import {
   ChevronRightIcon,
   EditIcon,
   GiftIcon,
+  LogOutIcon,
   PlusIcon,
   ShopIcon,
   TrashIcon,
@@ -70,6 +72,19 @@ function BackNav() {
       <ChevronLeftIcon className={styles.backNavIcon} />
       <span className={styles.backNavTitle}>Профіль</span>
     </Link>
+  );
+}
+
+interface LogoutSectionProps {
+  onLogout: () => void;
+}
+
+function LogoutSection({ onLogout }: LogoutSectionProps) {
+  return (
+    <button type="button" onClick={onLogout} className={styles.logoutButton}>
+      <LogOutIcon className={styles.logoutIcon} />
+      <span>Вийти з профілю</span>
+    </button>
   );
 }
 
@@ -436,11 +451,19 @@ function CertificatesSection() {
 
 
 export function MeScreen() {
+  const router = useRouter();
   const user = useAuth((state) => state.user);
   const isAuthenticated = useAuth((state) => state.isAuthenticated);
   const initialized = useAuth((state) => state.initialized);
   const loading = useAuth((state) => state.loading);
   const loadMe = useAuth((state) => state.loadMe);
+  const logout = useAuth((state) => state.logout);
+
+  const handleLogout = useCallback(() => {
+    void logout().then(() => {
+      router.push("/");
+    });
+  }, [logout, router]);
 
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [orders, setOrders] = useState<OrderListItem[]>([]);
@@ -722,6 +745,7 @@ export function MeScreen() {
               <CertificatesSection />
             </div>
           </div>
+          <LogoutSection onLogout={handleLogout} />
         </div>
       </div>
 
