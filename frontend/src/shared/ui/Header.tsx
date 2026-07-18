@@ -53,7 +53,7 @@ const isCatalogFormatFilter = (value: string | null): value is CatalogFormatFilt
 
 export function Header({
   homeHref = "/",
-  userHref = "/auth/login",
+  userHref = "/me",
   cartHref = "/cart",
   searchValue: controlledSearchValue,
   searchPlaceholder = "Пошук",

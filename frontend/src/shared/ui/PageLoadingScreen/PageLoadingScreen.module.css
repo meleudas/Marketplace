@@ -1,0 +1,23 @@
+.overlay,
+.inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgb(0 0 0 / 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.inline {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  min-height: 100vh;
+  width: 100%;
+  background: var(--color-bg, #131417);
+}

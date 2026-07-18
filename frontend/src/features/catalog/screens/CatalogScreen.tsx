@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useCatalogAuthors } from "@/features/catalog/hooks/useCatalogAuthors";
 import { useCatalogCategories } from "@/features/catalog/hooks/useCatalogCategories";
 import { useCatalogFilters } from "@/features/catalog/hooks/useCatalogFilters";
@@ -20,7 +20,7 @@ import {
 } from "@/features/storefront/lib/catalog-product-sort";
 import { getRouteCategorySlugs } from "@/features/storefront/lib/catalog-category-filter";
 import { StateBlock } from "@/features/storefront/ui/StateBlock";
-import { PageLayout, type CatalogFormatFilter } from "@/shared/ui";
+import { PageLayout, useNavigationLoading, type CatalogFormatFilter } from "@/shared/ui";
 import styles from "./CatalogScreen.module.css";
 
 interface CatalogScreenProps {
@@ -59,6 +59,7 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlParams = useMemo(() => parseUrlParams(searchParams), [searchParams]);
+  const setNavigationLoading = useNavigationLoading();
 
   const {
     categories,
@@ -73,9 +74,15 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
   const [searchInput, setSearchInput] = useState(urlParams.q);
   const [searchQuery, setSearchQuery] = useState(urlParams.q);
   const [page, setPage] = useState(urlParams.page);
+  const [filterUpdatePending, setFilterUpdatePending] = useState(false);
   const pendingScrollY = useRef<number | null>(null);
   const [pageSize, setPageSize] = useState(urlParams.pageSize);
   const initialUrlRef = useRef(false);
+  const handleProductsLoadComplete = useCallback(() => {
+    setFilterUpdatePending(false);
+    setNavigationLoading(false);
+  }, [setNavigationLoading]);
+
   const filters = useCatalogFilters({
     categories,
     selectedRootSlug,
@@ -146,6 +153,7 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     selectedSort,
     page: requestedPage,
     pageSize,
+    onLoadComplete: handleProductsLoadComplete,
   });
 
   useEffect(() => {
@@ -244,6 +252,20 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
   ]);
 
   const sortButtonLabel = getCatalogProductSortLabel(selectedSort);
+  const filterControlsDisabled = filterUpdatePending || productsLoading;
+
+  const runFilterUpdate = useCallback(
+    (update: () => void) => {
+      if (filterControlsDisabled) {
+        return;
+      }
+
+      setFilterUpdatePending(true);
+      setNavigationLoading(true);
+      update();
+    },
+    [filterControlsDisabled, setNavigationLoading],
+  );
 
   const handlePageChange = (nextPage: number) => {
     if (nextPage === currentPage) {
@@ -299,7 +321,11 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     >
       <h1 className={styles.pageTitle}>Каталог</h1>
 
-      <div className={styles.catalogLayout}>
+      <div
+        className={styles.catalogLayout}
+        aria-busy={filterControlsDisabled}
+        inert={filterControlsDisabled ? true : undefined}
+      >
         <CatalogFilterSidebar
           rootCategories={rootCategories}
           categories={categories}
@@ -310,12 +336,20 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
           appliedFormat={appliedFormat}
           appliedMinPrice={appliedMinPrice}
           appliedMaxPrice={appliedMaxPrice}
-          onToggleRootCategory={toggleAppliedRootCategory}
-          onToggleSubcategory={toggleAppliedSubcategory}
-          onToggleAuthor={toggleAppliedAuthor}
-          onToggleFormat={toggleAppliedFormatValue}
-          onApplyPriceRange={applyAppliedPriceRange}
-          onReset={resetAppliedFilters}
+          onToggleRootCategory={(slug) =>
+            runFilterUpdate(() => toggleAppliedRootCategory(slug))
+          }
+          onToggleSubcategory={(rootSlug, subcategorySlug) =>
+            runFilterUpdate(() => toggleAppliedSubcategory(rootSlug, subcategorySlug))
+          }
+          onToggleAuthor={(author) => runFilterUpdate(() => toggleAppliedAuthor(author))}
+          onToggleFormat={(format) =>
+            runFilterUpdate(() => toggleAppliedFormatValue(format))
+          }
+          onApplyPriceRange={(minPrice, maxPrice) =>
+            runFilterUpdate(() => applyAppliedPriceRange(minPrice, maxPrice))
+          }
+          onReset={() => runFilterUpdate(resetAppliedFilters)}
         />
 
         <div className={styles.catalogMain}>
@@ -327,9 +361,11 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
             appliedCategorySlugs={appliedCategorySlugs}
             appliedAuthors={appliedAuthors}
             appliedFormat={appliedFormat}
-            onRemoveCategory={handleRemoveCategory}
-            onRemoveAuthor={removeAppliedAuthor}
-            onRemoveFormat={handleRemoveFormat}
+            onRemoveCategory={(slug, source) =>
+              runFilterUpdate(() => handleRemoveCategory(slug, source))
+            }
+            onRemoveAuthor={(author) => runFilterUpdate(() => removeAppliedAuthor(author))}
+            onRemoveFormat={(format) => runFilterUpdate(() => handleRemoveFormat(format))}
           />
 
           <CatalogToolbar
@@ -360,7 +396,7 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
             showAllCategories={showAllCategories}
             showAllAuthors={showAllAuthors}
             onClose={() => setFiltersOpen(false)}
-            onApply={applyFilters}
+            onApply={() => runFilterUpdate(applyFilters)}
             onDraftAuthorsChange={setDraftAuthors}
             onDraftRootCategoryToggle={toggleDraftRootCategory}
             onDraftSubcategoryToggle={toggleDraftSubcategory}

@@ -5,6 +5,7 @@ import "@fontsource/inter/600.css";
 import "@fontsource/montserrat/400.css";
 import "@fontsource/montserrat/500.css";
 import "@fontsource/montserrat/600.css";
+import { NavigationLoading } from "@/shared/ui/NavigationLoading";
 import "./globals.css";
 import styles from "./layout.module.css";
 
@@ -135,7 +136,9 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={styles.body}>{children}</body>
+      <body className={styles.body}>
+        <NavigationLoading>{children}</NavigationLoading>
+      </body>
     </html>
   );
 }

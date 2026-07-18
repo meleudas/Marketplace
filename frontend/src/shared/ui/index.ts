@@ -72,5 +72,8 @@ export { SideDecorShell } from "./SideDecor";
 export { FooterCatIllustration } from "./icons";
 export { Spinner } from "./Spinner";
 export type { SpinnerProps, SpinnerSize } from "./Spinner";
+export { PageLoadingScreen } from "./PageLoadingScreen";
+export { NavigationLoading, useNavigationLoading } from "./NavigationLoading";
+
 export { CatalogMenu } from "./CatalogMenu";
 export type { CatalogFormatFilter, CatalogMenuCategory } from "./CatalogMenu";
