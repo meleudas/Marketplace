@@ -80,7 +80,7 @@ export function ProductCard({
       </div>
 
       <div className={styles.body}>
-        {product.author ? <p className={styles.author}>{product.author}</p> : null}
+        {product.author ? <p className={styles.author}>{product.author}</p> : <p className={styles.author} aria-hidden="true">&nbsp;</p>}
 
         <h3 className={styles.title}>{product.title}</h3>
 

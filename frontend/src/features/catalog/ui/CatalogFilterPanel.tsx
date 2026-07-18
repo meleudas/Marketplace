@@ -1,15 +1,13 @@
 import Image from "next/image";
 import {
-  DEFAULT_CATALOG_MAX_PRICE,
-  DEFAULT_CATALOG_MIN_PRICE,
   FORMAT_FILTER_OPTIONS,
 } from "@/features/catalog/lib/catalog-filter-options";
-import { toggleArrayFilter, toggleSingleFilter } from "@/features/catalog/lib/catalog-filter-utils";
 import { getChildCategories } from "@/features/storefront/lib/catalog-category-filter";
 import type { CatalogCategoryDto, CatalogFacetOptionDto } from "@/features/storefront/model/catalog.types";
 import { Button, Checkbox, CloseIcon } from "@/shared/ui";
 import iconStyles from "@/shared/ui/icons/Icon.module.css";
 import styles from "../screens/CatalogScreen.module.css";
+import { useState } from "react"
 
 const FILTER_PREVIEW_LIMIT = 4;
 const CATEGORY_FILTER_PREVIEW_LIMIT = 6;
@@ -22,7 +20,7 @@ interface CatalogFilterPanelProps {
   authorsLoading: boolean;
   draftAuthors: string[];
   draftCategorySlugs: string[];
-  draftFormat: string | null;
+  draftFormat: string[];
   draftMinPrice: string;
   draftMaxPrice: string;
   showAllCategories: boolean;
@@ -32,7 +30,7 @@ interface CatalogFilterPanelProps {
   onDraftAuthorsChange: (authors: string[] | ((current: string[]) => string[])) => void;
   onDraftRootCategoryToggle: (slug: string) => void;
   onDraftSubcategoryToggle: (rootSlug: string, subcategorySlug: string) => void;
-  onDraftFormatChange: (format: string | null | ((current: string | null) => string | null)) => void;
+  onDraftFormatChange: (format: string[]) => void;
   onDraftMinPriceChange: (value: string) => void;
   onDraftMaxPriceChange: (value: string) => void;
   onShowAllCategoriesChange: (value: boolean | ((current: boolean) => boolean)) => void;
@@ -63,6 +61,8 @@ export function CatalogFilterPanel({
   onShowAllCategoriesChange,
   onShowAllAuthorsChange,
 }: CatalogFilterPanelProps) {
+  const [authorSearch, setAuthorSearch] = useState("");
+
   if (!open) {
     return null;
   }
@@ -70,20 +70,14 @@ export function CatalogFilterPanel({
   const displayedRootCategories = showAllCategories
     ? rootCategories
     : rootCategories.slice(0, CATEGORY_FILTER_PREVIEW_LIMIT);
+  const filteredAuthorOptions = authorSearch
+    ? authorOptions.filter((option) =>
+        option.label.toLowerCase().includes(authorSearch.toLowerCase()),
+      )
+    : authorOptions;
   const displayedAuthorOptions = showAllAuthors
-    ? authorOptions
-    : authorOptions.slice(0, FILTER_PREVIEW_LIMIT);
-
-  const shouldShowSubcategories = (rootCategory: CatalogCategoryDto): boolean => {
-    const childSlugs = getChildCategories(categories, rootCategory.id).map(
-      (category) => category.slug,
-    );
-
-    return (
-      draftCategorySlugs.includes(rootCategory.slug) ||
-      childSlugs.some((slug) => draftCategorySlugs.includes(slug))
-    );
-  };
+    ? filteredAuthorOptions
+    : filteredAuthorOptions.slice(0, FILTER_PREVIEW_LIMIT);
 
   return (
     <section className={styles.filterPanel} role="dialog" aria-modal="true" aria-label="Фільтри">
@@ -116,7 +110,7 @@ export function CatalogFilterPanel({
                     onCheckedChange={() => onDraftRootCategoryToggle(category.slug)}
                   />
 
-                  {shouldShowSubcategories(category) && subcategories.length > 0 ? (
+                  {subcategories.length > 0 ? (
                     <div className={styles.subcategoryFilterList}>
                       {subcategories.map((subcategory) => (
                         <Checkbox
@@ -154,23 +148,39 @@ export function CatalogFilterPanel({
               Автор
             </h3>
             <div className={styles.filterList}>
-              {authorsLoading ? (
-                <p className={styles.filterLoadingText}>Завантаження авторів...</p>
-              ) : displayedAuthorOptions.length > 0 ? (
-                displayedAuthorOptions.map((option) => (
-                  <Checkbox
-                    key={option.value}
-                    label={`${option.label} (${option.count})`}
-                    checked={draftAuthors.includes(option.value)}
-                    onCheckedChange={() =>
-                      onDraftAuthorsChange((current) => toggleArrayFilter(current, option.value))
-                    }
-                  />
-                ))
-              ) : (
-                <p className={styles.filterLoadingText}>Авторів не знайдено</p>
-              )}
-            </div>
+                {authorsLoading ? (
+                  <p className={styles.filterLoadingText}>Завантаження авторів...</p>
+                ) : (
+                  <>
+                    <div className={styles.authorSearchWrapper}>
+                      <input
+                        className={styles.authorSearchInput}
+                        type="text"
+                        placeholder="Пошук авторів..."
+                        value={authorSearch}
+                        onChange={(event) => setAuthorSearch(event.target.value)}
+                      />
+                    </div>
+                    {displayedAuthorOptions.length > 0 ? (
+                      displayedAuthorOptions.map((option) => (
+                        <Checkbox
+                          key={option.value}
+                          label={`${option.label} (${option.count})`}
+                          checked={draftAuthors.includes(option.value)}
+                          onCheckedChange={() => {
+                            const next = draftAuthors.includes(option.value)
+                              ? draftAuthors.filter((a) => a !== option.value)
+                              : [...draftAuthors, option.value];
+                            onDraftAuthorsChange(next);
+                          }}
+                        />
+                      ))
+                    ) : (
+                      <p className={styles.filterLoadingText}>Авторів не знайдено</p>
+                    )}
+                  </>
+                )}
+              </div>
             {authorOptions.length > FILTER_PREVIEW_LIMIT ? (
               <button
                 type="button"
@@ -200,10 +210,13 @@ export function CatalogFilterPanel({
               <Checkbox
                 key={option.value}
                 label={option.label}
-                checked={draftFormat === option.value}
-                onCheckedChange={() =>
-                  onDraftFormatChange((current) => toggleSingleFilter(current, option.value))
-                }
+                checked={draftFormat.includes(option.value)}
+                onCheckedChange={() => {
+                  const next = draftFormat.includes(option.value)
+                    ? draftFormat.filter((f) => f !== option.value)
+                    : [...draftFormat, option.value];
+                  onDraftFormatChange(next);
+                }}
               />
             ))}
           </div>
@@ -219,7 +232,8 @@ export function CatalogFilterPanel({
               <input
                 className={styles.priceInput}
                 inputMode="numeric"
-                value={draftMinPrice || DEFAULT_CATALOG_MIN_PRICE}
+                placeholder="Від"
+                value={draftMinPrice}
                 onChange={(event) => onDraftMinPriceChange(event.target.value)}
               />
             </label>
@@ -228,7 +242,8 @@ export function CatalogFilterPanel({
               <input
                 className={styles.priceInput}
                 inputMode="numeric"
-                value={draftMaxPrice || DEFAULT_CATALOG_MAX_PRICE}
+                placeholder="До"
+                value={draftMaxPrice}
                 onChange={(event) => onDraftMaxPriceChange(event.target.value)}
               />
             </label>

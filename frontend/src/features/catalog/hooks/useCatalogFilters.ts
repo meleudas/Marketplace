@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  DEFAULT_CATALOG_MAX_PRICE,
-  DEFAULT_CATALOG_MIN_PRICE,
-  resolveAppliedPriceFilter,
-} from "@/features/catalog/lib/catalog-filter-options";
-import { toggleArrayFilter, toggleSingleFilter } from "@/features/catalog/lib/catalog-filter-utils";
+import { toggleArrayFilter } from "@/features/catalog/lib/catalog-filter-utils";
 import { getChildCategories, getRouteCategorySlugs } from "@/features/storefront/lib/catalog-category-filter";
 import type { CatalogCategoryDto } from "@/features/storefront/model/catalog.types";
 
@@ -13,6 +8,12 @@ interface UseCatalogFiltersParams {
   selectedRootSlug: string | null;
   selectedSubcategorySlug: string | null;
   onRouteCategoryMismatch: () => void;
+  initialAuthors?: string[];
+  initialCategorySlugs?: string[];
+  initialFormat?: string[];
+  initialMinPrice?: string;
+  initialMaxPrice?: string;
+  initialPageSize?: number;
 }
 
 export function useCatalogFilters({
@@ -20,18 +21,23 @@ export function useCatalogFilters({
   selectedRootSlug,
   selectedSubcategorySlug,
   onRouteCategoryMismatch,
+  initialAuthors,
+  initialCategorySlugs,
+  initialFormat,
+  initialMinPrice,
+  initialMaxPrice,
 }: UseCatalogFiltersParams) {
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [appliedAuthors, setAppliedAuthors] = useState<string[]>([]);
-  const [appliedCategorySlugs, setAppliedCategorySlugs] = useState<string[]>([]);
-  const [appliedFormat, setAppliedFormat] = useState<string | null>(null);
-  const [appliedMinPrice, setAppliedMinPrice] = useState("");
-  const [appliedMaxPrice, setAppliedMaxPrice] = useState("");
+  const [appliedAuthors, setAppliedAuthors] = useState<string[]>(initialAuthors ?? []);
+  const [appliedCategorySlugs, setAppliedCategorySlugs] = useState<string[]>(initialCategorySlugs ?? []);
+  const [appliedFormat, setAppliedFormat] = useState<string[]>(initialFormat ?? []);
+  const [appliedMinPrice, setAppliedMinPrice] = useState(initialMinPrice ?? "");
+  const [appliedMaxPrice, setAppliedMaxPrice] = useState(initialMaxPrice ?? "");
   const [draftAuthors, setDraftAuthors] = useState<string[]>([]);
   const [draftCategorySlugs, setDraftCategorySlugs] = useState<string[]>([]);
-  const [draftFormat, setDraftFormat] = useState<string | null>(null);
-  const [draftMinPrice, setDraftMinPrice] = useState(DEFAULT_CATALOG_MIN_PRICE);
-  const [draftMaxPrice, setDraftMaxPrice] = useState(DEFAULT_CATALOG_MAX_PRICE);
+  const [draftFormat, setDraftFormat] = useState<string[]>([]);
+  const [draftMinPrice, setDraftMinPrice] = useState("");
+  const [draftMaxPrice, setDraftMaxPrice] = useState("");
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [showAllAuthors, setShowAllAuthors] = useState(false);
 
@@ -42,9 +48,9 @@ export function useCatalogFilters({
     setDraftCategorySlugs(
       appliedCategorySlugs.length > 0 ? appliedCategorySlugs : routeCategorySlugs,
     );
-    setDraftFormat(appliedFormat);
-    setDraftMinPrice(appliedMinPrice || DEFAULT_CATALOG_MIN_PRICE);
-    setDraftMaxPrice(appliedMaxPrice || DEFAULT_CATALOG_MAX_PRICE);
+    setDraftFormat([...appliedFormat]);
+    setDraftMinPrice(appliedMinPrice || "");
+    setDraftMaxPrice(appliedMaxPrice || "");
     setShowAllCategories(false);
     setShowAllAuthors(false);
     setFiltersOpen(true);
@@ -54,8 +60,8 @@ export function useCatalogFilters({
     setAppliedAuthors(draftAuthors);
     setAppliedCategorySlugs(draftCategorySlugs);
     setAppliedFormat(draftFormat);
-    setAppliedMinPrice(resolveAppliedPriceFilter(draftMinPrice, DEFAULT_CATALOG_MIN_PRICE));
-    setAppliedMaxPrice(resolveAppliedPriceFilter(draftMaxPrice, DEFAULT_CATALOG_MAX_PRICE));
+    setAppliedMinPrice(draftMinPrice.trim());
+    setAppliedMaxPrice(draftMaxPrice.trim());
     setFiltersOpen(false);
 
     const currentRouteCategorySlug = selectedSubcategorySlug ?? selectedRootSlug;
@@ -92,8 +98,8 @@ export function useCatalogFilters({
     setAppliedCategorySlugs((current) => current.filter((value) => value !== slug));
   };
 
-  const removeAppliedFormat = () => {
-    setAppliedFormat(null);
+  const removeAppliedFormat = (format: string) => {
+    setAppliedFormat((current) => current.filter((value) => value !== format));
   };
 
   const notifyRouteMismatch = (nextCategorySlugs: string[]) => {
@@ -129,18 +135,18 @@ export function useCatalogFilters({
   };
 
   const toggleAppliedFormatValue = (format: string) => {
-    setAppliedFormat((current) => toggleSingleFilter(current, format));
+    setAppliedFormat((current) => toggleArrayFilter(current, format));
   };
 
   const applyAppliedPriceRange = (minPrice: string, maxPrice: string) => {
-    setAppliedMinPrice(resolveAppliedPriceFilter(minPrice, DEFAULT_CATALOG_MIN_PRICE));
-    setAppliedMaxPrice(resolveAppliedPriceFilter(maxPrice, DEFAULT_CATALOG_MAX_PRICE));
+    setAppliedMinPrice(minPrice.trim());
+    setAppliedMaxPrice(maxPrice.trim());
   };
 
   const resetAppliedFilters = () => {
     setAppliedAuthors([]);
     setAppliedCategorySlugs([]);
-    setAppliedFormat(null);
+    setAppliedFormat([]);
     setAppliedMinPrice("");
     setAppliedMaxPrice("");
   };

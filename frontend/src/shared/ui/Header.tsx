@@ -403,6 +403,14 @@ export function Header({
           </div>
 
           <div className={styles.actions}>
+            <button
+              type="button"
+              className={`${styles.iconAction} ${styles.mobileSearchBtn}`}
+              aria-label="Пошук"
+              onClick={handleOpenSearch}
+            >
+              <SearchIcon className={iconStyles.icon} />
+            </button>
             <Link
               href={userHref}
               className={`${styles.iconAction} ${styles.profileLink}`}

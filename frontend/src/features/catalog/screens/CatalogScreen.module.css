@@ -860,3 +860,123 @@
     transform: translateX(100%);
   }
 }
+
+/* ── List view ── */
+
+.productList {
+  display: grid;
+  gap: var(--space-12);
+}
+
+.productList .cardLink {
+  width: 100%;
+}
+
+/* ── Desktop toolbar controls ── */
+
+.desktopToolbarControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.viewToggle {
+  display: flex;
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.viewToggleButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--color-neutral-400);
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+
+.viewToggleButton:hover {
+  background: rgb(255 255 255 / 0.08);
+  color: var(--color-text);
+}
+
+.viewToggleButtonActive {
+  background: var(--color-primary-blue);
+  color: var(--color-white);
+}
+
+.viewToggleButtonActive:hover {
+  background: var(--color-primary-light-blue);
+  color: var(--color-white);
+}
+
+.pageSizeLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-family: var(--font-primary), sans-serif;
+  font-size: var(--typography-body2-font-size);
+  color: var(--color-neutral-400);
+  white-space: nowrap;
+}
+
+.pageSizeLabelText {
+  color: var(--color-neutral-400);
+}
+
+.pageSizeSelect {
+  height: 36px;
+  padding-inline: var(--space-8);
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: var(--radius-sm);
+  background: var(--color-neutral-800);
+  color: var(--color-text);
+  font-family: var(--font-primary), sans-serif;
+  font-size: var(--typography-body2-font-size);
+  cursor: pointer;
+}
+
+.pageSizeSelect:focus-visible {
+  outline: 2px solid var(--button-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── Author search ── */
+
+.authorSearchWrapper {
+  margin-bottom: var(--space-8);
+}
+
+.authorSearchInput {
+  width: 100%;
+  height: 36px;
+  padding-inline: var(--space-8);
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: var(--radius-sm);
+  background: var(--color-neutral-800);
+  color: var(--color-text);
+  font-family: var(--font-primary), sans-serif;
+  font-size: var(--typography-body2-font-size);
+}
+
+.authorSearchInput::placeholder {
+  color: var(--color-neutral-400);
+  opacity: 0.6;
+}
+
+.authorSearchInput:focus-visible {
+  outline: 2px solid var(--button-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .desktopToolbarControls {
+    flex-wrap: wrap;
+  }
+}

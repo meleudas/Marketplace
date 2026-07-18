@@ -7,8 +7,7 @@ import {
   fetchProductReviews,
   type ProductReviewDto,
 } from "../api/product-reviews.api";
-import { Button, Pagination } from "@/shared/ui";
-import { ReviewSubmitDialog } from "./ReviewSubmitDialog";
+import { Button, Spinner } from "@/shared/ui";
 import { StarRating } from "./StarRating";
 import styles from "./ReviewsSection.module.css";
 
@@ -16,9 +15,9 @@ interface ReviewsSectionProps {
   productId: number;
 }
 
-const REVIEWS_PAGE_SIZE = 3;
+const REVIEWS_PAGE_SIZE = 5;
 const REVIEWS_FETCH_SIZE = 100;
-const COMMENT_PREVIEW_LENGTH = 140;
+const COMMENT_EXPAND_THRESHOLD = 500;
 
 function formatReviewDate(value: string): string {
   return new Date(value).toLocaleDateString("uk-UA", {
@@ -30,9 +29,7 @@ function formatReviewDate(value: string): string {
 
 function ReviewCard({ review }: { review: ProductReviewDto }) {
   const [expanded, setExpanded] = useState(false);
-  const isLong = review.comment.length > COMMENT_PREVIEW_LENGTH;
-  const displayedComment =
-    expanded || !isLong ? review.comment : `${review.comment.slice(0, COMMENT_PREVIEW_LENGTH).trimEnd()}…`;
+  const isLong = review.comment.length > COMMENT_EXPAND_THRESHOLD;
 
   return (
     <article className={styles.card}>
@@ -41,17 +38,25 @@ function ReviewCard({ review }: { review: ProductReviewDto }) {
           <span className={styles.author}>{review.userName}</span>
           <span className={styles.date}>{formatReviewDate(review.createdAt)}</span>
         </div>
-        <StarRating value={review.rating ?? review.overallRating ?? 0} />
+        <StarRating value={review.rating ?? review.overallRating ?? 0} size="md" />
       </div>
 
-      <p className={styles.comment}>
-        {displayedComment}
-        {isLong && !expanded ? (
-          <button type="button" className={styles.moreButton} onClick={() => setExpanded(true)}>
-            Більше
-          </button>
+      <div className={`${styles.commentWrap} ${!expanded && isLong ? styles.commentCollapsed : ""}`}>
+        <p className={styles.comment}>{review.comment}</p>
+        {!expanded && isLong ? (
+          <div className={styles.commentFade} />
         ) : null}
-      </p>
+      </div>
+
+      {isLong ? (
+        <button
+          type="button"
+          className={styles.expandToggle}
+          onClick={() => setExpanded((prev) => !prev)}
+        >
+          {expanded ? "Згорнути" : "Розгорнути"}
+        </button>
+      ) : null}
     </article>
   );
 }
@@ -66,7 +71,9 @@ export const ReviewsSection = forwardRef<HTMLElement, ReviewsSectionProps>(funct
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
+  // Inline form state
+  const [formRating, setFormRating] = useState(0);
+  const [formComment, setFormComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -94,13 +101,23 @@ export const ReviewsSection = forwardRef<HTMLElement, ReviewsSectionProps>(funct
     setPage(Math.min(Math.max(nextPage, 1), totalPages));
   };
 
-  const handleSubmitReview = async ({ rating, comment }: { rating: number; comment: string }) => {
+  const handleSubmit = async () => {
+    if (formRating === 0) {
+      setSubmitError("Будь ласка, поставте оцінку");
+      return;
+    }
+    if (!formComment.trim()) {
+      setSubmitError("Будь ласка, напишіть відгук");
+      return;
+    }
+
     setSubmitting(true);
     setSubmitError(null);
 
     try {
-      await createProductReview(productId, { rating, comment });
-      setDialogOpen(false);
+      await createProductReview(productId, { rating: formRating, comment: formComment.trim() });
+      setFormRating(0);
+      setFormComment("");
       void loadReviews();
     } catch {
       setSubmitError("Не вдалося надіслати відгук. Спробуйте пізніше.");
@@ -113,39 +130,84 @@ export const ReviewsSection = forwardRef<HTMLElement, ReviewsSectionProps>(funct
     <section ref={ref} id="product-reviews" className={styles.section}>
       <h2 className={styles.sectionTitle}>Відгуки</h2>
 
-      <Button
-        variant="secondary"
-        fullWidth
-        className={styles.submitButton}
-        disabled={!isAuthenticated}
-        onClick={() => setDialogOpen(true)}
-      >
-        Надіслати відгук
-      </Button>
+      <div className={styles.layout}>
+        <div className={styles.formCol}>
+          <div className={styles.formCard}>
+            <h3 className={styles.formTitle}>
+              {isAuthenticated ? "Залишити відгук" : "Увійдіть, щоб залишити відгук"}
+            </h3>
 
-      {loading ? (
-        <p className={styles.stateText}>Завантаження відгуків...</p>
-      ) : allReviews.length === 0 ? (
-        <p className={styles.stateText}>Ще немає відгуків. Будьте першим!</p>
-      ) : (
-        <div className={styles.list}>
-          {visibleReviews.map((review) => (
-            <ReviewCard review={review} key={review.id} />
-          ))}
+            <div className={styles.formRatingRow}>
+              <span className={styles.formLabel}>Оцінка</span>
+              <StarRating
+                value={formRating}
+                size="md"
+                interactive
+                onChange={isAuthenticated ? setFormRating : undefined}
+              />
+            </div>
+
+            <div className={styles.formField}>
+              <span className={styles.formLabel}>Коментар</span>
+              <textarea
+                className={styles.formTextarea}
+                placeholder="Поділіться враженнями про книгу..."
+                value={formComment}
+                onChange={(e) => setFormComment(e.target.value)}
+                disabled={!isAuthenticated || submitting}
+                rows={5}
+              />
+            </div>
+
+            {submitError ? (
+              <p className={styles.formError}>{submitError}</p>
+            ) : null}
+
+            <Button
+              variant="primary"
+              fullWidth
+              disabled={!isAuthenticated || submitting}
+              onClick={handleSubmit}
+            >
+              {submitting ? "Надсилання..." : "Надіслати відгук"}
+            </Button>
+          </div>
         </div>
-      )}
 
-      {!loading && totalPages > 1 ? (
-        <Pagination currentPage={page} totalPages={totalPages} onPageChange={handlePageChange} />
-      ) : null}
+        <div className={styles.reviewsCol}>
+          {loading ? (
+            <div className={styles.loadingState}>
+              <Spinner />
+              <span className={styles.loadingText}>Завантаження відгуків...</span>
+            </div>
+          ) : allReviews.length === 0 ? (
+            <p className={styles.emptyState}>Ще немає відгуків. Будьте першим!</p>
+          ) : (
+            <>
+              <div className={styles.list}>
+                {visibleReviews.map((review) => (
+                  <ReviewCard review={review} key={review.id} />
+                ))}
+              </div>
 
-      <ReviewSubmitDialog
-        open={dialogOpen}
-        submitting={submitting}
-        error={submitError}
-        onClose={() => setDialogOpen(false)}
-        onSubmit={handleSubmitReview}
-      />
+              {totalPages > 1 ? (
+                <div className={styles.pagination}>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`${styles.pageBtn} ${p === page ? styles.pageBtnActive : ""}`}
+                      onClick={() => handlePageChange(p)}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
+      </div>
     </section>
   );
 });

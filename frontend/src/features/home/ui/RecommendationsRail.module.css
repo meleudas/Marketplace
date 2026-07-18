@@ -34,6 +34,10 @@
   --rail-border: rgb(163 194 224 / 0.24);
 }
 
+.section[data-variant="similar"] .scroller {
+  gap: var(--space-4);
+}
+
 .headerRow {
   display: flex;
   justify-content: space-between;
@@ -91,6 +95,7 @@
 
 .scroller {
   display: flex;
+  align-items: stretch;
   gap: var(--space-12);
   overflow-x: auto;
   padding-bottom: var(--space-4);
@@ -98,12 +103,26 @@
   scroll-snap-type: x proximity;
 }
 
+@media (min-width: 768px) and (max-width: 1023px) {
+  .scroller {
+    align-items: stretch;
+    gap: var(--space-4);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .section[data-variant="similar"] .scroller {
+    gap: 2px;
+  }
+}
+
 .scroller::-webkit-scrollbar {
   display: none;
 }
 
 .cardLink {
-  display: block;
+  display: flex;
+  height: 100%;
   flex: 0 0 auto;
   width: clamp(160px, 42vw, 220px);
   text-decoration: none;
@@ -151,6 +170,7 @@
 
   .scroller {
     display: grid;
+    gap: var(--space-8);
     grid-template-columns: repeat(auto-fill, minmax(var(--product-card-width), 1fr));
     overflow-x: visible;
     scroll-snap-type: none;
@@ -158,6 +178,7 @@
 
   .cardLink {
     width: 100%;
+    height: 100%;
   }
 
   .toggleWrap {

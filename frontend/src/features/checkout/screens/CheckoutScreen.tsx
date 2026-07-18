@@ -297,7 +297,7 @@ export function CheckoutScreen() {
         slug: product?.slug || "",
         author: product?.author || "Невідомий автор",
         stockStatus:
-          product?.availabilityStatus === "InStock" || product?.stock > 0
+          product?.availabilityStatus === "InStock" || (product?.stock ?? 0) > 0
             ? "В наявності"
             : "Немає в наявності",
       };

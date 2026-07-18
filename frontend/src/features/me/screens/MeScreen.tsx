@@ -28,6 +28,7 @@ import {
   getNormalizedStatus,
   getStatusClass,
   getStatusLabel,
+  type OrderStatusClassNames,
 } from "../lib/order-status";
 import styles from "./MeScreen.module.css";
 
@@ -244,7 +245,7 @@ function OrdersSection({ apiOrders }: OrdersSectionProps) {
               </div>
               <div className={styles.orderButtonRight}>
                 <span className={styles.orderButtonPrice}>{order.totalPrice} грн.</span>
-                <span className={`${styles.orderStatusBadge} ${getStatusClass(order.status, styles)}`}>
+                <span className={`${styles.orderStatusBadge} ${getStatusClass(order.status, styles as unknown as OrderStatusClassNames)}`}>
                   {getStatusLabel(order.status)}
                 </span>
               </div>
@@ -479,7 +480,7 @@ export function MeScreen() {
           birthday: user.birthday ? new Date(user.birthday).toISOString().split("T")[0] : prev.birthday,
           gender: prev.gender,
           phone: prev.phone,
-          email: prev.email || user.email,
+          email: prev.email || user.email || "",
         };
       });
     });

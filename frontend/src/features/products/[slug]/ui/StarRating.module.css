@@ -6,13 +6,13 @@
 }
 
 .sm svg {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
 }
 
 .md svg {
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
 }
 
 .starFilled {
@@ -21,4 +21,35 @@
 
 .starEmpty {
   color: #4d4d52;
+}
+
+.starInteractive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: #4d4d52;
+  transition: color 0.1s;
+  border-radius: 2px;
+}
+
+.starInteractive:hover {
+  transform: scale(1.2);
+}
+
+.starInteractive.starFilled {
+  color: #ffc700;
+}
+
+.sm .starInteractive svg {
+  width: 18px;
+  height: 18px;
+}
+
+.md .starInteractive svg {
+  width: 28px;
+  height: 28px;
 }

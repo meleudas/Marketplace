@@ -14,16 +14,88 @@
   color: var(--color-white);
 }
 
-.submitButton {
-  width: 100% !important;
-  max-width: none !important;
+.layout {
+  display: grid;
+  gap: var(--space-16);
 }
 
-.stateText {
+/* ---- Form Column ---- */
+
+.formCol {
+  order: 0;
+}
+
+.formCard {
+  display: grid;
+  gap: var(--space-12);
+  padding: var(--space-16);
+  border-radius: var(--radius-sm);
+  background: #1e1e22;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.formTitle {
   margin: 0;
   font-family: var(--font-primary), sans-serif;
-  font-size: var(--typography-body2-font-size);
-  color: var(--color-neutral-400);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-white);
+}
+
+.formRatingRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.formLabel {
+  font-family: var(--font-primary), sans-serif;
+  font-size: 14px;
+  color: #c0c1c6;
+  flex-shrink: 0;
+}
+
+.formField {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.formTextarea {
+  width: 100%;
+  min-height: 100px;
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  background: #0d0d10;
+  color: var(--color-white);
+  font-family: var(--font-primary), sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.formTextarea:focus {
+  outline: none;
+  border-color: rgba(83, 93, 223, 0.6);
+}
+
+.formTextarea:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.formError {
+  margin: 0;
+  font-family: var(--font-primary), sans-serif;
+  font-size: 13px;
+  color: #ea4335;
+}
+
+/* ---- Reviews Column ---- */
+
+.reviewsCol {
+  order: 1;
 }
 
 .list {
@@ -64,26 +136,103 @@
   color: #80838d;
 }
 
+.commentWrap {
+  position: relative;
+}
+
+.commentCollapsed {
+  max-height: 6em;
+  overflow: hidden;
+}
+
 .comment {
   margin: 0;
   font-family: var(--font-primary), sans-serif;
   font-size: 14px;
   line-height: 1.5;
   color: #c0c1c6;
+  white-space: pre-wrap;
 }
 
-.moreButton {
+.commentFade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2.5em;
+  background: linear-gradient(to bottom, transparent, #2f2f2f);
+  pointer-events: none;
+}
+
+.expandToggle {
   padding: 0;
-  margin-left: 4px;
   border: 0;
   background: transparent;
   font-family: var(--font-primary), sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-primary-light-blue);
+  cursor: pointer;
+  text-align: left;
+}
+
+.expandToggle:hover {
   text-decoration: underline;
+}
+
+.loadingState {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.loadingText {
+  font-family: var(--font-primary), sans-serif;
+  font-size: 14px;
+  color: #80838d;
+}
+
+.emptyState {
+  margin: 0;
+  font-family: var(--font-primary), sans-serif;
+  font-size: var(--typography-body2-font-size);
+  color: var(--color-neutral-400);
+}
+
+.pagination {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: center;
+  margin-top: var(--space-8);
+}
+
+.pageBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--space-4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background: transparent;
+  color: #c0c1c6;
+  font-family: var(--font-primary), sans-serif;
+  font-size: 14px;
   cursor: pointer;
 }
+
+.pageBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pageBtnActive {
+  background: var(--color-primary-blue);
+  color: #ffffff;
+  border-color: var(--color-primary-blue);
+}
+
+/* ---- Desktop: Side by Side ---- */
 
 @media (min-width: 1024px) {
   .section {
@@ -95,6 +244,28 @@
     font-size: 28px;
   }
 
+  .layout {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+    gap: var(--space-24);
+  }
+
+  .formCol {
+    order: 0;
+    position: sticky;
+    top: 100px;
+  }
+
+  .reviewsCol {
+    order: 1;
+  }
+
+  .formCard {
+    padding: var(--space-20) var(--space-24);
+    background: rgb(163 194 224 / 0.06);
+    border: 1px solid rgb(163 194 224 / 0.12);
+  }
+
   .list {
     gap: var(--space-16);
   }
@@ -103,5 +274,9 @@
     padding: var(--space-20) var(--space-24);
     background: rgb(163 194 224 / 0.12);
     border: 1px solid rgb(163 194 224 / 0.18);
+  }
+
+  .commentFade {
+    background: linear-gradient(to bottom, transparent, rgb(163 194 224 / 0.12));
   }
 }

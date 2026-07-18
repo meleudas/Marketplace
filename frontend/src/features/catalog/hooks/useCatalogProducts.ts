@@ -14,7 +14,7 @@ interface UseCatalogProductsParams {
   selectedSubcategorySlug: string | null;
   appliedAuthors: string[];
   appliedCategorySlugs: string[];
-  appliedFormat: string | null;
+  appliedFormat: string[];
   appliedMinPrice: string;
   appliedMaxPrice: string;
   searchQuery: string;
@@ -80,7 +80,7 @@ export function useCatalogProducts({
           minPrice,
           maxPrice,
           authors: appliedAuthors.length > 0 ? appliedAuthors : undefined,
-          format: appliedFormat ?? undefined,
+          format: appliedFormat.length > 0 ? appliedFormat.join(",") : undefined,
           sort: selectedSort,
           page,
           pageSize,

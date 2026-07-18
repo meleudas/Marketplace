@@ -16,6 +16,7 @@ import {
   getNormalizedStatus,
   getStatusClass,
   getStatusLabel,
+  type OrderStatusClassNames,
 } from "../lib/order-status";
 import styles from "./MeScreen.module.css";
 
@@ -180,7 +181,7 @@ export function MeOrdersScreen() {
                     </div>
                     <div className={styles.orderButtonRight}>
                       <span className={styles.orderButtonPrice}>{order.totalPrice} грн.</span>
-                      <span className={`${styles.orderStatusBadge} ${getStatusClass(order.status, styles)}`}>
+                      <span className={`${styles.orderStatusBadge} ${getStatusClass(order.status, styles as unknown as OrderStatusClassNames)}`}>
                         {getStatusLabel(order.status)}
                       </span>
                     </div>

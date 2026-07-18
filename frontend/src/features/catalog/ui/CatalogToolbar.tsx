@@ -11,9 +11,11 @@ interface CatalogToolbarProps {
   sortButtonLabel: string;
   totalCount: number;
   selectedSort: CatalogProductSort;
+  pageSize: number;
   onOpenFilters: () => void;
   onToggleSort: () => void;
   onSelectSort: (sort: CatalogProductSort) => void;
+  onPageSizeChange: (size: number) => void;
 }
 
 export function CatalogToolbar({
@@ -23,9 +25,11 @@ export function CatalogToolbar({
   sortButtonLabel,
   totalCount,
   selectedSort,
+  pageSize,
   onOpenFilters,
   onToggleSort,
   onSelectSort,
+  onPageSizeChange,
 }: CatalogToolbarProps) {
   return (
     <>
@@ -74,7 +78,24 @@ export function CatalogToolbar({
             <p className={styles.resultsCount}>
               Знайдено {totalCount} {totalCount === 1 ? "товар" : "товарів"}
             </p>
-            <CatalogSortDropdown selectedSort={selectedSort} onSelect={onSelectSort} />
+            <div className={styles.desktopToolbarControls}>
+              <label className={styles.pageSizeLabel}>
+                <span className={styles.pageSizeLabelText}>Показати по:</span>
+                <select
+                  className={styles.pageSizeSelect}
+                  value={pageSize}
+                  onChange={(event) => onPageSizeChange(Number(event.target.value))}
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={30}>30</option>
+                  <option value={40}>40</option>
+                  <option value={50}>50</option>
+                </select>
+              </label>
+
+              <CatalogSortDropdown selectedSort={selectedSort} onSelect={onSelectSort} />
+            </div>
           </>
         )}
       </div>

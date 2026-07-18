@@ -14,15 +14,13 @@ import type {
 } from "@/features/storefront/model/catalog.types";
 import { fetchShippingMethods, type ShippingMethodDto } from "@/features/checkout/api/checkout.api";
 import { useCartStore } from "@/features/cart/model/cart.store";
-import { StateBlock } from "@/features/storefront/ui/StateBlock";
 import { apiClient } from "@/shared/api/http.client";
 import {
   Button,
   ChevronDownIcon,
+  FooterCatIllustration,
   InitialsAvatar,
-  OpenBookIcon,
   PageLayout,
-  PhoneIcon,
   QuantityStepper,
   SideDecorShell,
   Spinner,
@@ -31,7 +29,6 @@ import {
 import iconStyles from "@/shared/ui/icons/Icon.module.css";
 import {
   buildProductCharacteristics,
-  formatCompactPrice,
   formatPriceWithUnit,
   getProductAuthor,
   resolveAvailabilityLabel,
@@ -325,10 +322,34 @@ export function ProductDetailsScreen({ slug }: ProductDetailsScreenProps) {
           </div>
         ) : null}
 
-        {!loading && error ? <StateBlock message={error} isError /> : null}
+        {!loading && error ? (
+          <div className={styles.errorState}>
+            <FooterCatIllustration className={styles.errorCat} />
+            <div className={styles.errorBody}>
+              <p className={styles.errorTitle}>Не вдалося завантажити дані про товар</p>
+              <p className={styles.errorText}>
+                Спробуйте оновити сторінку або поверніться до каталогу.
+              </p>
+              <Link href="/catalog" className={styles.errorLink}>
+                До каталогу
+              </Link>
+            </div>
+          </div>
+        ) : null}
 
         {!loading && !error && !productDetails ? (
-          <StateBlock message="Товар не знайдено" />
+          <div className={styles.errorState}>
+            <FooterCatIllustration className={styles.errorCat} />
+            <div className={styles.errorBody}>
+              <p className={styles.errorTitle}>Товар не знайдено</p>
+              <p className={styles.errorText}>
+                Можливо, цю книгу було видалено або вона тимчасово недоступна.
+              </p>
+              <Link href="/catalog" className={styles.errorLink}>
+                До каталогу
+              </Link>
+            </div>
+          </div>
         ) : null}
 
         {!loading && !error && productDetails ? (
@@ -364,14 +385,6 @@ export function ProductDetailsScreen({ slug }: ProductDetailsScreenProps) {
                   alt={productDetails.product.name}
                 />
 
-                <Button
-                  variant="secondary"
-                  fullWidth
-                  leadingIcon={<OpenBookIcon />}
-                  className={styles.previewButton}
-                >
-                  Читати уривок
-                </Button>
               </div>
 
               <div className={styles.heroDetailsCol}>
@@ -418,37 +431,7 @@ export function ProductDetailsScreen({ slug }: ProductDetailsScreenProps) {
                     className={styles.gridQuantityStepper}
                   />
 
-                  <Button
-                    variant="filter"
-                    fullWidth
-                    selectable
-                    selected
-                    leadingIcon={<PhoneIcon />}
-                    className={styles.gridCell}
-                    disabled={!productFormat?.isElectronic && !siblingFormat?.isElectronic}
-                  >
-                    {productFormat?.isElectronic
-                      ? formatCompactPrice(productDetails.product.price)
-                      : siblingFormat?.isElectronic
-                        ? formatCompactPrice(siblingFormat.price)
-                        : "—"}
-                  </Button>
 
-                  <Button
-                    variant="filter"
-                    fullWidth
-                    selectable
-                    selected={false}
-                    leadingIcon={<OpenBookIcon />}
-                    className={styles.gridCell}
-                    disabled={productFormat?.isElectronic && !siblingFormat}
-                  >
-                    {!productFormat?.isElectronic
-                      ? formatCompactPrice(productDetails.product.price)
-                      : siblingFormat
-                        ? formatCompactPrice(siblingFormat.price)
-                        : "—"}
-                  </Button>
                 </div>
 
                 {cartMessage ? (
@@ -460,9 +443,6 @@ export function ProductDetailsScreen({ slug }: ProductDetailsScreenProps) {
                     {cartMessage.text}
                   </p>
                 ) : null}
-
-                <div className={styles.skuBadge}>Артикул {productDetails.product.id}</div>
-
                 {characteristics.length > 0 ? (
                   <section className={styles.desktopCharacteristics}>
                     <h2 className={styles.desktopCharacteristicsTitle}>Характеристики</h2>
@@ -590,23 +570,25 @@ export function ProductDetailsScreen({ slug }: ProductDetailsScreenProps) {
                     {productDetails.product.description}
                   </p>
 
-                  {descriptionExpanded ? (
-                    <button
-                      type="button"
-                      className={styles.expandLink}
-                      onClick={() => setDescriptionExpanded(false)}
-                    >
-                      Згорнути
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className={styles.expandLink}
-                      onClick={() => setDescriptionExpanded(true)}
-                    >
-                      Розгорнути
-                    </button>
-                  )}
+                  {productDetails.product.description.length > 500 ? (
+                    descriptionExpanded ? (
+                      <button
+                        type="button"
+                        className={styles.expandLink}
+                        onClick={() => setDescriptionExpanded(false)}
+                      >
+                        Згорнути
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className={styles.expandLink}
+                        onClick={() => setDescriptionExpanded(true)}
+                      >
+                        Розгорнути
+                      </button>
+                    )
+                  ) : null}
                 </SurfaceCard>
               </div>
             ) : null}
@@ -621,18 +603,21 @@ export function ProductDetailsScreen({ slug }: ProductDetailsScreenProps) {
                   <p className={styles.authorSectionLabel}>Автор</p>
                   <p className={styles.authorSectionName}>{productAuthor}</p>
                 </div>
-                <Link href="/catalog" className={styles.authorSectionLink}>
-                  Дізнатися більше про автора ›
+                <Link
+                  href={`/catalog?authors=${encodeURIComponent(productAuthor)}`}
+                  className={styles.authorSectionLink}
+                >
+                  Інші книги цього автора ›
                 </Link>
               </section>
             ) : null}
-
-            <SimilarProductsSection slug={productDetails.product.slug} />
 
             <ReviewsSection
               ref={reviewsSectionRef}
               productId={productDetails.product.id}
             />
+
+            <SimilarProductsSection slug={productDetails.product.slug} />
           </>
         ) : null}
       </SideDecorShell>

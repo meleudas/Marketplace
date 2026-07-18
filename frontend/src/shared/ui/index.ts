@@ -44,8 +44,9 @@ export {
   TrashIcon,
   UserIcon,
   ViberIcon,
+  GoogleIcon,
 } from "./icons";
-export type { BookTopLogoProps, IconProps } from "./icons";
+export type { BookTopLogoProps, GoogleIconProps, IconProps } from "./icons";
 export { IconButton } from "./IconButton";
 export { TextField } from "./TextField";
 export type { TextFieldKind, TextFieldProps } from "./TextField";
@@ -67,6 +68,7 @@ export type { SurfaceCardProps } from "./SurfaceCard/SurfaceCard";
 export { PageLayout } from "./PageLayout";
 export { PageBackground } from "./PageBackground";
 export { SideDecorShell } from "./SideDecor";
+export { FooterCatIllustration } from "./icons";
 export { Spinner } from "./Spinner";
 export type { SpinnerProps, SpinnerSize } from "./Spinner";
 export { CatalogMenu } from "./CatalogMenu";

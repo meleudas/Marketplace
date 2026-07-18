@@ -11,7 +11,7 @@ interface SimilarProductsSectionProps {
   slug: string;
 }
 
-const SIMILAR_PRODUCTS_LIMIT = 15;
+const SIMILAR_PRODUCTS_LIMIT = 6;
 
 export function SimilarProductsSection({ slug }: SimilarProductsSectionProps) {
   const [items, setItems] = useState<ProductRailCard[]>([]);
@@ -26,7 +26,7 @@ export function SimilarProductsSection({ slug }: SimilarProductsSectionProps) {
       try {
         const products = await getSimilarProductsBySlug(slug, SIMILAR_PRODUCTS_LIMIT);
         if (!isCancelled) {
-          setItems(products.map(mapProductToRailCard));
+          setItems(products.slice(0, SIMILAR_PRODUCTS_LIMIT).map(mapProductToRailCard));
         }
       } catch {
         if (!isCancelled) {

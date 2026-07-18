@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import {
-  DEFAULT_CATALOG_MAX_PRICE,
-  DEFAULT_CATALOG_MIN_PRICE,
   FORMAT_FILTER_OPTIONS,
 } from "@/features/catalog/lib/catalog-filter-options";
 import { getChildCategories } from "@/features/storefront/lib/catalog-category-filter";
@@ -24,7 +22,7 @@ interface CatalogFilterSidebarProps {
   authorsLoading: boolean;
   appliedCategorySlugs: string[];
   appliedAuthors: string[];
-  appliedFormat: string | null;
+  appliedFormat: string[];
   appliedMinPrice: string;
   appliedMaxPrice: string;
   onToggleRootCategory: (slug: string) => void;
@@ -67,21 +65,22 @@ export function CatalogFilterSidebar({
   );
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [showAllAuthors, setShowAllAuthors] = useState(false);
-  const [minPriceInput, setMinPriceInput] = useState(appliedMinPrice || DEFAULT_CATALOG_MIN_PRICE);
-  const [maxPriceInput, setMaxPriceInput] = useState(appliedMaxPrice || DEFAULT_CATALOG_MAX_PRICE);
+  const [minPriceInput, setMinPriceInput] = useState(appliedMinPrice);
+  const [maxPriceInput, setMaxPriceInput] = useState(appliedMaxPrice);
   const [prevAppliedMinPrice, setPrevAppliedMinPrice] = useState(appliedMinPrice);
   const [prevAppliedMaxPrice, setPrevAppliedMaxPrice] = useState(appliedMaxPrice);
+  const [authorSearch, setAuthorSearch] = useState("");
 
   // Keep the local price draft in sync when the applied range changes externally
   // (e.g. "Очистити"), without introducing an effect-driven render cascade.
   if (appliedMinPrice !== prevAppliedMinPrice) {
     setPrevAppliedMinPrice(appliedMinPrice);
-    setMinPriceInput(appliedMinPrice || DEFAULT_CATALOG_MIN_PRICE);
+    setMinPriceInput(appliedMinPrice);
   }
 
   if (appliedMaxPrice !== prevAppliedMaxPrice) {
     setPrevAppliedMaxPrice(appliedMaxPrice);
-    setMaxPriceInput(appliedMaxPrice || DEFAULT_CATALOG_MAX_PRICE);
+    setMaxPriceInput(appliedMaxPrice);
   }
 
   const toggleSection = (key: SidebarSectionKey) => {
@@ -99,25 +98,23 @@ export function CatalogFilterSidebar({
   const hasActiveFilters =
     appliedCategorySlugs.length > 0 ||
     appliedAuthors.length > 0 ||
-    Boolean(appliedFormat) ||
+    appliedFormat.length > 0 ||
     Boolean(appliedMinPrice) ||
     Boolean(appliedMaxPrice);
 
   const displayedRootCategories = showAllCategories
     ? rootCategories
     : rootCategories.slice(0, CATEGORY_PREVIEW_LIMIT);
+  const filteredAuthorOptions = authorSearch
+    ? authorOptions.filter((option) =>
+        option.label.toLowerCase().includes(authorSearch.toLowerCase()),
+      )
+    : authorOptions;
   const displayedAuthorOptions = showAllAuthors
-    ? authorOptions
-    : authorOptions.slice(0, AUTHOR_PREVIEW_LIMIT);
+    ? filteredAuthorOptions
+    : filteredAuthorOptions.slice(0, AUTHOR_PREVIEW_LIMIT);
 
-  const shouldShowSubcategories = (rootCategory: CatalogCategoryDto): boolean => {
-    const childSlugs = getChildCategories(categories, rootCategory.id).map((child) => child.slug);
 
-    return (
-      appliedCategorySlugs.includes(rootCategory.slug) ||
-      childSlugs.some((slug) => appliedCategorySlugs.includes(slug))
-    );
-  };
 
   return (
     <aside className={styles.sidebar} aria-label="Фільтри каталогу">
@@ -154,7 +151,7 @@ export function CatalogFilterSidebar({
                     onCheckedChange={() => onToggleRootCategory(category.slug)}
                   />
 
-                  {shouldShowSubcategories(category) && subcategories.length > 0 ? (
+                  {subcategories.length > 0 ? (
                     <div className={styles.sidebarSubcategoryList}>
                       {subcategories.map((subcategory) => (
                         <Checkbox
@@ -198,17 +195,30 @@ export function CatalogFilterSidebar({
           <div className={styles.sidebarSectionBody}>
             {authorsLoading ? (
               <p className={styles.filterLoadingText}>Завантаження авторів...</p>
-            ) : displayedAuthorOptions.length > 0 ? (
-              displayedAuthorOptions.map((option) => (
-                <Checkbox
-                  key={option.value}
-                  label={`${option.label} (${option.count})`}
-                  checked={appliedAuthors.includes(option.value)}
-                  onCheckedChange={() => onToggleAuthor(option.value)}
-                />
-              ))
             ) : (
-              <p className={styles.filterLoadingText}>Авторів не знайдено</p>
+              <>
+                <div className={styles.authorSearchWrapper}>
+                  <input
+                    className={styles.authorSearchInput}
+                    type="text"
+                    placeholder="Пошук авторів..."
+                    value={authorSearch}
+                    onChange={(event) => setAuthorSearch(event.target.value)}
+                  />
+                </div>
+                {displayedAuthorOptions.length > 0 ? (
+                  displayedAuthorOptions.map((option) => (
+                    <Checkbox
+                      key={option.value}
+                      label={`${option.label} (${option.count})`}
+                      checked={appliedAuthors.includes(option.value)}
+                      onCheckedChange={() => onToggleAuthor(option.value)}
+                    />
+                  ))
+                ) : (
+                  <p className={styles.filterLoadingText}>Авторів не знайдено</p>
+                )}
+              </>
             )}
 
             {authorOptions.length > AUTHOR_PREVIEW_LIMIT ? (
@@ -241,7 +251,7 @@ export function CatalogFilterSidebar({
               <Checkbox
                 key={option.value}
                 label={option.label}
-                checked={appliedFormat === option.value}
+                checked={appliedFormat.includes(option.value)}
                 onCheckedChange={() => onToggleFormat(option.value)}
               />
             ))}
@@ -268,6 +278,7 @@ export function CatalogFilterSidebar({
                 <input
                   className={styles.sidebarPriceInput}
                   inputMode="numeric"
+                  placeholder="Від"
                   value={minPriceInput}
                   onChange={(event) => setMinPriceInput(event.target.value)}
                 />
@@ -277,6 +288,7 @@ export function CatalogFilterSidebar({
                 <input
                   className={styles.sidebarPriceInput}
                   inputMode="numeric"
+                  placeholder="До"
                   value={maxPriceInput}
                   onChange={(event) => setMaxPriceInput(event.target.value)}
                 />
