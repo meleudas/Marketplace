@@ -150,7 +150,7 @@ export function CheckoutScreen() {
 
   useEffect(() => {
     if (initialized && !isAuthenticated) {
-      router.push("/auth?redirect=/checkout");
+      router.push("/auth/login?redirect=/checkout");
       return;
     }
     if (isAuthenticated) {
@@ -520,7 +520,7 @@ export function CheckoutScreen() {
                 <button
                   type="button"
                   className={styles.pinkBtn}
-                  onClick={() => router.push("/auth?redirect=/checkout")}
+                  onClick={() => router.push("/auth/login?redirect=/checkout")}
                 >
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <path

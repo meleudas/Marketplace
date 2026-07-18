@@ -45,7 +45,7 @@ export function StorefrontLayout({ title, children }: StorefrontLayoutProps) {
               Profile
             </Link>
           ) : (
-            <Link href="/auth" className={styles.link}>
+            <Link href="/auth/login" className={styles.link}>
               Sign in
             </Link>
           )}

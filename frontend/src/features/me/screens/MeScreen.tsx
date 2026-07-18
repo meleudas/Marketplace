@@ -697,7 +697,7 @@ export function MeScreen() {
             <h1 className={styles.authTitle}>Профіль</h1>
             <p className={styles.authSubtitle}>Увійдіть, щоб переглянути свій профіль</p>
             <div className={styles.authActions}>
-              <Link href="/auth" className={styles.signInButton}>
+              <Link href="/auth/login" className={styles.signInButton}>
                 Увійти
               </Link>
               <Link href="/" className={styles.backButton}>

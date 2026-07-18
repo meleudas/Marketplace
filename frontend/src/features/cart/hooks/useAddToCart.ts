@@ -53,7 +53,7 @@ export function useAddToCart() {
 
         if (status === 401) {
           const redirect = encodeURIComponent(pathname || "/");
-          router.push(`/auth?redirect=${redirect}`);
+          router.push(`/auth/login?redirect=${redirect}`);
           return;
         }
 

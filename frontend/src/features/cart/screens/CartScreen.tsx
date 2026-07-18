@@ -469,7 +469,7 @@ export function CartScreen() {
                   <span className={styles.totalsAmount}>{formatCartPrice(totalAmount)}грн</span>
                 </div>
                 <Link
-                  href={isAuthenticated ? "/checkout" : "/auth?redirect=/checkout"}
+                  href={isAuthenticated ? "/checkout" : "/auth/login?redirect=/checkout"}
                   className={styles.ctaBtn}
                 >
                   Оформити замовлення

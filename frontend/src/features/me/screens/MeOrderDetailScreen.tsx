@@ -88,7 +88,7 @@ export function MeOrderDetailScreen({ orderId }: MeOrderDetailScreenProps) {
             <h1 className={styles.authTitle}>Профіль</h1>
             <p className={styles.authSubtitle}>Увійдіть, щоб переглянути замовлення</p>
             <div className={styles.authActions}>
-              <Link href="/auth" className={styles.signInButton}>
+              <Link href="/auth/login" className={styles.signInButton}>
                 Увійти
               </Link>
               <Link href="/" className={styles.backButton}>
