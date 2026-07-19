@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { clearAuthState, loginViaUi } from "../fixtures/auth.fixture";
-import { getVerifiedTestCredentials } from "../fixtures/api.helper";
+import {
+  clearAuthState,
+  loginViaUi,
+  openAuthenticatedSession,
+} from "../fixtures/auth.fixture";
+import { getVerifiedTestCredentials, loginUserViaApi } from "../fixtures/api.helper";
 import { skipIfBackendAuthUnavailable } from "../fixtures/backend.helper";
 import {
   clearAuthenticatedCart,
@@ -68,11 +72,9 @@ test.describe("Add to cart from product details", () => {
 
     await clearAuthState(page);
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUi(page, credentials);
-
-    const accessToken = await page.evaluate(() => window.localStorage.getItem("accessToken"));
-    expect(accessToken).toBeTruthy();
-    await clearAuthenticatedCart(request, accessToken!);
+    const tokens = await loginUserViaApi(credentials.email, credentials.password);
+    await openAuthenticatedSession(page, tokens.accessToken);
+    await clearAuthenticatedCart(request, tokens.accessToken);
     await page.goto("/");
     await expect(page.getByTestId("header-cart-badge")).toHaveCount(0);
   });
@@ -123,14 +125,11 @@ test.describe("Guest cart merge on login", () => {
   test.beforeEach(async ({ page, request }) => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
-    // Clear the account cart first, then return to a guest session.
+    // Clear the account cart first (API auth), then return to a guest session.
     await clearAuthState(page);
     const credentials = await getVerifiedTestCredentials();
-    await loginViaUi(page, credentials);
-
-    const accessToken = await page.evaluate(() => window.localStorage.getItem("accessToken"));
-    expect(accessToken).toBeTruthy();
-    await clearAuthenticatedCart(request, accessToken!);
+    const tokens = await loginUserViaApi(credentials.email, credentials.password);
+    await clearAuthenticatedCart(request, tokens.accessToken);
     await clearAuthState(page);
   });
 

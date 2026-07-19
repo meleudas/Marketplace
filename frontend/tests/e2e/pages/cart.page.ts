@@ -1,5 +1,9 @@
 import { expect, type Locator, type Page } from "@playwright/test";
-import { formatExpectedCartPrice, type CartProductFixture } from "../fixtures/cart.fixture";
+import {
+  formatExpectedCartPrice,
+  getCatalogProductUnitPriceBySlug,
+  type CartProductFixture,
+} from "../fixtures/cart.fixture";
 
 export class CartPage {
   readonly page: Page;
@@ -89,10 +93,8 @@ export class CatalogCartActions {
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText(name, { exact: true })).toBeVisible();
 
-    const dialogPriceText = (
-      await dialog.getByTestId("add-to-cart-dialog-product-price").innerText()
-    ).trim();
-    const price = Number(dialogPriceText.replace(/[^\d]/g, ""));
+    // Dialog rounds display price; cart line totals use exact API unit price.
+    const price = await getCatalogProductUnitPriceBySlug(this.page.request, slug);
     expect(price).toBeGreaterThan(0);
 
     return {

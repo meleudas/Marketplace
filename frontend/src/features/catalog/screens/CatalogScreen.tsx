@@ -60,9 +60,7 @@ export function CatalogScreen({ categorySlug, initialQuery = {} }: CatalogScreen
   const pendingScrollY = useRef<number | null>(null);
   const [pageSize, setPageSize] = useState(urlParams.pageSize);
   const urlSyncReadyRef = useRef(false);
-  const handleProductsLoadComplete = useCallback(() => {
-    setFilterUpdatePending(false);
-  }, [setFilterUpdatePending]);
+  const desiredCatalogUrlRef = useRef<string>("");
 
   const filters = useCatalogFilters({
     categories,
@@ -112,6 +110,52 @@ export function CatalogScreen({ categorySlug, initialQuery = {} }: CatalogScreen
     resetAppliedFilters,
     hydrateAppliedFilters,
   } = filters;
+
+  const buildDesiredCatalogUrl = useCallback(
+    () =>
+      buildCatalogUrl(categorySlug, {
+        authors: appliedAuthors,
+        categories: appliedCategorySlugs,
+        format: appliedFormat,
+        minPrice: appliedMinPrice,
+        maxPrice: appliedMaxPrice,
+        page,
+        searchQuery,
+        selectedSort,
+        pageSize,
+      }),
+    [
+      appliedAuthors,
+      appliedCategorySlugs,
+      appliedFormat,
+      appliedMinPrice,
+      appliedMaxPrice,
+      page,
+      searchQuery,
+      selectedSort,
+      pageSize,
+      categorySlug,
+    ],
+  );
+
+  const handleProductsLoadComplete = useCallback(() => {
+    setFilterUpdatePending(false);
+    // Next.js App Router can overwrite history.replaceState after data fetches;
+    // re-apply the desired catalog query so Playwright/shareable URLs stay in sync.
+    if (!urlSyncReadyRef.current) {
+      return;
+    }
+
+    const desiredUrl = desiredCatalogUrlRef.current;
+    if (!desiredUrl) {
+      return;
+    }
+
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+    if (currentUrl !== desiredUrl) {
+      replaceCatalogUrlShallow(desiredUrl);
+    }
+  }, [setFilterUpdatePending]);
 
   // Sync format when header catalog menu navigates. Ignore echoes of our own shallow URL writes
   // by only reacting when the header key changes; keep the route category selected.
@@ -213,37 +257,24 @@ export function CatalogScreen({ categorySlug, initialQuery = {} }: CatalogScreen
   }, [filtersOpen, sortModalOpen]);
 
   useEffect(() => {
-    urlSyncReadyRef.current = true;
-  }, []);
+    const desiredUrl = buildDesiredCatalogUrl();
+    desiredCatalogUrlRef.current = desiredUrl;
+
+    if (!urlSyncReadyRef.current) {
+      return;
+    }
+
+    replaceCatalogUrlShallow(desiredUrl);
+  }, [buildDesiredCatalogUrl]);
 
   useEffect(() => {
-    if (!urlSyncReadyRef.current) return;
-
-    replaceCatalogUrlShallow(
-      buildCatalogUrl(categorySlug, {
-        authors: appliedAuthors,
-        categories: appliedCategorySlugs,
-        format: appliedFormat,
-        minPrice: appliedMinPrice,
-        maxPrice: appliedMaxPrice,
-        page,
-        searchQuery,
-        selectedSort,
-        pageSize,
-      }),
-    );
-  }, [
-    appliedAuthors,
-    appliedCategorySlugs,
-    appliedFormat,
-    appliedMinPrice,
-    appliedMaxPrice,
-    page,
-    searchQuery,
-    selectedSort,
-    pageSize,
-    categorySlug,
-  ]);
+    urlSyncReadyRef.current = true;
+    const desiredUrl = desiredCatalogUrlRef.current || buildDesiredCatalogUrl();
+    desiredCatalogUrlRef.current = desiredUrl;
+    replaceCatalogUrlShallow(desiredUrl);
+    // Intentionally run once after mount so the first real state write is not skipped.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only bootstrap for shallow URL sync
+  }, []);
 
   const sortButtonLabel = getCatalogProductSortLabel(selectedSort);
   const filterControlsDisabled = filterUpdatePending || productsLoading;

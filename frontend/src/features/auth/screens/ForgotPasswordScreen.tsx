@@ -113,7 +113,7 @@ export function ForgotPasswordScreen() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
+          <form onSubmit={handleSubmit(onSubmit)} className={styles.form} noValidate>
             <TextField
               id="forgot-email"
               label="Ел. пошта"

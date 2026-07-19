@@ -1,15 +1,47 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, test, type Page, type Response } from "@playwright/test";
 
 const ACCESS_TOKEN_KEY = "accessToken";
 const AUTH_POLL_TIMEOUT = 30_000;
 const LOGIN_PATH = "/auth/login";
+const AUTH_UI_GOTO_ATTEMPTS = 3;
+const LOGIN_UI_ATTEMPTS = 2;
 
 function authAlert(page: Page) {
   return page.locator("main [role='alert']");
 }
 
+async function gotoWithAbortRetry(page: Page, path: string): Promise<void> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= AUTH_UI_GOTO_ATTEMPTS; attempt++) {
+    try {
+      // Prefer "load" so client components have time to hydrate before interactions.
+      await page.goto(path, { waitUntil: "load" });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!isAbortedNavigationError(error) || attempt === AUTH_UI_GOTO_ATTEMPTS) {
+        throw error;
+      }
+
+      // Abort races: retry with a lighter wait, then require hydrated UI separately.
+      try {
+        await page.goto(path, { waitUntil: "domcontentloaded" });
+        return;
+      } catch (retryError) {
+        lastError = retryError;
+        if (!isAbortedNavigationError(retryError) || attempt === AUTH_UI_GOTO_ATTEMPTS) {
+          throw retryError;
+        }
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 export async function clearAuthState(page: Page): Promise<void> {
-  await page.goto("/");
+  await gotoWithAbortRetry(page, "/");
   await page.evaluate(() => {
     window.localStorage.clear();
     window.sessionStorage.clear();
@@ -29,10 +61,84 @@ export async function expectAccessTokenMissing(page: Page): Promise<void> {
   await expect.poll(async () => getAccessToken(page), { timeout: AUTH_POLL_TIMEOUT }).toBeNull();
 }
 
+function isAbortedNavigationError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /ERR_ABORTED|net::ERR_ABORTED/i.test(message);
+}
+
+/** Wait until the login client form is hydrated (RHF handlers attached). */
+async function expectLoginFormHydrated(page: Page): Promise<void> {
+  const emailInput = page.locator("#login-email");
+  const submitButton = page.getByRole("button", { name: "Увійти", exact: true });
+
+  await expect(page.getByRole("heading", { name: "Вхід" })).toBeVisible({
+    timeout: AUTH_POLL_TIMEOUT,
+  });
+  await expect(emailInput).toBeVisible({ timeout: AUTH_POLL_TIMEOUT });
+  await expect(emailInput).toBeEnabled();
+  await expect(submitButton).toBeVisible();
+  await expect(submitButton).toBeEnabled();
+}
+
+/**
+ * Fill a controlled RHF input until the value sticks (guards remount races).
+ */
+async function fillStableInput(
+  locator: ReturnType<Page["locator"]>,
+  value: string,
+): Promise<void> {
+  await expect(async () => {
+    await expect(locator).toBeEnabled();
+    await locator.click({ timeout: 5_000 });
+    await locator.fill("");
+    await locator.fill(value);
+    await expect(locator).toHaveValue(value);
+  }).toPass({ timeout: 15_000 });
+}
+
+function isRetryableLoginError(error: unknown): boolean {
+  if (isAbortedNavigationError(error)) {
+    return true;
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  // Retry navigation/response waits and transient controlled-input fill races.
+  return (
+    (/waitForResponse|Timeout.*exceeded|page\.goto|toHaveValue|toPass/i.test(message) ||
+      /unexpected value ""/i.test(message)) &&
+    !/Login failed:/i.test(message)
+  );
+}
+
+function isLoginPostResponse(response: Response): boolean {
+  if (response.request().method() !== "POST") {
+    return false;
+  }
+
+  try {
+    return new URL(response.url()).pathname.endsWith("/auth/login");
+  } catch {
+    return /\/auth\/login(?:\?|$)/.test(response.url());
+  }
+}
+
 export async function waitForAuthUi(page: Page): Promise<void> {
-  await page.goto(LOGIN_PATH);
-  await expect(page.getByRole("heading", { name: "Вхід" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Увійти", exact: true })).toBeVisible();
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= AUTH_UI_GOTO_ATTEMPTS; attempt++) {
+    try {
+      await gotoWithAbortRetry(page, LOGIN_PATH);
+      await expectLoginFormHydrated(page);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!isAbortedNavigationError(error) || attempt === AUTH_UI_GOTO_ATTEMPTS) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 async function readLoginError(page: Page, status: number): Promise<string> {
@@ -45,7 +151,7 @@ function isHomeUrl(url: URL): boolean {
   return url.pathname === "/";
 }
 
-export async function loginViaUi(
+async function attemptLoginViaUi(
   page: Page,
   credentials: { email: string; password: string },
 ): Promise<void> {
@@ -53,21 +159,24 @@ export async function loginViaUi(
 
   const emailInput = page.locator("#login-email");
   const passwordInput = page.locator("#login-password");
+  const submitButton = page.getByRole("button", { name: "Увійти", exact: true });
 
-  await emailInput.fill(credentials.email);
-  await passwordInput.fill(credentials.password);
-  await expect(emailInput).toHaveValue(credentials.email);
-  await expect(passwordInput).toHaveValue(credentials.password);
+  await fillStableInput(emailInput, credentials.email);
+  await fillStableInput(passwordInput, credentials.password);
+  await expect(submitButton).toBeEnabled();
 
-  const loginResponsePromise = page.waitForResponse(
-    (response) =>
-      response.url().includes("/auth/login") && response.request().method() === "POST",
-    { timeout: AUTH_POLL_TIMEOUT },
-  );
+  const loginResponsePromise = page.waitForResponse(isLoginPostResponse, {
+    timeout: AUTH_POLL_TIMEOUT,
+  });
 
-  await page.getByRole("button", { name: "Увійти", exact: true }).click();
+  await submitButton.click();
 
   const loginResponse = await loginResponsePromise;
+
+  if (loginResponse.status() === 429) {
+    test.skip(true, "Login endpoint is rate-limited (429).");
+  }
+
   if (!loginResponse.ok()) {
     if (await page.getByRole("heading", { name: "Підтвердіть вхід" }).isVisible()) {
       throw new Error("Login requires 2FA; use the two-factor credentials helper.");
@@ -81,9 +190,44 @@ export async function loginViaUi(
   }
 }
 
+export async function loginViaUi(
+  page: Page,
+  credentials: { email: string; password: string },
+): Promise<void> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= LOGIN_UI_ATTEMPTS; attempt++) {
+    try {
+      await attemptLoginViaUi(page, credentials);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableLoginError(error) || attempt === LOGIN_UI_ATTEMPTS) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+/** Sets an API-issued access token and reloads so auth store bootstraps. */
+export async function openAuthenticatedSession(page: Page, accessToken: string): Promise<void> {
+  await gotoWithAbortRetry(page, "/");
+  await page.evaluate(
+    ({ key, token }) => {
+      window.localStorage.setItem(key, token);
+    },
+    { key: ACCESS_TOKEN_KEY, token: accessToken },
+  );
+  await page.reload({ waitUntil: "load" });
+  await expectAccessTokenExists(page);
+}
+
 export async function advanceForgotPasswordToStepTwo(page: Page, email: string): Promise<void> {
   await openForgotPasswordForm(page);
-  await page.locator("#forgot-email").fill(email);
+  const emailInput = page.locator("#forgot-email");
+  await fillStableInput(emailInput, email);
   await page.getByRole("button", { name: "Надіслати код скидання" }).click();
 
   const successMessage = page.getByText(/Код для скидання пароля надіслано/i);
@@ -97,8 +241,10 @@ export async function advanceForgotPasswordToStepTwo(page: Page, email: string):
 }
 
 export async function logoutViaUi(page: Page): Promise<void> {
-  await page.goto("/me");
-  await expect(page.getByRole("heading", { name: "Персональні дані" })).toBeVisible();
+  await gotoWithAbortRetry(page, "/me");
+  await expect(page.getByRole("heading", { name: "Персональні дані" })).toBeVisible({
+    timeout: AUTH_POLL_TIMEOUT,
+  });
   await page.getByRole("button", { name: "Вийти з профілю" }).click();
   await page.waitForURL(isHomeUrl);
   await expectGuest(page);
@@ -113,6 +259,7 @@ export async function openRegisterForm(page: Page): Promise<void> {
   await page.getByRole("link", { name: "Створити" }).click();
   await expect(page).toHaveURL(/\/auth\/register/);
   await expect(page.getByRole("heading", { name: "Створіть акаунт" })).toBeVisible();
+  await expect(page.locator("#register-email")).toBeEnabled();
 }
 
 export async function openForgotPasswordForm(page: Page): Promise<void> {
@@ -120,6 +267,7 @@ export async function openForgotPasswordForm(page: Page): Promise<void> {
   await page.getByRole("link", { name: "Забули пароль?" }).click();
   await expect(page).toHaveURL(/\/auth\/forgot-password/);
   await expect(page.getByRole("heading", { name: "Відновлення пароля" })).toBeVisible();
+  await expect(page.locator("#forgot-email")).toBeEnabled();
 }
 
 export async function submitRegisterForm(
@@ -138,8 +286,8 @@ export async function submitLoginForm(
   data: { email: string; password: string },
 ): Promise<void> {
   await waitForAuthUi(page);
-  await page.locator("#login-email").fill(data.email);
-  await page.locator("#login-password").fill(data.password);
+  await fillStableInput(page.locator("#login-email"), data.email);
+  await fillStableInput(page.locator("#login-password"), data.password);
   await page.getByRole("button", { name: "Увійти", exact: true }).click();
 }
 

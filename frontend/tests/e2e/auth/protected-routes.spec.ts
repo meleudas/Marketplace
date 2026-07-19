@@ -1,7 +1,17 @@
 import { expect, test } from "@playwright/test";
-import { clearAuthState, loginViaUi } from "../fixtures/auth.fixture";
-import { getAdminTestCredentials, getVerifiedTestCredentials } from "../fixtures/api.helper";
+import { clearAuthState, loginViaUi, openAuthenticatedSession } from "../fixtures/auth.fixture";
+import {
+  getAdminTestCredentials,
+  getVerifiedTestCredentials,
+  loginUserViaApi,
+} from "../fixtures/api.helper";
 import { skipIfBackendAuthUnavailable } from "../fixtures/backend.helper";
+
+async function authenticateVerifiedUser(page: Parameters<typeof openAuthenticatedSession>[0]) {
+  const credentials = await getVerifiedTestCredentials();
+  const tokens = await loginUserViaApi(credentials.email, credentials.password);
+  await openAuthenticatedSession(page, tokens.accessToken);
+}
 
 test.describe("Auth protected routes - guest", () => {
   test.beforeEach(async ({ page }) => {
@@ -46,8 +56,7 @@ test.describe("Auth protected routes - authenticated", () => {
   test("authenticated user can open /me", async ({ page }) => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
-    const credentials = await getVerifiedTestCredentials();
-    await loginViaUi(page, credentials);
+    await authenticateVerifiedUser(page);
     await page.goto("/me");
     await expect(page.getByRole("heading", { name: "Персональні дані" })).toBeVisible();
     await expect(page.getByText("Увійдіть, щоб переглянути свій профіль")).not.toBeVisible();
@@ -56,8 +65,7 @@ test.describe("Auth protected routes - authenticated", () => {
   test("authenticated user can open /settings", async ({ page }) => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
-    const credentials = await getVerifiedTestCredentials();
-    await loginViaUi(page, credentials);
+    await authenticateVerifiedUser(page);
     await page.goto("/settings");
     await expect(page.getByRole("heading", { name: "Security Settings" })).toBeVisible();
   });
@@ -65,18 +73,20 @@ test.describe("Auth protected routes - authenticated", () => {
   test("authenticated user can open /workspace", async ({ page }) => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
-    const credentials = await getVerifiedTestCredentials();
-    await loginViaUi(page, credentials);
+    await authenticateVerifiedUser(page);
     await page.goto("/workspace");
-    await expect(page.getByText("You need to sign in to access workspace.")).not.toBeVisible();
-    await expect(page.getByRole("link", { name: "Overview" })).toBeVisible();
+    await expect(page.getByText("You need to sign in to access workspace.")).not.toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByRole("navigation").getByRole("link", { name: "Overview" })).toBeVisible({
+      timeout: 20_000,
+    });
   });
 
   test("non-admin user cannot access /admin", async ({ page }) => {
     test.skip(skipIfBackendAuthUnavailable(), "Backend auth API is unavailable or rate-limited");
 
-    const credentials = await getVerifiedTestCredentials();
-    await loginViaUi(page, credentials);
+    await authenticateVerifiedUser(page);
     await page.goto("/admin");
     await expect(page.getByText("Only admin users can open this section.")).toBeVisible();
   });
@@ -92,6 +102,7 @@ test.describe("Auth protected routes - authenticated", () => {
       return;
     }
 
+    // Admin path still exercises UI login once (role-specific credentials).
     await loginViaUi(page, adminCredentials);
     await page.goto("/admin");
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();

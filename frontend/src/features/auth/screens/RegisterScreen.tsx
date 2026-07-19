@@ -69,7 +69,7 @@ export function RegisterScreen() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
+          <form onSubmit={handleSubmit(onSubmit)} className={styles.form} noValidate>
             <TextField
               id="register-userName"
               label="Ім'я користувача"

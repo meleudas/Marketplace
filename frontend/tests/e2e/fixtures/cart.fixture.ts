@@ -58,6 +58,29 @@ export async function getInStockCatalogProduct(
   };
 }
 
+interface CatalogProductDetailResponse {
+  product?: { id: number; price: number; name?: string; slug?: string };
+  price?: number;
+}
+
+/** Exact unit price from catalog API (not UI-rounded display text). */
+export async function getCatalogProductUnitPriceBySlug(
+  request: APIRequestContext,
+  slug: string,
+): Promise<number> {
+  const payload = (await getJson(
+    request,
+    `/catalog/products/${encodeURIComponent(slug)}`,
+  )) as CatalogProductDetailResponse;
+
+  const price = payload.product?.price ?? payload.price;
+  if (typeof price !== "number" || !Number.isFinite(price) || price <= 0) {
+    throw new Error(`Catalog product "${slug}" did not return a valid unit price.`);
+  }
+
+  return price;
+}
+
 export async function clearAuthenticatedCart(
   request: APIRequestContext,
   accessToken: string,
