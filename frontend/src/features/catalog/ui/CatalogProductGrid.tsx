@@ -5,7 +5,7 @@ import { useAddToCart } from "@/features/cart/hooks/useAddToCart";
 import { AddToCartDialog } from "@/features/cart/ui/AddToCartDialog";
 import { mapCatalogProductToCardData } from "@/features/storefront/lib/map-catalog-product-to-card";
 import type { CatalogProductListItemDto } from "@/features/storefront/model/catalog.types";
-import { Pagination, ProductCard, ProductCardSkeleton } from "@/shared/ui";
+import { Pagination, ProductCard, ProductCardSkeleton, Spinner } from "@/shared/ui";
 import styles from "../screens/CatalogScreen.module.css";
 
 interface CatalogProductGridProps {
@@ -41,10 +41,10 @@ export function CatalogProductGrid({
         ))}
       </div>
     );
-  } else if (refreshing) {
-    content = null;
   } else if (!error && products.length === 0) {
-    content = (
+    content = refreshing ? (
+      <div className={styles.catalogRefreshEmpty} aria-hidden="true" />
+    ) : (
       <p className={styles.emptyState} role="status">
         Товарів за обраними фільтрами не знайдено
       </p>
@@ -54,7 +54,12 @@ export function CatalogProductGrid({
   } else {
     content = (
       <>
-        <div className={styles.productGrid}>
+        <div
+          className={[styles.productGrid, refreshing ? styles.productGridRefreshing : ""]
+            .filter(Boolean)
+            .join(" ")}
+          aria-busy={refreshing || undefined}
+        >
           {products.map((product) => (
             <div key={product.id} className={styles.cardLink}>
               <ProductCard
@@ -81,13 +86,18 @@ export function CatalogProductGrid({
   }
 
   return (
-    <>
+    <div className={styles.catalogResults}>
       {content}
+      {refreshing ? (
+        <div className={styles.catalogRefreshOverlay} role="status" aria-live="polite">
+          <Spinner size="lg" aria-label="Застосування фільтрів" />
+        </div>
+      ) : null}
       <AddToCartDialog
         open={addedProduct !== null}
         product={addedProduct}
         onClose={dismissAddedDialog}
       />
-    </>
+    </div>
   );
 }

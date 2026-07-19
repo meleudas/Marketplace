@@ -168,9 +168,9 @@ export function MicrophoneIcon(props: IconProps) {
   );
 }
 
-export function SearchIcon(props: IconProps) {
+export function SearchIcon({ width = 24, height = 24, ...props }: IconProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden {...props}>
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden {...props} width={width} height={height}>
       <path
         fillRule="evenodd"
         clipRule="evenodd"

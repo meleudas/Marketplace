@@ -51,26 +51,34 @@ export async function loginViaUi(
 ): Promise<void> {
   await waitForAuthUi(page);
 
-  await page.locator("#login-email").fill(credentials.email);
-  await page.locator("#login-password").fill(credentials.password);
+  const emailInput = page.locator("#login-email");
+  const passwordInput = page.locator("#login-password");
 
-  const loginResponsePromise = page
-    .waitForResponse(
-      (response) =>
-        response.url().includes("/auth/login") && response.request().method() === "POST",
-      { timeout: AUTH_POLL_TIMEOUT },
-    )
-    .catch(() => null);
+  await emailInput.fill(credentials.email);
+  await passwordInput.fill(credentials.password);
+  await expect(emailInput).toHaveValue(credentials.email);
+  await expect(passwordInput).toHaveValue(credentials.password);
+
+  const loginResponsePromise = page.waitForResponse(
+    (response) =>
+      response.url().includes("/auth/login") && response.request().method() === "POST",
+    { timeout: AUTH_POLL_TIMEOUT },
+  );
 
   await page.getByRole("button", { name: "Увійти", exact: true }).click();
 
   const loginResponse = await loginResponsePromise;
-  if (loginResponse && !loginResponse.ok()) {
+  if (!loginResponse.ok()) {
+    if (await page.getByRole("heading", { name: "Підтвердіть вхід" }).isVisible()) {
+      throw new Error("Login requires 2FA; use the two-factor credentials helper.");
+    }
     throw new Error(`Login failed: ${await readLoginError(page, loginResponse.status())}`);
   }
 
-  await page.waitForURL(isHomeUrl, { timeout: AUTH_POLL_TIMEOUT });
   await expectAccessTokenExists(page);
+  if (!isHomeUrl(new URL(page.url()))) {
+    await page.waitForURL(isHomeUrl, { timeout: AUTH_POLL_TIMEOUT });
+  }
 }
 
 export async function advanceForgotPasswordToStepTwo(page: Page, email: string): Promise<void> {
@@ -136,6 +144,5 @@ export async function submitLoginForm(
 }
 
 export function getAuthorizationHeader(requestHeaders: Record<string, string>): string | undefined {
-  const direct = requestHeaders.authorization ?? requestHeaders.Authorization;
-  return direct;
+  return requestHeaders.authorization ?? requestHeaders.Authorization;
 }

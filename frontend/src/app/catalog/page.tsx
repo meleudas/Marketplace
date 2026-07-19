@@ -1,6 +1,6 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
 import { CatalogScreen } from "@/features/catalog/screens/CatalogScreen";
+import type { CatalogQueryRecord } from "@/features/catalog/lib/catalog-url-params";
 
 export const metadata: Metadata = {
   title: "Каталог книг | Book Top",
@@ -15,10 +15,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Page() {
-  return (
-    <Suspense fallback={null}>
-      <CatalogScreen />
-    </Suspense>
-  );
+interface CatalogPageProps {
+  searchParams: Promise<CatalogQueryRecord>;
+}
+
+export default async function Page({ searchParams }: CatalogPageProps) {
+  const initialQuery = await searchParams;
+
+  return <CatalogScreen initialQuery={initialQuery} />;
 }

@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { CatalogScreen } from "@/features/catalog/screens/CatalogScreen";
+import type { CatalogQueryRecord } from "@/features/catalog/lib/catalog-url-params";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 interface CatalogCategoryPageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<CatalogQueryRecord>;
 }
 
 async function fetchCategoryBySlug(slug: string) {
@@ -53,8 +55,9 @@ export async function generateMetadata({ params }: CatalogCategoryPageProps): Pr
   };
 }
 
-export default async function Page({ params }: CatalogCategoryPageProps) {
+export default async function Page({ params, searchParams }: CatalogCategoryPageProps) {
   const { slug } = await params;
+  const initialQuery = await searchParams;
 
-  return <CatalogScreen categorySlug={slug} />;
+  return <CatalogScreen categorySlug={slug} initialQuery={initialQuery} />;
 }

@@ -5,7 +5,7 @@
 }
 
 .label {
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-size: var(--input-label-font-size);
   font-weight: var(--input-label-font-weight);
   line-height: var(--input-label-line-height);
@@ -23,7 +23,7 @@
   width: 100%;
   height: var(--input-height);
   padding: 0 var(--input-padding-x);
-  font-family: var(--font-primary);
+  font-family: var(--font-primary), sans-serif;
   font-size: var(--input-font-size);
   font-weight: var(--input-font-weight);
   line-height: var(--input-line-height);
@@ -74,8 +74,29 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 24px;
+  height: 24px;
   color: var(--input-placeholder-color);
   pointer-events: none;
+}
+
+.adornment svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.field[type="search"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.field[type="search"]::-webkit-search-decoration,
+.field[type="search"]::-webkit-search-cancel-button,
+.field[type="search"]::-webkit-search-results-button,
+.field[type="search"]::-webkit-search-results-decoration {
+  display: none;
+  -webkit-appearance: none;
 }
 
 .leading {

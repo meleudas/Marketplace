@@ -108,6 +108,12 @@ export class CatalogPage {
     );
   }
 
+  async expectBrowserSearchParam(name: string, value: string): Promise<void> {
+    await expect
+      .poll(() => new URL(this.page.url()).searchParams.get(name), { timeout: 15_000 })
+      .toBe(value);
+  }
+
   async resetFilters(): Promise<CatalogSearchFixture> {
     return this.waitForSearch(
       () => this.sidebar.getByRole("button", { name: "Очистити" }).click(),

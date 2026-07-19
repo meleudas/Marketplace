@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { toggleArrayFilter } from "@/features/catalog/lib/catalog-filter-utils";
 import { getChildCategories, getRouteCategorySlugs } from "@/features/storefront/lib/catalog-category-filter";
 import type { CatalogCategoryDto } from "@/features/storefront/model/catalog.types";
@@ -151,6 +151,21 @@ export function useCatalogFilters({
     setAppliedMaxPrice("");
   };
 
+  const hydrateAppliedFilters = useCallback((next: {
+    authors?: string[];
+    categorySlugs?: string[];
+    format?: string[];
+    minPrice?: string;
+    maxPrice?: string;
+  }) => {
+    setAppliedAuthors(next.authors ?? []);
+    setAppliedCategorySlugs(next.categorySlugs ?? []);
+    setAppliedFormat(next.format ?? []);
+    setAppliedMinPrice(next.minPrice ?? "");
+    setAppliedMaxPrice(next.maxPrice ?? "");
+    setFiltersOpen(false);
+  }, []);
+
   return {
     filtersOpen,
     setFiltersOpen,
@@ -188,5 +203,6 @@ export function useCatalogFilters({
     toggleAppliedFormatValue,
     applyAppliedPriceRange,
     resetAppliedFilters,
+    hydrateAppliedFilters,
   };
 }

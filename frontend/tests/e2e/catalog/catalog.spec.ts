@@ -38,7 +38,7 @@ test.describe("Catalog and filters", () => {
       const result = await catalog.applyFormat(format.label, format.value);
 
       expect(result.total).toBeGreaterThan(0);
-      expect(new URL(page.url()).searchParams.get("format")).toBe(format.value);
+      await catalog.expectBrowserSearchParam("format", format.value);
       await catalog.expectSelectedFilter(format.label);
       await catalog.expectRenderedProducts(result);
     });
@@ -51,7 +51,7 @@ test.describe("Catalog and filters", () => {
     const result = await catalog.applyAuthor(data.author.label, data.author.value);
 
     expect(result.total).toBeGreaterThan(0);
-    expect(new URL(page.url()).searchParams.get("authors")).toBe(data.author.value);
+    await catalog.expectBrowserSearchParam("authors", data.author.value);
     await catalog.expectSelectedFilter(data.author.label);
     await catalog.expectRenderedProducts(result);
   });
@@ -64,9 +64,8 @@ test.describe("Catalog and filters", () => {
     await catalog.applyCategory(data.rootCategory.name, categoryIds);
     const result = await catalog.applyFormat("Паперова", "паперовий");
 
-    const url = new URL(page.url());
-    expect(url.searchParams.get("categories")).toBe(data.rootCategory.slug);
-    expect(url.searchParams.get("format")).toBe("паперовий");
+    await catalog.expectBrowserSearchParam("categories", data.rootCategory.slug);
+    await catalog.expectBrowserSearchParam("format", "паперовий");
     await catalog.expectSelectedFilter(data.rootCategory.name);
     await catalog.expectSelectedFilter("Паперова");
     expect(result.items.every((product) => categoryIds.includes(product.categoryId))).toBe(true);
