@@ -119,6 +119,8 @@ export function ProductCard({
         size="icon"
         className={styles.cartButton}
         aria-label="Додати до кошика"
+        data-testid="product-card-add-to-cart"
+        data-product-id={product.id}
         leadingIcon={<CartIcon className={iconStyles.icon} />}
         disabled={!isInStock || isAddingToCart}
         onClick={handleAddToCart}

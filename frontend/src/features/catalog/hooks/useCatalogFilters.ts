@@ -57,16 +57,25 @@ export function useCatalogFilters({
   };
 
   const applyFilters = () => {
+    const routeCategorySlugs = getRouteCategorySlugs(selectedRootSlug, selectedSubcategorySlug);
+    const nextCategorySlugs =
+      draftCategorySlugs.length > 0 || routeCategorySlugs.length === 0
+        ? draftCategorySlugs
+        : routeCategorySlugs;
+
     setAppliedAuthors(draftAuthors);
-    setAppliedCategorySlugs(draftCategorySlugs);
+    setAppliedCategorySlugs(nextCategorySlugs);
     setAppliedFormat(draftFormat);
     setAppliedMinPrice(draftMinPrice.trim());
     setAppliedMaxPrice(draftMaxPrice.trim());
     setFiltersOpen(false);
 
     const currentRouteCategorySlug = selectedSubcategorySlug ?? selectedRootSlug;
-    const nextSingleCategorySlug = draftCategorySlugs.length === 1 ? draftCategorySlugs[0] : null;
-    if (currentRouteCategorySlug && currentRouteCategorySlug !== nextSingleCategorySlug) {
+    if (
+      currentRouteCategorySlug &&
+      nextCategorySlugs.length > 0 &&
+      !nextCategorySlugs.includes(currentRouteCategorySlug)
+    ) {
       onRouteCategoryMismatch();
     }
   };
@@ -104,10 +113,33 @@ export function useCatalogFilters({
 
   const notifyRouteMismatch = (nextCategorySlugs: string[]) => {
     const currentRouteCategorySlug = selectedSubcategorySlug ?? selectedRootSlug;
-    const nextSingleCategorySlug = nextCategorySlugs.length === 1 ? nextCategorySlugs[0] : null;
-    if (currentRouteCategorySlug && currentRouteCategorySlug !== nextSingleCategorySlug) {
-      onRouteCategoryMismatch();
+    if (!currentRouteCategorySlug) {
+      return;
     }
+
+    // Clearing applied categories should fall back to the route category, not leave the page.
+    if (nextCategorySlugs.length === 0) {
+      return;
+    }
+
+    // Stay on the route page when the route category remains part of the selection.
+    if (nextCategorySlugs.includes(currentRouteCategorySlug)) {
+      return;
+    }
+
+    onRouteCategoryMismatch();
+  };
+
+  /** Keep the header/route category selected when applying other sidebar filters. */
+  const ensureRouteCategoryApplied = () => {
+    const routeCategorySlugs = getRouteCategorySlugs(selectedRootSlug, selectedSubcategorySlug);
+    if (routeCategorySlugs.length === 0) {
+      return;
+    }
+
+    setAppliedCategorySlugs((current) =>
+      current.length > 0 ? current : routeCategorySlugs,
+    );
   };
 
   /** Instant-apply toggles for the always-visible desktop sidebar (no draft/apply step). */
@@ -116,29 +148,38 @@ export function useCatalogFilters({
     const childSlugs = category
       ? getChildCategories(categories, category.id).map((child) => child.slug)
       : [];
+    const routeCategorySlugs = getRouteCategorySlugs(selectedRootSlug, selectedSubcategorySlug);
+    const base =
+      appliedCategorySlugs.length > 0 ? appliedCategorySlugs : routeCategorySlugs;
 
-    const withoutChildren = appliedCategorySlugs.filter((value) => !childSlugs.includes(value));
+    const withoutChildren = base.filter((value) => !childSlugs.includes(value));
     const next = toggleArrayFilter(withoutChildren, slug);
     setAppliedCategorySlugs(next);
     notifyRouteMismatch(next);
   };
 
   const toggleAppliedSubcategory = (rootSlug: string, subcategorySlug: string) => {
-    const withoutRoot = appliedCategorySlugs.filter((value) => value !== rootSlug);
+    const routeCategorySlugs = getRouteCategorySlugs(selectedRootSlug, selectedSubcategorySlug);
+    const base =
+      appliedCategorySlugs.length > 0 ? appliedCategorySlugs : routeCategorySlugs;
+    const withoutRoot = base.filter((value) => value !== rootSlug);
     const next = toggleArrayFilter(withoutRoot, subcategorySlug);
     setAppliedCategorySlugs(next);
     notifyRouteMismatch(next);
   };
 
   const toggleAppliedAuthor = (author: string) => {
+    ensureRouteCategoryApplied();
     setAppliedAuthors((current) => toggleArrayFilter(current, author));
   };
 
   const toggleAppliedFormatValue = (format: string) => {
+    ensureRouteCategoryApplied();
     setAppliedFormat((current) => toggleArrayFilter(current, format));
   };
 
   const applyAppliedPriceRange = (minPrice: string, maxPrice: string) => {
+    ensureRouteCategoryApplied();
     setAppliedMinPrice(minPrice.trim());
     setAppliedMaxPrice(maxPrice.trim());
   };

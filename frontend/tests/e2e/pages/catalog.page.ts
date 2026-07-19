@@ -10,6 +10,8 @@ export class CatalogPage {
   readonly selectedFilters: Locator;
   readonly productLinks: Locator;
   readonly emptyState: Locator;
+  readonly pagination: Locator;
+  readonly pageSizeSelect: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -20,22 +22,21 @@ export class CatalogPage {
     this.emptyState = page.getByRole("status").filter({
       hasText: "Товарів за обраними фільтрами не знайдено",
     });
+    this.pagination = page.getByRole("navigation", { name: "Пагінація" });
+    this.pageSizeSelect = page.getByLabel("Показати по:");
   }
 
   async goto(path = "/catalog"): Promise<void> {
-    await this.waitForSearch(
-      () => this.page.goto(path),
-      (url) => {
-        const pageSize = url.searchParams.get("pageSize");
-        return pageSize === "20" || pageSize === "21";
-      },
-    );
+    await this.page.goto(path);
+    await this.waitUntilLoaded();
   }
 
   async waitUntilLoaded(): Promise<void> {
     await expect(this.heading).toBeVisible();
     await expect(this.page.getByText(/^Знайдено \d+ товар/)).toBeVisible();
-    await expect(this.page.locator('[aria-busy="false"]').first()).toBeVisible();
+    await expect(this.sidebar).toBeVisible();
+    // When idle, aria-busy is omitted (not aria-busy="false").
+    await expect(this.sidebar).not.toHaveAttribute("aria-busy", "true");
   }
 
   async openCategoryFromHeader(
@@ -61,11 +62,9 @@ export class CatalogPage {
     categoryName: string,
     expectedCategoryIds: readonly number[],
   ): Promise<CatalogSearchFixture> {
+    const checkbox = this.sidebar.getByRole("checkbox", { name: categoryName, exact: true });
     return this.waitForSearch(
-      () =>
-        clickCheckbox(
-          this.sidebar.getByRole("checkbox", { name: categoryName, exact: true }),
-        ),
+      () => this.checkSidebarCheckbox(checkbox),
       (url) => {
         const ids = url.searchParams.getAll("categoryIds");
         return expectedCategoryIds.every((id) => ids.includes(String(id)));
@@ -77,8 +76,9 @@ export class CatalogPage {
     label: "Електронна" | "Паперова",
     value: "електронний" | "паперовий",
   ): Promise<CatalogSearchFixture> {
+    const checkbox = this.sidebar.getByRole("checkbox", { name: label, exact: true });
     return this.waitForSearch(
-      () => clickCheckbox(this.sidebar.getByRole("checkbox", { name: label, exact: true })),
+      () => this.checkSidebarCheckbox(checkbox),
       (url) => url.searchParams.get("format") === value,
     );
   }
@@ -92,7 +92,7 @@ export class CatalogPage {
     });
 
     return this.waitForSearch(
-      () => clickCheckbox(checkbox),
+      () => this.checkSidebarCheckbox(checkbox),
       (url) => url.searchParams.getAll("authors").includes(authorValue),
     );
   }
@@ -101,6 +101,7 @@ export class CatalogPage {
     const input = this.sidebar.getByLabel("Від", { exact: true });
     return this.waitForSearch(
       async () => {
+        await expect(this.sidebar).not.toHaveAttribute("aria-busy", "true");
         await input.fill(String(minPrice));
         await input.blur();
       },
@@ -108,15 +109,12 @@ export class CatalogPage {
     );
   }
 
-  async expectBrowserSearchParam(name: string, value: string): Promise<void> {
-    await expect
-      .poll(() => new URL(this.page.url()).searchParams.get(name), { timeout: 15_000 })
-      .toBe(value);
-  }
-
   async resetFilters(): Promise<CatalogSearchFixture> {
     return this.waitForSearch(
-      () => this.sidebar.getByRole("button", { name: "Очистити" }).click(),
+      async () => {
+        await expect(this.sidebar).not.toHaveAttribute("aria-busy", "true");
+        await this.sidebar.getByRole("button", { name: "Очистити" }).click();
+      },
       (url) =>
         !url.searchParams.has("categoryIds") &&
         !url.searchParams.has("authors") &&
@@ -124,6 +122,58 @@ export class CatalogPage {
         !url.searchParams.has("minPrice") &&
         !url.searchParams.has("maxPrice"),
     );
+  }
+
+  async selectPageSize(size: 10 | 20 | 30 | 40 | 50): Promise<CatalogSearchFixture> {
+    return this.waitForSearch(
+      async () => {
+        await expect(this.pageSizeSelect).toBeVisible();
+        await this.pageSizeSelect.selectOption(String(size));
+      },
+      (url) => url.searchParams.get("pageSize") === String(size),
+    );
+  }
+
+  async selectSort(
+    label: "За популярністю" | "За новизною" | "Від найдешевших" | "Від найдорожчих",
+    value: "relevance" | "newest" | "price_asc" | "price_desc",
+  ): Promise<CatalogSearchFixture> {
+    return this.waitForSearch(
+      async () => {
+        const trigger = this.page.locator("button[aria-haspopup='listbox']").filter({
+          hasText: /За популярністю|За новизною|Від найдешевших|Від найдорожчих/,
+        });
+        await expect(trigger).toBeVisible();
+        await trigger.click();
+        await this.page.getByRole("listbox").getByRole("button", { name: label, exact: true }).click();
+      },
+      (url) => url.searchParams.get("sort") === value,
+    );
+  }
+
+  async goToPage(pageNumber: number): Promise<CatalogSearchFixture> {
+    return this.waitForSearch(
+      async () => {
+        await expect(this.pagination).toBeVisible();
+        await this.pagination.getByRole("button", { name: String(pageNumber), exact: true }).click();
+      },
+      (url) => url.searchParams.get("page") === String(pageNumber),
+    );
+  }
+
+  async expectBrowserSearchParam(name: string, value: string | null): Promise<void> {
+    await expect
+      .poll(() => new URL(this.page.url()).searchParams.get(name), { timeout: 15_000 })
+      .toBe(value);
+  }
+
+  async expectBrowserSearchParams(params: Record<string, string>): Promise<void> {
+    await expect
+      .poll(() => {
+        const search = new URL(this.page.url()).searchParams;
+        return Object.fromEntries(Object.keys(params).map((key) => [key, search.get(key)]));
+      }, { timeout: 15_000 })
+      .toEqual(params);
   }
 
   async expectSelectedFilter(label: string): Promise<void> {
@@ -146,8 +196,20 @@ export class CatalogPage {
     await expectSearchSucceeded(response);
     const result = (await response.json()) as CatalogSearchFixture;
     await expect(this.page.getByText(new RegExp(`^Знайдено ${result.total} товар`))).toBeVisible();
-    await expect(this.page.locator('[aria-busy="false"]').first()).toBeVisible();
+    await expect(this.sidebar).toBeVisible();
+    await expect(this.sidebar).not.toHaveAttribute("aria-busy", "true");
     return result;
+  }
+
+  private async checkSidebarCheckbox(checkbox: Locator): Promise<void> {
+    await expect(async () => {
+      await expect(this.sidebar).not.toHaveAttribute("aria-busy", "true");
+      if (!(await checkbox.isChecked())) {
+        // Native input is visually hidden; the label receives the click.
+        await checkbox.locator("xpath=..").click();
+      }
+      await expect(checkbox).toBeChecked();
+    }).toPass({ timeout: 15_000 });
   }
 
   private async waitForSearchRequest(
@@ -183,8 +245,4 @@ async function expectSearchSucceeded(response: Response): Promise<void> {
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-async function clickCheckbox(checkbox: Locator): Promise<void> {
-  await checkbox.locator("xpath=..").click();
 }

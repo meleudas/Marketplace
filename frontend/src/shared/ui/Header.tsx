@@ -428,7 +428,7 @@ export function Header({
             >
               <CartIcon className={iconStyles.icon} />
               {cartCount > 0 && (
-                <span className={styles.cartBadge}>
+                <span className={styles.cartBadge} data-testid="header-cart-badge">
                   {cartCount > 99 ? "99+" : cartCount}
                 </span>
               )}

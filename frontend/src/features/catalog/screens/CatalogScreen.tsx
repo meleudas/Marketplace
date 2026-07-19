@@ -113,13 +113,19 @@ export function CatalogScreen({ categorySlug, initialQuery = {} }: CatalogScreen
     hydrateAppliedFilters,
   } = filters;
 
-  // Sync format (and clear other URL-driven filters) when header catalog menu navigates.
+  // Sync format when header catalog menu navigates. Ignore echoes of our own shallow URL writes
+  // by only reacting when the header key changes; keep the route category selected.
   if (seenHeaderNavigationKey !== headerNavigationKey) {
     const parsed = parseCatalogQuery(initialQuery);
     setSeenHeaderNavigationKey(headerNavigationKey);
     hydrateAppliedFilters({
       authors: parsed.authors,
-      categorySlugs: parsed.categories,
+      categorySlugs:
+        parsed.categories.length > 0
+          ? parsed.categories
+          : categorySlug
+            ? [categorySlug]
+            : [],
       format: parsed.format,
       minPrice: parsed.minPrice,
       maxPrice: parsed.maxPrice,

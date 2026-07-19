@@ -1,6 +1,5 @@
 "use client";
 
-import { isAxiosError } from "axios";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -13,8 +12,9 @@ import type {
   CatalogProductDetailDto,
 } from "@/features/storefront/model/catalog.types";
 import { fetchShippingMethods, type ShippingMethodDto } from "@/features/checkout/api/checkout.api";
-import { useCartStore } from "@/features/cart/model/cart.store";
-import { apiClient } from "@/shared/api/http.client";
+import { useAuth } from "@/features/auth/model/auth.store";
+import { useAddToCart } from "@/features/cart/hooks/useAddToCart";
+import { AddToCartDialog } from "@/features/cart/ui/AddToCartDialog";
 import {
   Button,
   ChevronDownIcon,
@@ -101,15 +101,18 @@ export function ProductDetailsScreen({ slug }: ProductDetailsScreenProps) {
   const [ukrposhtaOpen, setUkrposhtaOpen] = useState(true);
 
   const [quantity, setQuantity] = useState(1);
-  const [addingToCart, setAddingToCart] = useState(false);
-  const [cartMessage, setCartMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [allCharacteristicsVisible, setAllCharacteristicsVisible] = useState(false);
 
   const reviewsSectionRef = useRef<HTMLElement>(null);
 
-  const { loadCart } = useCartStore();
+  const loadMe = useAuth((state) => state.loadMe);
+  const { addToCart, addingProductId, addedProduct, dismissAddedDialog } = useAddToCart();
+
+  useEffect(() => {
+    void loadMe();
+  }, [loadMe]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -281,29 +284,20 @@ export function ProductDetailsScreen({ slug }: ProductDetailsScreenProps) {
     </dl>
   );
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = () => {
     if (!productDetails) return;
 
-    setAddingToCart(true);
-    setCartMessage(null);
-
-    try {
-      await apiClient.post("/me/cart/items", {
-        productId: productDetails.product.id,
-        quantity,
-      });
-      setCartMessage({ text: "Книгу додано в кошик", isError: false });
-      void loadCart();
-    } catch (err: unknown) {
-      if (isAxiosError(err) && err.response?.status === 401) {
-        setCartMessage({ text: "Увійдіть, щоб додати книгу в кошик", isError: true });
-      } else {
-        setCartMessage({ text: "Не вдалося додати книгу в кошик", isError: true });
-      }
-    } finally {
-      setAddingToCart(false);
-    }
+    void addToCart({
+      id: String(productDetails.product.id),
+      title: productDetails.product.name,
+      imageUrl: productDetails.images[0]?.imageUrl ?? "",
+      price: productDetails.product.price,
+      quantity,
+    });
   };
+
+  const isAddingToCart =
+    productDetails !== null && addingProductId === String(productDetails.product.id);
 
   return (
     <PageLayout
@@ -419,10 +413,11 @@ export function ProductDetailsScreen({ slug }: ProductDetailsScreenProps) {
                     variant="primary"
                     fullWidth
                     className={styles.gridCell}
-                    disabled={addingToCart || !availability.inStock}
+                    data-testid="product-details-add-to-cart"
+                    disabled={isAddingToCart || !availability.inStock}
                     onClick={handleAddToCart}
                   >
-                    {addingToCart ? "Додавання..." : "Додати у кошик"}
+                    {isAddingToCart ? "Додавання..." : "Додати у кошик"}
                   </Button>
 
                   <QuantityStepper
@@ -430,19 +425,8 @@ export function ProductDetailsScreen({ slug }: ProductDetailsScreenProps) {
                     onChange={setQuantity}
                     className={styles.gridQuantityStepper}
                   />
-
-
                 </div>
 
-                {cartMessage ? (
-                  <p
-                    className={
-                      cartMessage.isError ? styles.cartMessageError : styles.cartMessageSuccess
-                    }
-                  >
-                    {cartMessage.text}
-                  </p>
-                ) : null}
                 {characteristics.length > 0 ? (
                   <section className={styles.desktopCharacteristics}>
                     <h2 className={styles.desktopCharacteristicsTitle}>Характеристики</h2>
@@ -621,6 +605,12 @@ export function ProductDetailsScreen({ slug }: ProductDetailsScreenProps) {
           </>
         ) : null}
       </SideDecorShell>
+
+      <AddToCartDialog
+        open={Boolean(addedProduct)}
+        product={addedProduct}
+        onClose={dismissAddedDialog}
+      />
     </PageLayout>
   );
 }

@@ -27,6 +27,29 @@ test.describe("Catalog and filters", () => {
     await catalog.expectSelectedFilter(data.subcategory.name);
   });
 
+  test("keeps header category selected after applying a sidebar format filter", async ({
+    page,
+  }) => {
+    const catalog = new CatalogPage(page);
+    await page.goto("/");
+
+    await catalog.openCategoryFromHeader(
+      data.rootCategory.name,
+      data.subcategory.name,
+      data.subcategory.id,
+    );
+    await catalog.expectSelectedFilter(data.subcategory.name);
+
+    await catalog.applyFormat("Паперова", "паперовий");
+
+    await expect(page).toHaveURL(new RegExp(`/catalog/${data.subcategory.slug}`));
+    await catalog.expectSelectedFilter(data.subcategory.name);
+    await catalog.expectSelectedFilter("Паперова");
+    await expect(
+      catalog.sidebar.getByRole("checkbox", { name: data.subcategory.name, exact: true }),
+    ).toBeChecked();
+  });
+
   for (const format of [
     { label: "Паперова", value: "паперовий" },
     { label: "Електронна", value: "електронний" },
@@ -38,7 +61,6 @@ test.describe("Catalog and filters", () => {
       const result = await catalog.applyFormat(format.label, format.value);
 
       expect(result.total).toBeGreaterThan(0);
-      await catalog.expectBrowserSearchParam("format", format.value);
       await catalog.expectSelectedFilter(format.label);
       await catalog.expectRenderedProducts(result);
     });
@@ -51,7 +73,6 @@ test.describe("Catalog and filters", () => {
     const result = await catalog.applyAuthor(data.author.label, data.author.value);
 
     expect(result.total).toBeGreaterThan(0);
-    await catalog.expectBrowserSearchParam("authors", data.author.value);
     await catalog.expectSelectedFilter(data.author.label);
     await catalog.expectRenderedProducts(result);
   });
@@ -64,8 +85,6 @@ test.describe("Catalog and filters", () => {
     await catalog.applyCategory(data.rootCategory.name, categoryIds);
     const result = await catalog.applyFormat("Паперова", "паперовий");
 
-    await catalog.expectBrowserSearchParam("categories", data.rootCategory.slug);
-    await catalog.expectBrowserSearchParam("format", "паперовий");
     await catalog.expectSelectedFilter(data.rootCategory.name);
     await catalog.expectSelectedFilter("Паперова");
     expect(result.items.every((product) => categoryIds.includes(product.categoryId))).toBe(true);
@@ -94,9 +113,6 @@ test.describe("Catalog and filters", () => {
 
     const result = await catalog.resetFilters();
 
-    const url = new URL(page.url());
-    expect(url.searchParams.has("categories")).toBe(false);
-    expect(url.searchParams.has("format")).toBe(false);
     await expect(catalog.selectedFilters).toHaveCount(0);
     expect(result.total).toBeGreaterThan(0);
   });
@@ -144,5 +160,68 @@ test.describe("Catalog and filters", () => {
     expect(result.total).toBe(0);
     await expect(catalog.emptyState).toBeVisible();
     await expect(catalog.productLinks).toHaveCount(0);
+  });
+
+  test("syncs applied filters to the browser URL", async ({ page }) => {
+    const catalog = new CatalogPage(page);
+    await catalog.goto();
+
+    await catalog.applyFormat("Паперова", "паперовий");
+    await catalog.expectBrowserSearchParam("format", "паперовий");
+
+    await catalog.applyAuthor(data.author.label, data.author.value);
+    await catalog.expectBrowserSearchParams({
+      format: "паперовий",
+      authors: data.author.value,
+    });
+  });
+
+  test("changes page size and reflects it in API, UI, and URL", async ({ page }) => {
+    const catalog = new CatalogPage(page);
+    await catalog.goto();
+
+    const result = await catalog.selectPageSize(10);
+
+    expect(result.pageSize).toBe(10);
+    expect(result.items.length).toBeLessThanOrEqual(10);
+    await expect(catalog.productLinks).toHaveCount(result.items.length);
+    await expect(catalog.pageSizeSelect).toHaveValue("10");
+    await catalog.expectBrowserSearchParam("perPage", "10");
+  });
+
+  test("paginates to the next page and updates the URL", async ({ page }) => {
+    const catalog = new CatalogPage(page);
+    await catalog.goto();
+
+    const firstPage = await catalog.selectPageSize(10);
+    expect(firstPage.total).toBeGreaterThan(10);
+    const firstPageSlugs = firstPage.items.map((item) => item.slug);
+
+    const secondPage = await catalog.goToPage(2);
+
+    expect(secondPage.page).toBe(2);
+    expect(secondPage.items.map((item) => item.slug)).not.toEqual(firstPageSlugs);
+    await catalog.expectRenderedProducts(secondPage);
+    await catalog.expectBrowserSearchParam("page", "2");
+    await expect(catalog.pagination.getByRole("button", { name: "2", exact: true })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  test("applies sorting by price ascending and syncs the URL", async ({ page }) => {
+    const catalog = new CatalogPage(page);
+    await catalog.goto();
+
+    const result = await catalog.selectSort("Від найдешевших", "price_asc");
+
+    expect(result.items.length).toBeGreaterThan(1);
+    const prices = result.items.map((item) => item.price);
+    expect(prices).toEqual([...prices].sort((left, right) => left - right));
+    await catalog.expectRenderedProducts(result);
+    await catalog.expectBrowserSearchParam("sort", "price_asc");
+    await expect(
+      page.locator("button[aria-haspopup='listbox']").filter({ hasText: "Від найдешевших" }),
+    ).toBeVisible();
   });
 });

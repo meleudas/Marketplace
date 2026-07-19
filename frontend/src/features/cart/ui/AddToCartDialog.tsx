@@ -87,9 +87,13 @@ export function AddToCartDialog({ open, product, onClose }: AddToCartDialogProps
           </div>
 
           <div className={styles.productMeta}>
-            <p className={styles.productTitle}>{product.title}</p>
+            <p className={styles.productTitle} data-testid="add-to-cart-dialog-product-title">
+              {product.title}
+            </p>
             {typeof product.price === "number" ? (
-              <p className={styles.productPrice}>{formatPrice(product.price)}</p>
+              <p className={styles.productPrice} data-testid="add-to-cart-dialog-product-price">
+                {formatPrice(product.price)}
+              </p>
             ) : null}
           </div>
         </div>

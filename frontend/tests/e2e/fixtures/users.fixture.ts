@@ -10,6 +10,16 @@ export const testUsers = {
     password:
       process.env.E2E_VERIFIED_PASSWORD ?? process.env.E2E_USER_PASSWORD ?? "BookMarket1!",
   },
+  /** Dedicated buyer for product-review E2E (with verified purchase setup). */
+  reviewBuyer: {
+    email: process.env.E2E_REVIEW_BUYER_EMAIL ?? "user51@bookmarket.ua",
+    password: process.env.E2E_REVIEW_BUYER_PASSWORD ?? "BookMarket1!",
+  },
+  /** Dedicated user without a purchase of the review product. */
+  reviewNonBuyer: {
+    email: process.env.E2E_REVIEW_NON_BUYER_EMAIL ?? "user52@bookmarket.ua",
+    password: process.env.E2E_REVIEW_NON_BUYER_PASSWORD ?? "BookMarket1!",
+  },
   admin: {
     email: process.env.E2E_ADMIN_EMAIL ?? "admin@bookmarket.ua",
     password: process.env.E2E_ADMIN_PASSWORD ?? "BookMarket1!",

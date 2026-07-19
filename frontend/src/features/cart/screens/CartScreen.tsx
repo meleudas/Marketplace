@@ -357,7 +357,12 @@ export function CartScreen() {
             <div className={styles.leftCol}>
               <div className={styles.itemsList}>
                 {cartItemsWithMetadata.map((item) => (
-                  <div key={item.id} className={styles.cartItem}>
+                  <div
+                    key={item.id}
+                    className={styles.cartItem}
+                    data-testid="cart-item"
+                    data-product-id={String(item.productId)}
+                  >
                     <div className={styles.itemTopRow}>
                       <div className={styles.itemImageWrap}>
                         {item.imageUrl ? (
@@ -378,7 +383,9 @@ export function CartScreen() {
                           <span className={styles.stockGreen}>
                             {item.stockStatus}
                           </span>
-                          <span className={styles.bookTitle}>{item.name}</span>
+                          <span className={styles.bookTitle} data-testid="cart-item-title">
+                            {item.name}
+                          </span>
                         </div>
                       </div>
                       <button
@@ -429,7 +436,9 @@ export function CartScreen() {
                             />
                           </svg>
                         </button>
-                        <span className={styles.qtyText}>{item.quantity}</span>
+                        <span className={styles.qtyText} data-testid="cart-item-quantity">
+                          {item.quantity}
+                        </span>
                         <button
                           type="button"
                           className={styles.qtyBtn}
@@ -453,7 +462,7 @@ export function CartScreen() {
                           </svg>
                         </button>
                       </div>
-                      <span className={styles.priceText}>
+                      <span className={styles.priceText} data-testid="cart-item-price">
                         {formatCartPrice(item.lineTotal)} грн.
                       </span>
                     </div>
@@ -466,11 +475,14 @@ export function CartScreen() {
               <div className={styles.bottomBar}>
                 <div className={styles.totalsRow}>
                   <span className={styles.totalsLabel}>Разом</span>
-                  <span className={styles.totalsAmount}>{formatCartPrice(totalAmount)}грн</span>
+                  <span className={styles.totalsAmount} data-testid="cart-total">
+                    {formatCartPrice(totalAmount)}грн
+                  </span>
                 </div>
-                <Link
+                  <Link
                   href={isAuthenticated ? "/checkout" : "/auth/login?redirect=/checkout"}
                   className={styles.ctaBtn}
+                  data-testid="cart-checkout-cta"
                 >
                   Оформити замовлення
                 </Link>

@@ -16,7 +16,7 @@ interface ReviewsSectionProps {
 }
 
 const REVIEWS_PAGE_SIZE = 5;
-const REVIEWS_FETCH_SIZE = 100;
+const REVIEWS_FETCH_SIZE = 20;
 const COMMENT_EXPAND_THRESHOLD = 500;
 
 function formatReviewDate(value: string): string {
@@ -32,17 +32,27 @@ function ReviewCard({ review }: { review: ProductReviewDto }) {
   const isLong = review.comment.length > COMMENT_EXPAND_THRESHOLD;
 
   return (
-    <article className={styles.card}>
+    <article
+      className={styles.card}
+      data-testid="product-review-item"
+      data-review-id={String(review.id)}
+    >
       <div className={styles.cardHeader}>
         <div className={styles.cardHeaderMeta}>
-          <span className={styles.author}>{review.userName}</span>
-          <span className={styles.date}>{formatReviewDate(review.createdAt)}</span>
+          <span className={styles.author} data-testid="product-review-author">
+            {review.userName}
+          </span>
+          <span className={styles.date} data-testid="product-review-date">
+            {formatReviewDate(review.createdAt)}
+          </span>
         </div>
         <StarRating value={review.rating ?? review.overallRating ?? 0} size="md" />
       </div>
 
       <div className={`${styles.commentWrap} ${!expanded && isLong ? styles.commentCollapsed : ""}`}>
-        <p className={styles.comment}>{review.comment}</p>
+        <p className={styles.comment} data-testid="product-review-text">
+          {review.comment}
+        </p>
         {!expanded && isLong ? (
           <div className={styles.commentFade} />
         ) : null}
@@ -118,7 +128,7 @@ export const ReviewsSection = forwardRef<HTMLElement, ReviewsSectionProps>(funct
       await createProductReview(productId, { rating: formRating, comment: formComment.trim() });
       setFormRating(0);
       setFormComment("");
-      void loadReviews();
+      await loadReviews();
     } catch {
       setSubmitError("Не вдалося надіслати відгук. Спробуйте пізніше.");
     } finally {
@@ -127,13 +137,13 @@ export const ReviewsSection = forwardRef<HTMLElement, ReviewsSectionProps>(funct
   };
 
   return (
-    <section ref={ref} id="product-reviews" className={styles.section}>
+    <section ref={ref} id="product-reviews" className={styles.section} data-testid="product-reviews">
       <h2 className={styles.sectionTitle}>Відгуки</h2>
 
       <div className={styles.layout}>
         <div className={styles.formCol}>
-          <div className={styles.formCard}>
-            <h3 className={styles.formTitle}>
+          <div className={styles.formCard} data-testid="product-review-form">
+            <h3 className={styles.formTitle} data-testid="product-review-form-title">
               {isAuthenticated ? "Залишити відгук" : "Увійдіть, щоб залишити відгук"}
             </h3>
 
@@ -151,6 +161,7 @@ export const ReviewsSection = forwardRef<HTMLElement, ReviewsSectionProps>(funct
               <span className={styles.formLabel}>Коментар</span>
               <textarea
                 className={styles.formTextarea}
+                data-testid="product-review-comment"
                 placeholder="Поділіться враженнями про книгу..."
                 value={formComment}
                 onChange={(e) => setFormComment(e.target.value)}
@@ -160,12 +171,15 @@ export const ReviewsSection = forwardRef<HTMLElement, ReviewsSectionProps>(funct
             </div>
 
             {submitError ? (
-              <p className={styles.formError}>{submitError}</p>
+              <p className={styles.formError} data-testid="product-review-error" role="alert">
+                {submitError}
+              </p>
             ) : null}
 
             <Button
               variant="primary"
               fullWidth
+              data-testid="product-review-submit"
               disabled={!isAuthenticated || submitting}
               onClick={handleSubmit}
             >
@@ -174,7 +188,7 @@ export const ReviewsSection = forwardRef<HTMLElement, ReviewsSectionProps>(funct
           </div>
         </div>
 
-        <div className={styles.reviewsCol}>
+        <div className={styles.reviewsCol} data-testid="product-reviews-list">
           {loading ? (
             <div className={styles.loadingState}>
               <Spinner />
