@@ -64,6 +64,10 @@ if (app.Environment.IsDevelopment())
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
+    // RecurringJob static API needs JobStorage.Current. UseHangfireDashboard sets it in Development only;
+    // on Production (ECS) resolve storage from DI before registering recurring jobs.
+    JobStorage.Current = app.Services.GetRequiredService<JobStorage>();
+
     var recommendationOptions = app.Configuration
         .GetSection(RecommendationModelOptions.SectionName)
         .Get<RecommendationModelOptions>() ?? new RecommendationModelOptions();
