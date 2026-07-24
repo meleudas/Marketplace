@@ -12,10 +12,10 @@ interface CatalogSelectedFiltersProps {
   routeCategorySlugs: string[];
   appliedCategorySlugs: string[];
   appliedAuthors: string[];
-  appliedFormat: string | null;
+  appliedFormat: string[];
   onRemoveCategory: (slug: string, source: "applied" | "route") => void;
   onRemoveAuthor: (author: string) => void;
-  onRemoveFormat: () => void;
+  onRemoveFormat: (format: string) => void;
 }
 
 type SelectedFilterItem =
@@ -64,19 +64,15 @@ export function CatalogSelectedFilters({
     type: "author",
     value: author,
   }));
-  const formatOption = appliedFormat
-    ? FORMAT_FILTER_OPTIONS.find((option) => option.value === appliedFormat)
-    : null;
-  const formatItems: SelectedFilterItem[] = formatOption
-    ? [
-        {
-          key: `format-${formatOption.value}`,
-          label: formatOption.label,
-          type: "format",
-          value: formatOption.value,
-        },
-      ]
-    : [];
+  const formatItems: SelectedFilterItem[] = appliedFormat
+    .map((formatValue) => FORMAT_FILTER_OPTIONS.find((option) => option.value === formatValue))
+    .filter((option): option is (typeof FORMAT_FILTER_OPTIONS)[number] => Boolean(option))
+    .map((formatOption) => ({
+      key: `format-${formatOption.value}`,
+      label: formatOption.label,
+      type: "format" as const,
+      value: formatOption.value,
+    }));
   const items = [...categoryItems, ...authorItems, ...formatItems];
 
   if (items.length === 0) {
@@ -92,7 +88,7 @@ export function CatalogSelectedFilters({
         onRemoveAuthor(item.value);
         break;
       case "format":
-        onRemoveFormat();
+        onRemoveFormat(item.value);
         break;
     }
   };

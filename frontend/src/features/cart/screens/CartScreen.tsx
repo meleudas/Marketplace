@@ -11,7 +11,7 @@ import {
   subscribeToGuestCart,
 } from "@/features/cart/lib/guest-cart.storage";
 import { useCartStore } from "@/features/cart/model/cart.store";
-import { getCatalogProducts } from "@/features/storefront/api/catalog.api";
+import { getCatalogProductBySlug, getCatalogProducts } from "@/features/storefront/api/catalog.api";
 import {
   fetchMyCart,
   updateCartItemQuantity,
@@ -20,6 +20,7 @@ import {
 } from "@/features/checkout/api/checkout.api";
 import type { CatalogProductListItemDto } from "@/features/storefront/model/catalog.types";
 import { formatCartPrice } from "@/features/cart/lib/format-cart-price";
+import { getProductAuthor } from "@/features/products/[slug]/lib/product-details.lib";
 import { PageLayout, Spinner } from "@/shared/ui";
 import styles from "./CartScreen.module.css";
 
@@ -49,6 +50,8 @@ export function CartScreen() {
     CatalogProductListItemDto[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [enrichedAuthors, setEnrichedAuthors] = useState<Record<number, string>>({});
+  const [enrichedStock, setEnrichedStock] = useState<Record<number, boolean>>({});
 
   const { setTotalItems } = useCartStore();
 
@@ -105,6 +108,67 @@ export function CartScreen() {
     void loadData();
   }, [initialized, isAuthenticated, setTotalItems]);
 
+  // Enrich cart items with product detail data (author, stock) when catalog list lacks it
+  useEffect(() => {
+    if (loading || catalogProducts.length === 0) return;
+
+    const productIdsToEnrich: { productId: number; slug: string }[] = [];
+
+    if (isAuthenticated && cart?.items) {
+      for (const item of cart.items) {
+        const product = catalogProducts.find((p) => p.id === item.productId);
+        if (product && !product.author) {
+          productIdsToEnrich.push({ productId: item.productId, slug: product.slug });
+        }
+      }
+    } else {
+      const guestProductIds = Object.keys(guestQuantities).map(Number);
+      for (const productId of guestProductIds) {
+        const product = catalogProducts.find((p) => p.id === productId);
+        if (product && !product.author) {
+          productIdsToEnrich.push({ productId, slug: product.slug });
+        }
+      }
+    }
+
+    if (productIdsToEnrich.length === 0) return;
+
+    let cancelled = false;
+
+    const enrich = async () => {
+      const authors: Record<number, string> = {};
+      const stock: Record<number, boolean> = {};
+
+      await Promise.allSettled(
+        productIdsToEnrich.map(async ({ productId, slug }) => {
+          try {
+            const detail = await getCatalogProductBySlug(slug);
+            if (!cancelled) {
+              const author = detail.detail ? getProductAuthor(detail.detail) : null;
+              if (author) {
+                authors[productId] = author;
+              }
+              stock[productId] = detail.product.availabilityStatus === "InStock" || (detail.product.stock ?? 0) > 0;
+            }
+          } catch {
+            // Silently skip if enrichment fails
+          }
+        }),
+      );
+
+      if (!cancelled) {
+        setEnrichedAuthors((prev) => ({ ...prev, ...authors }));
+        setEnrichedStock((prev) => ({ ...prev, ...stock }));
+      }
+    };
+
+    void enrich();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, catalogProducts, cart, guestQuantities, isAuthenticated]);
+
   const cartItemsWithMetadata: CartItemWithMeta[] = useMemo(() => {
     if (!initialized) return [];
 
@@ -123,9 +187,9 @@ export function CartScreen() {
           name: product?.name || `Товар #${item.productId}`,
           imageUrl: product?.imageUrls?.[0] || "",
           slug: product?.slug || "",
-          author: product?.author || "Невідомий автор",
+          author: product?.author || enrichedAuthors[item.productId] || "Невідомий автор",
           stockStatus:
-            product?.availabilityStatus === "InStock" || (product?.stock ?? 0) > 0
+            (enrichedStock[item.productId] ?? (product?.availabilityStatus === "InStock" || (product?.stock ?? 0) > 0))
               ? "В наявності"
               : "Немає в наявності",
         };
@@ -153,9 +217,9 @@ export function CartScreen() {
           name: product.name,
           imageUrl: product.imageUrls?.[0] || "",
           slug: product.slug,
-          author: product.author || "Невідомий автор",
+          author: product.author || enrichedAuthors[productId] || "Невідомий автор",
           stockStatus:
-            product.availabilityStatus === "InStock" || (product.stock ?? 0) > 0
+            (enrichedStock[productId] ?? (product.availabilityStatus === "InStock" || (product.stock ?? 0) > 0))
               ? "В наявності"
               : "Немає в наявності",
         } satisfies CartItemWithMeta;
@@ -293,7 +357,12 @@ export function CartScreen() {
             <div className={styles.leftCol}>
               <div className={styles.itemsList}>
                 {cartItemsWithMetadata.map((item) => (
-                  <div key={item.id} className={styles.cartItem}>
+                  <div
+                    key={item.id}
+                    className={styles.cartItem}
+                    data-testid="cart-item"
+                    data-product-id={String(item.productId)}
+                  >
                     <div className={styles.itemTopRow}>
                       <div className={styles.itemImageWrap}>
                         {item.imageUrl ? (
@@ -314,7 +383,9 @@ export function CartScreen() {
                           <span className={styles.stockGreen}>
                             {item.stockStatus}
                           </span>
-                          <span className={styles.bookTitle}>{item.name}</span>
+                          <span className={styles.bookTitle} data-testid="cart-item-title">
+                            {item.name}
+                          </span>
                         </div>
                       </div>
                       <button
@@ -359,13 +430,15 @@ export function CartScreen() {
                           >
                             <path
                               d="M3 8h10"
-                              stroke="#ffffff"
+                              stroke="currentColor"
                               strokeWidth="2"
                               strokeLinecap="round"
                             />
                           </svg>
                         </button>
-                        <span className={styles.qtyText}>{item.quantity}</span>
+                        <span className={styles.qtyText} data-testid="cart-item-quantity">
+                          {item.quantity}
+                        </span>
                         <button
                           type="button"
                           className={styles.qtyBtn}
@@ -382,14 +455,14 @@ export function CartScreen() {
                           >
                             <path
                               d="M8 3v10M3 8h10"
-                              stroke="#ffffff"
+                              stroke="currentColor"
                               strokeWidth="2"
                               strokeLinecap="round"
                             />
                           </svg>
                         </button>
                       </div>
-                      <span className={styles.priceText}>
+                      <span className={styles.priceText} data-testid="cart-item-price">
                         {formatCartPrice(item.lineTotal)} грн.
                       </span>
                     </div>
@@ -402,11 +475,14 @@ export function CartScreen() {
               <div className={styles.bottomBar}>
                 <div className={styles.totalsRow}>
                   <span className={styles.totalsLabel}>Разом</span>
-                  <span className={styles.totalsAmount}>{formatCartPrice(totalAmount)}грн</span>
+                  <span className={styles.totalsAmount} data-testid="cart-total">
+                    {formatCartPrice(totalAmount)}грн
+                  </span>
                 </div>
-                <Link
-                  href={isAuthenticated ? "/checkout" : "/auth?redirect=/checkout"}
+                  <Link
+                  href={isAuthenticated ? "/checkout" : "/auth/login?redirect=/checkout"}
                   className={styles.ctaBtn}
+                  data-testid="cart-checkout-cta"
                 >
                   Оформити замовлення
                 </Link>

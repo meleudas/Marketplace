@@ -1,13 +1,18 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useCatalogAuthors } from "@/features/catalog/hooks/useCatalogAuthors";
 import { useCatalogCategories } from "@/features/catalog/hooks/useCatalogCategories";
-import { useCatalogPageSize } from "@/features/catalog/hooks/useCatalogPageSize";
 import { useCatalogFilters } from "@/features/catalog/hooks/useCatalogFilters";
 import { useCatalogProducts } from "@/features/catalog/hooks/useCatalogProducts";
 import { isCatalogProductFormat } from "@/features/catalog/lib/catalog-filter-options";
+import {
+  buildCatalogUrl,
+  parseCatalogQuery,
+  replaceCatalogUrlShallow,
+  type CatalogQueryRecord,
+} from "@/features/catalog/lib/catalog-url-params";
 import { CatalogFilterPanel } from "@/features/catalog/ui/CatalogFilterPanel";
 import { CatalogFilterSidebar } from "@/features/catalog/ui/CatalogFilterSidebar";
 import { CatalogProductGrid } from "@/features/catalog/ui/CatalogProductGrid";
@@ -26,24 +31,17 @@ import styles from "./CatalogScreen.module.css";
 
 interface CatalogScreenProps {
   categorySlug?: string;
+  initialQuery?: CatalogQueryRecord;
 }
 
-function parseCatalogSortParam(value: string | null): CatalogProductSort | null {
-  if (
-    value === "relevance" ||
-    value === "newest" ||
-    value === "price_asc" ||
-    value === "price_desc"
-  ) {
-    return value;
-  }
-
-  return null;
-}
-
-export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
+export function CatalogScreen({ categorySlug, initialQuery = {} }: CatalogScreenProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  // Only category path + format come from the header catalog menu.
+  // Do not key off other query fields — shallow sidebar URL updates must not remount/hydrate.
+  const headerNavigationKey = `${categorySlug ?? ""}::${parseCatalogQuery(initialQuery).format.join(",")}`;
+  const [urlParams] = useState(() => parseCatalogQuery(initialQuery));
+  const [seenHeaderNavigationKey, setSeenHeaderNavigationKey] = useState(headerNavigationKey);
+
   const {
     categories,
     rootCategories,
@@ -51,24 +49,29 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     selectedSubcategorySlug,
     categoryError,
   } = useCatalogCategories(categorySlug);
-  const [manualSort, setManualSort] = useState<CatalogProductSort>(DEFAULT_CATALOG_PRODUCT_SORT);
-  const sortFromUrl = useMemo(
-    () => parseCatalogSortParam(searchParams.get("sort")),
-    [searchParams],
+  const [selectedSort, setSelectedSort] = useState<CatalogProductSort>(
+    urlParams.sort ?? DEFAULT_CATALOG_PRODUCT_SORT,
   );
-  const selectedSort = sortFromUrl ?? manualSort;
   const [sortModalOpen, setSortModalOpen] = useState(false);
-  const [searchInput, setSearchInput] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [pageState, setPageState] = useState({ key: "", page: 1 });
+  const [searchInput, setSearchInput] = useState(urlParams.q);
+  const [searchQuery, setSearchQuery] = useState(urlParams.q);
+  const [page, setPage] = useState(urlParams.page);
+  const [filterUpdatePending, setFilterUpdatePending] = useState(false);
   const pendingScrollY = useRef<number | null>(null);
-  const pageSize = useCatalogPageSize();
+  const [pageSize, setPageSize] = useState(urlParams.pageSize);
+  const urlSyncReadyRef = useRef(false);
+  const desiredCatalogUrlRef = useRef<string>("");
 
   const filters = useCatalogFilters({
     categories,
     selectedRootSlug,
     selectedSubcategorySlug,
     onRouteCategoryMismatch: () => router.push("/catalog"),
+    initialAuthors: urlParams.authors,
+    initialCategorySlugs: urlParams.categories,
+    initialFormat: urlParams.format,
+    initialMinPrice: urlParams.minPrice,
+    initialMaxPrice: urlParams.maxPrice,
   });
 
   const {
@@ -77,7 +80,6 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     appliedAuthors,
     appliedCategorySlugs,
     appliedFormat,
-    setAppliedFormat,
     appliedMinPrice,
     appliedMaxPrice,
     draftAuthors,
@@ -106,7 +108,81 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     toggleAppliedFormatValue,
     applyAppliedPriceRange,
     resetAppliedFilters,
+    hydrateAppliedFilters,
   } = filters;
+
+  const buildDesiredCatalogUrl = useCallback(
+    () =>
+      buildCatalogUrl(categorySlug, {
+        authors: appliedAuthors,
+        categories: appliedCategorySlugs,
+        format: appliedFormat,
+        minPrice: appliedMinPrice,
+        maxPrice: appliedMaxPrice,
+        page,
+        searchQuery,
+        selectedSort,
+        pageSize,
+      }),
+    [
+      appliedAuthors,
+      appliedCategorySlugs,
+      appliedFormat,
+      appliedMinPrice,
+      appliedMaxPrice,
+      page,
+      searchQuery,
+      selectedSort,
+      pageSize,
+      categorySlug,
+    ],
+  );
+
+  const handleProductsLoadComplete = useCallback(() => {
+    setFilterUpdatePending(false);
+    // Next.js App Router can overwrite history.replaceState after data fetches;
+    // re-apply the desired catalog query so Playwright/shareable URLs stay in sync.
+    if (!urlSyncReadyRef.current) {
+      return;
+    }
+
+    const desiredUrl = desiredCatalogUrlRef.current;
+    if (!desiredUrl) {
+      return;
+    }
+
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+    if (currentUrl !== desiredUrl) {
+      replaceCatalogUrlShallow(desiredUrl);
+    }
+  }, [setFilterUpdatePending]);
+
+  // Sync format when header catalog menu navigates. Ignore echoes of our own shallow URL writes
+  // by only reacting when the header key changes; keep the route category selected.
+  if (seenHeaderNavigationKey !== headerNavigationKey) {
+    const parsed = parseCatalogQuery(initialQuery);
+    setSeenHeaderNavigationKey(headerNavigationKey);
+    hydrateAppliedFilters({
+      authors: parsed.authors,
+      categorySlugs:
+        parsed.categories.length > 0
+          ? parsed.categories
+          : categorySlug
+            ? [categorySlug]
+            : [],
+      format: parsed.format,
+      minPrice: parsed.minPrice,
+      maxPrice: parsed.maxPrice,
+    });
+    setSelectedSort(parsed.sort ?? DEFAULT_CATALOG_PRODUCT_SORT);
+    setSearchInput(parsed.q);
+    setSearchQuery(parsed.q);
+    setPage(parsed.page);
+    setPageSize(parsed.pageSize);
+    setFilterUpdatePending(true);
+  }
+
+  const routeCategorySlugs = getRouteCategorySlugs(selectedRootSlug, selectedSubcategorySlug);
 
   const { authors, authorsLoading } = useCatalogAuthors({
     categories,
@@ -114,33 +190,6 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     selectedSubcategorySlug,
     appliedCategorySlugs,
   });
-
-  const paginationKey = useMemo(() => {
-    return JSON.stringify({
-      appliedAuthors,
-      appliedCategorySlugs,
-      appliedFormat,
-      appliedMaxPrice,
-      appliedMinPrice,
-      selectedRootSlug,
-      selectedSubcategorySlug,
-      selectedSort,
-      searchQuery,
-      pageSize,
-    });
-  }, [
-    appliedAuthors,
-    appliedCategorySlugs,
-    appliedFormat,
-    appliedMaxPrice,
-    appliedMinPrice,
-    selectedRootSlug,
-    selectedSubcategorySlug,
-    selectedSort,
-    searchQuery,
-    pageSize,
-  ]);
-  const requestedPage = pageState.key === paginationKey ? pageState.page : 1;
 
   const { products, totalProducts, productsLoading, productsError } = useCatalogProducts({
     categories,
@@ -153,24 +202,28 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     appliedMaxPrice,
     searchQuery,
     selectedSort,
-    page: requestedPage,
+    page,
     pageSize,
+    onLoadComplete: handleProductsLoadComplete,
   });
 
   useEffect(() => {
-    const formatParam = searchParams.get("format");
-
-    if (formatParam && isCatalogProductFormat(formatParam)) {
-      setAppliedFormat(formatParam);
-      return;
-    }
-
-    setAppliedFormat(null);
-  }, [searchParams, setAppliedFormat]);
-
-  useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      setSearchQuery(searchInput.trim());
+      const nextQuery = searchInput.trim();
+      let shouldResetPage = false;
+
+      setSearchQuery((current) => {
+        if (current === nextQuery) {
+          return current;
+        }
+
+        shouldResetPage = true;
+        return nextQuery;
+      });
+
+      if (shouldResetPage) {
+        setPage(1);
+      }
     }, 350);
 
     return () => window.clearTimeout(timeoutId);
@@ -179,7 +232,7 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
   const isInitialLoading = productsLoading && products.length === 0;
   const error = categoryError ?? productsError;
   const totalPages = Math.max(1, Math.ceil(totalProducts / pageSize));
-  const currentPage = Math.min(requestedPage, totalPages);
+  const currentPage = Math.min(page, totalPages);
 
   useLayoutEffect(() => {
     if (pendingScrollY.current === null) {
@@ -203,19 +256,53 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     };
   }, [filtersOpen, sortModalOpen]);
 
-  const sortButtonLabel = getCatalogProductSortLabel(selectedSort);
+  useEffect(() => {
+    const desiredUrl = buildDesiredCatalogUrl();
+    desiredCatalogUrlRef.current = desiredUrl;
 
-  const handlePageChange = (page: number) => {
-    if (page === currentPage) {
+    if (!urlSyncReadyRef.current) {
+      return;
+    }
+
+    replaceCatalogUrlShallow(desiredUrl);
+  }, [buildDesiredCatalogUrl]);
+
+  useEffect(() => {
+    urlSyncReadyRef.current = true;
+    const desiredUrl = desiredCatalogUrlRef.current || buildDesiredCatalogUrl();
+    desiredCatalogUrlRef.current = desiredUrl;
+    replaceCatalogUrlShallow(desiredUrl);
+    // Intentionally run once after mount so the first real state write is not skipped.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only bootstrap for shallow URL sync
+  }, []);
+
+  const sortButtonLabel = getCatalogProductSortLabel(selectedSort);
+  const filterControlsDisabled = filterUpdatePending || productsLoading;
+
+  const runFilterUpdate = useCallback(
+    (update: () => void) => {
+      if (filterControlsDisabled) {
+        return;
+      }
+
+      setFilterUpdatePending(true);
+      setPage(1);
+      update();
+    },
+    [filterControlsDisabled, setFilterUpdatePending, setPage],
+  );
+
+  const handlePageChange = (nextPage: number) => {
+    if (nextPage === currentPage) {
       return;
     }
 
     pendingScrollY.current = window.scrollY;
-    setPageState({ key: paginationKey, page });
+    setPage(nextPage);
   };
 
   const handleSortSelect = (sort: CatalogProductSort) => {
-    setManualSort(sort);
+    setSelectedSort(sort);
     setSortModalOpen(false);
   };
 
@@ -225,7 +312,9 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
   };
 
   const catalogMenuFormat: CatalogFormatFilter =
-    appliedFormat && isCatalogProductFormat(appliedFormat) ? appliedFormat : "all";
+    appliedFormat.length > 0 && isCatalogProductFormat(appliedFormat[0])
+      ? appliedFormat[0]
+      : "all";
 
   const handleRemoveCategory = (slug: string, source: "applied" | "route") => {
     if (source === "applied") {
@@ -236,12 +325,8 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
     router.push("/catalog");
   };
 
-  const handleRemoveFormat = () => {
-    removeAppliedFormat();
-
-    if (searchParams.get("format")) {
-      router.push(categorySlug ? `/catalog/${categorySlug}` : "/catalog");
-    }
+  const handleRemoveFormat = (format: string) => {
+    removeAppliedFormat(format);
   };
 
   return (
@@ -263,17 +348,27 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
           categories={categories}
           authorOptions={authors}
           authorsLoading={authorsLoading}
+          routeCategorySlugs={routeCategorySlugs}
           appliedCategorySlugs={appliedCategorySlugs}
           appliedAuthors={appliedAuthors}
           appliedFormat={appliedFormat}
           appliedMinPrice={appliedMinPrice}
           appliedMaxPrice={appliedMaxPrice}
-          onToggleRootCategory={toggleAppliedRootCategory}
-          onToggleSubcategory={toggleAppliedSubcategory}
-          onToggleAuthor={toggleAppliedAuthor}
-          onToggleFormat={toggleAppliedFormatValue}
-          onApplyPriceRange={applyAppliedPriceRange}
-          onReset={resetAppliedFilters}
+          disabled={filterControlsDisabled}
+          onToggleRootCategory={(slug) =>
+            runFilterUpdate(() => toggleAppliedRootCategory(slug))
+          }
+          onToggleSubcategory={(rootSlug, subcategorySlug) =>
+            runFilterUpdate(() => toggleAppliedSubcategory(rootSlug, subcategorySlug))
+          }
+          onToggleAuthor={(author) => runFilterUpdate(() => toggleAppliedAuthor(author))}
+          onToggleFormat={(format) =>
+            runFilterUpdate(() => toggleAppliedFormatValue(format))
+          }
+          onApplyPriceRange={(minPrice, maxPrice) =>
+            runFilterUpdate(() => applyAppliedPriceRange(minPrice, maxPrice))
+          }
+          onReset={() => runFilterUpdate(resetAppliedFilters)}
         />
 
         <div className={styles.catalogMain}>
@@ -281,13 +376,15 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
             loading={isInitialLoading}
             categories={categories}
             authorOptions={authors}
-            routeCategorySlugs={getRouteCategorySlugs(selectedRootSlug, selectedSubcategorySlug)}
+            routeCategorySlugs={routeCategorySlugs}
             appliedCategorySlugs={appliedCategorySlugs}
             appliedAuthors={appliedAuthors}
             appliedFormat={appliedFormat}
-            onRemoveCategory={handleRemoveCategory}
-            onRemoveAuthor={removeAppliedAuthor}
-            onRemoveFormat={handleRemoveFormat}
+            onRemoveCategory={(slug, source) =>
+              runFilterUpdate(() => handleRemoveCategory(slug, source))
+            }
+            onRemoveAuthor={(author) => runFilterUpdate(() => removeAppliedAuthor(author))}
+            onRemoveFormat={(format) => runFilterUpdate(() => handleRemoveFormat(format))}
           />
 
           <CatalogToolbar
@@ -297,9 +394,11 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
             sortButtonLabel={sortButtonLabel}
             totalCount={totalProducts}
             selectedSort={selectedSort}
+            pageSize={pageSize}
             onOpenFilters={handleOpenFilters}
             onToggleSort={() => setSortModalOpen((open) => !open)}
             onSelectSort={handleSortSelect}
+            onPageSizeChange={setPageSize}
           />
 
           <CatalogFilterPanel
@@ -316,7 +415,7 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
             showAllCategories={showAllCategories}
             showAllAuthors={showAllAuthors}
             onClose={() => setFiltersOpen(false)}
-            onApply={applyFilters}
+            onApply={() => runFilterUpdate(applyFilters)}
             onDraftAuthorsChange={setDraftAuthors}
             onDraftRootCategoryToggle={toggleDraftRootCategory}
             onDraftSubcategoryToggle={toggleDraftSubcategory}
@@ -331,7 +430,7 @@ export function CatalogScreen({ categorySlug }: CatalogScreenProps) {
 
           <CatalogProductGrid
             loading={isInitialLoading}
-            refreshing={productsLoading && !isInitialLoading}
+            refreshing={filterControlsDisabled && !isInitialLoading}
             error={error}
             products={products}
             pageSize={pageSize}

@@ -14,13 +14,14 @@ interface UseCatalogProductsParams {
   selectedSubcategorySlug: string | null;
   appliedAuthors: string[];
   appliedCategorySlugs: string[];
-  appliedFormat: string | null;
+  appliedFormat: string[];
   appliedMinPrice: string;
   appliedMaxPrice: string;
   searchQuery: string;
   selectedSort: CatalogProductSort;
   page: number;
   pageSize: number;
+  onLoadComplete?: () => void;
 }
 
 interface UseCatalogProductsResult {
@@ -43,6 +44,7 @@ export function useCatalogProducts({
   selectedSort,
   page,
   pageSize,
+  onLoadComplete,
 }: UseCatalogProductsParams): UseCatalogProductsResult {
   const [products, setProducts] = useState<CatalogProductListItemDto[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
@@ -80,7 +82,7 @@ export function useCatalogProducts({
           minPrice,
           maxPrice,
           authors: appliedAuthors.length > 0 ? appliedAuthors : undefined,
-          format: appliedFormat ?? undefined,
+          format: appliedFormat.length > 0 ? appliedFormat.join(",") : undefined,
           sort: selectedSort,
           page,
           pageSize,
@@ -97,6 +99,7 @@ export function useCatalogProducts({
       } finally {
         if (!cancelled) {
           setProductsLoading(false);
+          onLoadComplete?.();
         }
       }
     };
@@ -115,6 +118,7 @@ export function useCatalogProducts({
     categories,
     page,
     pageSize,
+    onLoadComplete,
     searchQuery,
     selectedRootSlug,
     selectedSubcategorySlug,

@@ -1,10 +1,5 @@
-import { useState } from "react";
-import {
-  DEFAULT_CATALOG_MAX_PRICE,
-  DEFAULT_CATALOG_MIN_PRICE,
-  resolveAppliedPriceFilter,
-} from "@/features/catalog/lib/catalog-filter-options";
-import { toggleArrayFilter, toggleSingleFilter } from "@/features/catalog/lib/catalog-filter-utils";
+import { useCallback, useState } from "react";
+import { toggleArrayFilter } from "@/features/catalog/lib/catalog-filter-utils";
 import { getChildCategories, getRouteCategorySlugs } from "@/features/storefront/lib/catalog-category-filter";
 import type { CatalogCategoryDto } from "@/features/storefront/model/catalog.types";
 
@@ -13,6 +8,12 @@ interface UseCatalogFiltersParams {
   selectedRootSlug: string | null;
   selectedSubcategorySlug: string | null;
   onRouteCategoryMismatch: () => void;
+  initialAuthors?: string[];
+  initialCategorySlugs?: string[];
+  initialFormat?: string[];
+  initialMinPrice?: string;
+  initialMaxPrice?: string;
+  initialPageSize?: number;
 }
 
 export function useCatalogFilters({
@@ -20,18 +21,23 @@ export function useCatalogFilters({
   selectedRootSlug,
   selectedSubcategorySlug,
   onRouteCategoryMismatch,
+  initialAuthors,
+  initialCategorySlugs,
+  initialFormat,
+  initialMinPrice,
+  initialMaxPrice,
 }: UseCatalogFiltersParams) {
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [appliedAuthors, setAppliedAuthors] = useState<string[]>([]);
-  const [appliedCategorySlugs, setAppliedCategorySlugs] = useState<string[]>([]);
-  const [appliedFormat, setAppliedFormat] = useState<string | null>(null);
-  const [appliedMinPrice, setAppliedMinPrice] = useState("");
-  const [appliedMaxPrice, setAppliedMaxPrice] = useState("");
+  const [appliedAuthors, setAppliedAuthors] = useState<string[]>(initialAuthors ?? []);
+  const [appliedCategorySlugs, setAppliedCategorySlugs] = useState<string[]>(initialCategorySlugs ?? []);
+  const [appliedFormat, setAppliedFormat] = useState<string[]>(initialFormat ?? []);
+  const [appliedMinPrice, setAppliedMinPrice] = useState(initialMinPrice ?? "");
+  const [appliedMaxPrice, setAppliedMaxPrice] = useState(initialMaxPrice ?? "");
   const [draftAuthors, setDraftAuthors] = useState<string[]>([]);
   const [draftCategorySlugs, setDraftCategorySlugs] = useState<string[]>([]);
-  const [draftFormat, setDraftFormat] = useState<string | null>(null);
-  const [draftMinPrice, setDraftMinPrice] = useState(DEFAULT_CATALOG_MIN_PRICE);
-  const [draftMaxPrice, setDraftMaxPrice] = useState(DEFAULT_CATALOG_MAX_PRICE);
+  const [draftFormat, setDraftFormat] = useState<string[]>([]);
+  const [draftMinPrice, setDraftMinPrice] = useState("");
+  const [draftMaxPrice, setDraftMaxPrice] = useState("");
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [showAllAuthors, setShowAllAuthors] = useState(false);
 
@@ -42,25 +48,34 @@ export function useCatalogFilters({
     setDraftCategorySlugs(
       appliedCategorySlugs.length > 0 ? appliedCategorySlugs : routeCategorySlugs,
     );
-    setDraftFormat(appliedFormat);
-    setDraftMinPrice(appliedMinPrice || DEFAULT_CATALOG_MIN_PRICE);
-    setDraftMaxPrice(appliedMaxPrice || DEFAULT_CATALOG_MAX_PRICE);
+    setDraftFormat([...appliedFormat]);
+    setDraftMinPrice(appliedMinPrice || "");
+    setDraftMaxPrice(appliedMaxPrice || "");
     setShowAllCategories(false);
     setShowAllAuthors(false);
     setFiltersOpen(true);
   };
 
   const applyFilters = () => {
+    const routeCategorySlugs = getRouteCategorySlugs(selectedRootSlug, selectedSubcategorySlug);
+    const nextCategorySlugs =
+      draftCategorySlugs.length > 0 || routeCategorySlugs.length === 0
+        ? draftCategorySlugs
+        : routeCategorySlugs;
+
     setAppliedAuthors(draftAuthors);
-    setAppliedCategorySlugs(draftCategorySlugs);
+    setAppliedCategorySlugs(nextCategorySlugs);
     setAppliedFormat(draftFormat);
-    setAppliedMinPrice(resolveAppliedPriceFilter(draftMinPrice, DEFAULT_CATALOG_MIN_PRICE));
-    setAppliedMaxPrice(resolveAppliedPriceFilter(draftMaxPrice, DEFAULT_CATALOG_MAX_PRICE));
+    setAppliedMinPrice(draftMinPrice.trim());
+    setAppliedMaxPrice(draftMaxPrice.trim());
     setFiltersOpen(false);
 
     const currentRouteCategorySlug = selectedSubcategorySlug ?? selectedRootSlug;
-    const nextSingleCategorySlug = draftCategorySlugs.length === 1 ? draftCategorySlugs[0] : null;
-    if (currentRouteCategorySlug && currentRouteCategorySlug !== nextSingleCategorySlug) {
+    if (
+      currentRouteCategorySlug &&
+      nextCategorySlugs.length > 0 &&
+      !nextCategorySlugs.includes(currentRouteCategorySlug)
+    ) {
       onRouteCategoryMismatch();
     }
   };
@@ -92,16 +107,39 @@ export function useCatalogFilters({
     setAppliedCategorySlugs((current) => current.filter((value) => value !== slug));
   };
 
-  const removeAppliedFormat = () => {
-    setAppliedFormat(null);
+  const removeAppliedFormat = (format: string) => {
+    setAppliedFormat((current) => current.filter((value) => value !== format));
   };
 
   const notifyRouteMismatch = (nextCategorySlugs: string[]) => {
     const currentRouteCategorySlug = selectedSubcategorySlug ?? selectedRootSlug;
-    const nextSingleCategorySlug = nextCategorySlugs.length === 1 ? nextCategorySlugs[0] : null;
-    if (currentRouteCategorySlug && currentRouteCategorySlug !== nextSingleCategorySlug) {
-      onRouteCategoryMismatch();
+    if (!currentRouteCategorySlug) {
+      return;
     }
+
+    // Clearing applied categories should fall back to the route category, not leave the page.
+    if (nextCategorySlugs.length === 0) {
+      return;
+    }
+
+    // Stay on the route page when the route category remains part of the selection.
+    if (nextCategorySlugs.includes(currentRouteCategorySlug)) {
+      return;
+    }
+
+    onRouteCategoryMismatch();
+  };
+
+  /** Keep the header/route category selected when applying other sidebar filters. */
+  const ensureRouteCategoryApplied = () => {
+    const routeCategorySlugs = getRouteCategorySlugs(selectedRootSlug, selectedSubcategorySlug);
+    if (routeCategorySlugs.length === 0) {
+      return;
+    }
+
+    setAppliedCategorySlugs((current) =>
+      current.length > 0 ? current : routeCategorySlugs,
+    );
   };
 
   /** Instant-apply toggles for the always-visible desktop sidebar (no draft/apply step). */
@@ -110,40 +148,64 @@ export function useCatalogFilters({
     const childSlugs = category
       ? getChildCategories(categories, category.id).map((child) => child.slug)
       : [];
+    const routeCategorySlugs = getRouteCategorySlugs(selectedRootSlug, selectedSubcategorySlug);
+    const base =
+      appliedCategorySlugs.length > 0 ? appliedCategorySlugs : routeCategorySlugs;
 
-    const withoutChildren = appliedCategorySlugs.filter((value) => !childSlugs.includes(value));
+    const withoutChildren = base.filter((value) => !childSlugs.includes(value));
     const next = toggleArrayFilter(withoutChildren, slug);
     setAppliedCategorySlugs(next);
     notifyRouteMismatch(next);
   };
 
   const toggleAppliedSubcategory = (rootSlug: string, subcategorySlug: string) => {
-    const withoutRoot = appliedCategorySlugs.filter((value) => value !== rootSlug);
+    const routeCategorySlugs = getRouteCategorySlugs(selectedRootSlug, selectedSubcategorySlug);
+    const base =
+      appliedCategorySlugs.length > 0 ? appliedCategorySlugs : routeCategorySlugs;
+    const withoutRoot = base.filter((value) => value !== rootSlug);
     const next = toggleArrayFilter(withoutRoot, subcategorySlug);
     setAppliedCategorySlugs(next);
     notifyRouteMismatch(next);
   };
 
   const toggleAppliedAuthor = (author: string) => {
+    ensureRouteCategoryApplied();
     setAppliedAuthors((current) => toggleArrayFilter(current, author));
   };
 
   const toggleAppliedFormatValue = (format: string) => {
-    setAppliedFormat((current) => toggleSingleFilter(current, format));
+    ensureRouteCategoryApplied();
+    setAppliedFormat((current) => toggleArrayFilter(current, format));
   };
 
   const applyAppliedPriceRange = (minPrice: string, maxPrice: string) => {
-    setAppliedMinPrice(resolveAppliedPriceFilter(minPrice, DEFAULT_CATALOG_MIN_PRICE));
-    setAppliedMaxPrice(resolveAppliedPriceFilter(maxPrice, DEFAULT_CATALOG_MAX_PRICE));
+    ensureRouteCategoryApplied();
+    setAppliedMinPrice(minPrice.trim());
+    setAppliedMaxPrice(maxPrice.trim());
   };
 
   const resetAppliedFilters = () => {
     setAppliedAuthors([]);
     setAppliedCategorySlugs([]);
-    setAppliedFormat(null);
+    setAppliedFormat([]);
     setAppliedMinPrice("");
     setAppliedMaxPrice("");
   };
+
+  const hydrateAppliedFilters = useCallback((next: {
+    authors?: string[];
+    categorySlugs?: string[];
+    format?: string[];
+    minPrice?: string;
+    maxPrice?: string;
+  }) => {
+    setAppliedAuthors(next.authors ?? []);
+    setAppliedCategorySlugs(next.categorySlugs ?? []);
+    setAppliedFormat(next.format ?? []);
+    setAppliedMinPrice(next.minPrice ?? "");
+    setAppliedMaxPrice(next.maxPrice ?? "");
+    setFiltersOpen(false);
+  }, []);
 
   return {
     filtersOpen,
@@ -182,5 +244,6 @@ export function useCatalogFilters({
     toggleAppliedFormatValue,
     applyAppliedPriceRange,
     resetAppliedFilters,
+    hydrateAppliedFilters,
   };
 }

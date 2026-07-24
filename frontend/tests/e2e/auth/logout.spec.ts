@@ -21,8 +21,8 @@ test.describe("Auth logout", () => {
     await loginViaUi(page, credentials);
     await page.goto("/me");
 
-    await expect(page.getByRole("heading", { name: "My profile" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Logout" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Персональні дані" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Вийти з профілю" })).toBeVisible();
   });
 
   test("user can log out from /me", async ({ page }) => {
@@ -32,7 +32,7 @@ test.describe("Auth logout", () => {
     await loginViaUi(page, credentials);
     await logoutViaUi(page);
 
-    await expect(page.getByRole("heading", { name: "Auth MVP" })).toBeVisible();
+    await expect(page).toHaveURL(/\/($|\?)/);
   });
 
   test("logout clears localStorage accessToken", async ({ page }) => {
@@ -50,8 +50,8 @@ test.describe("Auth logout", () => {
     const credentials = await getVerifiedTestCredentials();
     await loginViaUi(page, credentials);
     await page.goto("/me");
-    await page.getByRole("button", { name: "Logout" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await page.getByRole("button", { name: "Вийти з профілю" }).click();
+    await expect(page).toHaveURL(/\/($|\?)/);
   });
 
   test("after logout /me shows sign-in prompt", async ({ page }) => {
@@ -62,8 +62,8 @@ test.describe("Auth logout", () => {
     await logoutViaUi(page);
 
     await page.goto("/me");
-    await expect(page.getByText("You need to sign in first")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
+    await expect(page.getByText("Увійдіть, щоб переглянути свій профіль")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Увійти" })).toBeVisible();
   });
 
   test("after logout /settings redirects to /", async ({ page }) => {
@@ -74,7 +74,7 @@ test.describe("Auth logout", () => {
     await logoutViaUi(page);
 
     await page.goto("/settings");
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/($|\?)/);
   });
 
   test("logout still clears local session when /auth/logout returns 500", async ({ page }) => {
@@ -88,8 +88,8 @@ test.describe("Auth logout", () => {
     });
 
     await page.goto("/me");
-    await page.getByRole("button", { name: "Logout" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await page.getByRole("button", { name: "Вийти з профілю" }).click();
+    await expect(page).toHaveURL(/\/($|\?)/);
     await expectAccessTokenMissing(page);
     await expectGuest(page);
   });
@@ -109,7 +109,7 @@ test.describe("Auth logout API endpoint", () => {
     );
 
     await page.goto("/me");
-    await page.getByRole("button", { name: "Logout" }).click();
+    await page.getByRole("button", { name: "Вийти з профілю" }).click();
     const logoutRequest = await logoutRequestPromise;
 
     expect(logoutRequest.url()).toContain(getApiBaseUrl());

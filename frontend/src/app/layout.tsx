@@ -135,7 +135,9 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={styles.body}>{children}</body>
+      <body className={styles.body}>
+        {children}
+      </body>
     </html>
   );
 }

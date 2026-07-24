@@ -14,12 +14,15 @@
 
 .catalogLayout {
   display: block;
+  overflow: visible;
 }
 
 .catalogMain {
   display: grid;
   gap: var(--space-16);
   min-width: 0;
+  min-height: 40vh;
+  overflow: visible;
 }
 
 @media (min-width: 1024px) {
@@ -478,21 +481,44 @@
   display: none;
 }
 
+.sidebarScroll {
+  display: block;
+}
+
 @media (min-width: 1024px) {
   .sidebar {
-    display: grid;
-    gap: var(--space-4);
+    /* Matches desktop sticky header: 50px logo + 8px padding-y × 2 + gap */
+    --catalog-filters-top: calc(50px + 16px + var(--space-16));
+    display: block;
     align-self: start;
     position: sticky;
-    top: var(--space-24);
+    top: var(--catalog-filters-top);
+    z-index: 2;
+    box-sizing: border-box;
+    width: 280px;
+    max-width: 100%;
+    max-height: calc(100dvh - var(--catalog-filters-top) - var(--space-24));
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: var(--space-20);
     border: 1px solid rgb(163 194 224 / 0.24);
     border-radius: var(--radius-sm);
+    color: var(--color-text);
     background:
       radial-gradient(circle at 0% 0%, rgb(83 93 223 / 0.14), transparent 46%),
       radial-gradient(circle at 100% 100%, rgb(238 2 144 / 0.08), transparent 42%),
       rgb(47 47 47 / 0.72);
   }
+
+  .sidebarScroll {
+    display: block;
+  }
+}
+
+.sidebarDisabled {
+  opacity: 0.72;
+  pointer-events: none;
 }
 
 .sidebarHeader {
@@ -500,6 +526,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-12);
+  flex-shrink: 0;
   padding-bottom: var(--space-12);
   border-bottom: 1px solid rgb(255 255 255 / 0.12);
 }
@@ -652,16 +679,35 @@
   outline-offset: 2px;
 }
 
-.sidebarApplyPrice {
-  width: 100%;
-  max-width: none;
-}
-
 .productGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--product-card-width), var(--product-card-width)));
   justify-content: start;
   gap: var(--space-12);
+}
+
+.catalogResults {
+  position: relative;
+  min-width: 0;
+}
+
+.productGridRefreshing {
+  opacity: 0.45;
+  transition: opacity var(--ui-transition-fast);
+}
+
+.catalogRefreshOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.catalogRefreshEmpty {
+  min-height: 220px;
 }
 
 .cardLink {
@@ -858,5 +904,125 @@
 @keyframes shimmer {
   100% {
     transform: translateX(100%);
+  }
+}
+
+/* ── List view ── */
+
+.productList {
+  display: grid;
+  gap: var(--space-12);
+}
+
+.productList .cardLink {
+  width: 100%;
+}
+
+/* ── Desktop toolbar controls ── */
+
+.desktopToolbarControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.viewToggle {
+  display: flex;
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.viewToggleButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--color-neutral-400);
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+
+.viewToggleButton:hover {
+  background: rgb(255 255 255 / 0.08);
+  color: var(--color-text);
+}
+
+.viewToggleButtonActive {
+  background: var(--color-primary-blue);
+  color: var(--color-white);
+}
+
+.viewToggleButtonActive:hover {
+  background: var(--color-primary-light-blue);
+  color: var(--color-white);
+}
+
+.pageSizeLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-family: var(--font-primary), sans-serif;
+  font-size: var(--typography-body2-font-size);
+  color: var(--color-neutral-400);
+  white-space: nowrap;
+}
+
+.pageSizeLabelText {
+  color: var(--color-neutral-400);
+}
+
+.pageSizeSelect {
+  height: 36px;
+  padding-inline: var(--space-8);
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: var(--radius-sm);
+  background: var(--color-neutral-800);
+  color: var(--color-text);
+  font-family: var(--font-primary), sans-serif;
+  font-size: var(--typography-body2-font-size);
+  cursor: pointer;
+}
+
+.pageSizeSelect:focus-visible {
+  outline: 2px solid var(--button-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── Author search ── */
+
+.authorSearchWrapper {
+  margin-bottom: var(--space-8);
+}
+
+.authorSearchInput {
+  width: 100%;
+  height: 36px;
+  padding-inline: var(--space-8);
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: var(--radius-sm);
+  background: var(--color-neutral-800);
+  color: var(--color-text);
+  font-family: var(--font-primary), sans-serif;
+  font-size: var(--typography-body2-font-size);
+}
+
+.authorSearchInput::placeholder {
+  color: var(--color-neutral-400);
+  opacity: 0.6;
+}
+
+.authorSearchInput:focus-visible {
+  outline: 2px solid var(--button-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .desktopToolbarControls {
+    flex-wrap: wrap;
   }
 }

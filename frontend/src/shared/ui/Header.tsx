@@ -53,7 +53,7 @@ const isCatalogFormatFilter = (value: string | null): value is CatalogFormatFilt
 
 export function Header({
   homeHref = "/",
-  userHref = "/auth",
+  userHref = "/me",
   cartHref = "/cart",
   searchValue: controlledSearchValue,
   searchPlaceholder = "Пошук",
@@ -403,6 +403,14 @@ export function Header({
           </div>
 
           <div className={styles.actions}>
+            <button
+              type="button"
+              className={`${styles.iconAction} ${styles.mobileSearchBtn}`}
+              aria-label="Пошук"
+              onClick={handleOpenSearch}
+            >
+              <SearchIcon className={iconStyles.icon} />
+            </button>
             <Link
               href={userHref}
               className={`${styles.iconAction} ${styles.profileLink}`}
@@ -420,7 +428,7 @@ export function Header({
             >
               <CartIcon className={iconStyles.icon} />
               {cartCount > 0 && (
-                <span className={styles.cartBadge}>
+                <span className={styles.cartBadge} data-testid="header-cart-badge">
                   {cartCount > 99 ? "99+" : cartCount}
                 </span>
               )}

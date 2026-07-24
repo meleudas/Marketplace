@@ -21,8 +21,8 @@ test.describe("Auth email 2FA login", () => {
       password: testUsers.twoFactor.password,
     });
 
-    await expect(page.getByLabel("2FA Code")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Verify and login" })).toBeVisible();
+    await expect(page.locator("#login-two-factor-code")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Підтвердити і увійти" })).toBeVisible();
   });
 
   test("submitting 2FA step without code shows validation error", async ({ page }) => {
@@ -33,8 +33,8 @@ test.describe("Auth email 2FA login", () => {
       password: testUsers.twoFactor.password,
     });
 
-    await page.getByRole("button", { name: "Verify and login" }).click();
-    await expect(page.getByText("2FA code is required")).toBeVisible();
+    await page.getByRole("button", { name: "Підтвердити і увійти" }).click();
+    await expect(page.getByText("Потрібен код підтвердження")).toBeVisible();
   });
 
   test("invalid 2FA code shows error", async ({ page }) => {
@@ -45,9 +45,9 @@ test.describe("Auth email 2FA login", () => {
       password: testUsers.twoFactor.password,
     });
 
-    await page.getByLabel("2FA Code").fill("000000");
-    await page.getByRole("button", { name: "Verify and login" }).click();
-    await expect(page.getByText(/Invalid 2FA code|invalid/i)).toBeVisible();
+    await page.locator("#login-two-factor-code").fill("000000");
+    await page.getByRole("button", { name: "Підтвердити і увійти" }).click();
+    await expect(page.locator("main [role='alert']")).toHaveText(/Invalid 2FA code/i);
   });
 
   test("Use different account returns to email and password step", async ({ page }) => {
@@ -58,10 +58,10 @@ test.describe("Auth email 2FA login", () => {
       password: testUsers.twoFactor.password,
     });
 
-    await page.getByRole("button", { name: "Use different account" }).click();
-    await expect(page.getByLabel("Email")).toBeVisible();
-    await expect(page.getByLabel("Password")).toBeVisible();
-    await expect(page.getByLabel("2FA Code")).not.toBeVisible();
+    await page.getByRole("button", { name: "Використати інший акаунт" }).click();
+    await expect(page.locator("#login-email")).toBeVisible();
+    await expect(page.locator("#login-password")).toBeVisible();
+    await expect(page.locator("#login-two-factor-code")).not.toBeVisible();
   });
 });
 
@@ -72,7 +72,7 @@ test.describe("Auth email 2FA settings", () => {
 
   test("guest opening /settings redirects to /", async ({ page }) => {
     await page.goto("/settings");
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/($|\?)/);
   });
 
   test("verified user can request email 2FA code", async ({ page }) => {

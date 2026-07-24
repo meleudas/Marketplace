@@ -150,7 +150,7 @@ export function CheckoutScreen() {
 
   useEffect(() => {
     if (initialized && !isAuthenticated) {
-      router.push("/auth?redirect=/checkout");
+      router.push("/auth/login?redirect=/checkout");
       return;
     }
     if (isAuthenticated) {
@@ -297,7 +297,7 @@ export function CheckoutScreen() {
         slug: product?.slug || "",
         author: product?.author || "Невідомий автор",
         stockStatus:
-          product?.availabilityStatus === "InStock" || product?.stock > 0
+          product?.availabilityStatus === "InStock" || (product?.stock ?? 0) > 0
             ? "В наявності"
             : "Немає в наявності",
       };
@@ -462,7 +462,7 @@ export function CheckoutScreen() {
                 />
               </svg>
             </div>
-            <h2 className={styles.successTitle}>
+            <h2 className={styles.successTitle} data-testid="checkout-success">
               Замовлення успішно створено!
             </h2>
             <p className={styles.successSub}>
@@ -507,7 +507,11 @@ export function CheckoutScreen() {
             </svg>
           </Link>
         </div>
-        {errorMsg && <div className={styles.errorAlert}>{errorMsg}</div>}
+        {errorMsg && (
+          <div className={styles.errorAlert} data-testid="checkout-error" role="alert">
+            {errorMsg}
+          </div>
+        )}
         <div className={styles.colsContainer}>
           <div className={styles.leftCol}>
             {/* ══════════════════════════════════════════════ */}
@@ -520,7 +524,7 @@ export function CheckoutScreen() {
                 <button
                   type="button"
                   className={styles.pinkBtn}
-                  onClick={() => router.push("/auth?redirect=/checkout")}
+                  onClick={() => router.push("/auth/login?redirect=/checkout")}
                 >
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <path
@@ -557,6 +561,7 @@ export function CheckoutScreen() {
                     <input
                       type="text"
                       className={styles.input}
+                      data-testid="checkout-first-name"
                       value={contacts.firstName}
                       onChange={(e) =>
                         setContacts({ ...contacts, firstName: e.target.value })
@@ -573,6 +578,7 @@ export function CheckoutScreen() {
                     <input
                       type="text"
                       className={styles.input}
+                      data-testid="checkout-last-name"
                       value={contacts.lastName}
                       onChange={(e) =>
                         setContacts({ ...contacts, lastName: e.target.value })
@@ -676,6 +682,7 @@ export function CheckoutScreen() {
                     </label>
                     <label
                       className={styles.radioLabel}
+                      data-testid="checkout-carrier-ukrposhta"
                       onClick={() => setCarrier("UkrPoshta")}
                     >
                       <span
@@ -808,6 +815,7 @@ export function CheckoutScreen() {
                           <input
                             type="text"
                             className={styles.selectInput}
+                            data-testid="checkout-ukrposhta-city"
                             placeholder="Місто / Село"
                             value={ukrposhtaCity}
                             onChange={(e) => setUkrposhtaCity(e.target.value)}
@@ -819,6 +827,7 @@ export function CheckoutScreen() {
                           <input
                             type="text"
                             className={styles.selectInput}
+                            data-testid="checkout-ukrposhta-index"
                             placeholder="Поштовий індекс (5 цифр)"
                             value={ukrposhtaIndex}
                             onChange={(e) => setUkrposhtaIndex(e.target.value)}
@@ -831,6 +840,7 @@ export function CheckoutScreen() {
                           <input
                             type="text"
                             className={styles.selectInput}
+                            data-testid="checkout-ukrposhta-branch"
                             placeholder="Відділення або поштомат"
                             value={ukrposhtaBranch}
                             onChange={(e) => setUkrposhtaBranch(e.target.value)}
@@ -937,6 +947,7 @@ export function CheckoutScreen() {
               <div className={styles.paymentOptions}>
                 <label
                   className={styles.radioLabel}
+                  data-testid="checkout-payment-card"
                   onClick={() => setPaymentMethod("Card")}
                 >
                   <span
@@ -997,6 +1008,7 @@ export function CheckoutScreen() {
 
                 <label
                   className={styles.radioLabel}
+                  data-testid="checkout-payment-cash"
                   onClick={() => setPaymentMethod("Cash")}
                 >
                   <span
@@ -1197,6 +1209,7 @@ export function CheckoutScreen() {
             <button
               type="submit"
               className={styles.pinkBtn}
+              data-testid="checkout-submit"
               disabled={submitting}
             >
               <span>

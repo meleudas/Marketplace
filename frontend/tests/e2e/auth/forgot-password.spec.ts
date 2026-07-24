@@ -14,13 +14,15 @@ test.describe("Auth forgot password", () => {
 
   test("user can navigate from login to forgot password", async ({ page }) => {
     await openForgotPasswordForm(page);
-    await expect(page.getByText(/Enter your email and we will send you a reset token/i)).toBeVisible();
+    await expect(
+      page.getByText("Введіть електронну пошту, і ми надішлемо код скидання."),
+    ).toBeVisible();
   });
 
   test("step 1 validates email", async ({ page }) => {
     await openForgotPasswordForm(page);
-    await page.getByRole("button", { name: "Send reset token" }).click();
-    await expect(page.getByText("Enter a valid email")).toBeVisible();
+    await page.getByRole("button", { name: "Надіслати код скидання" }).click();
+    await expect(page.getByText("Введіть дійсну електронну адресу")).toBeVisible();
   });
 
   test("step 1 submits email and moves to reset step", async ({ page }) => {
@@ -28,11 +30,11 @@ test.describe("Auth forgot password", () => {
 
     const credentials = await getVerifiedTestCredentials();
     await openForgotPasswordForm(page);
-    await page.getByLabel("Email").fill(credentials.email);
-    await page.getByRole("button", { name: "Send reset token" }).click();
+    await page.locator("#forgot-email").fill(credentials.email);
+    await page.getByRole("button", { name: "Надіслати код скидання" }).click();
 
-    const successMessage = page.getByText(/Password reset code sent/i);
-    const errorMessage = page.locator('[class*="errorMessage"]');
+    const successMessage = page.getByText(/Код для скидання пароля надіслано/i);
+    const errorMessage = page.locator("main [role='alert']");
 
     const result = await Promise.race([
       successMessage
@@ -48,8 +50,8 @@ test.describe("Auth forgot password", () => {
     }
 
     expect(result).toBe("success");
-    await expect(page.getByLabel("Reset token")).toBeVisible();
-    await expect(page.getByLabel("New password")).toBeVisible();
+    await expect(page.locator("#forgot-token")).toBeVisible();
+    await expect(page.locator("#forgot-new-password")).toBeVisible();
   });
 
   test("reset step keeps email readonly", async ({ page }) => {
@@ -57,7 +59,7 @@ test.describe("Auth forgot password", () => {
 
     const credentials = await getVerifiedTestCredentials();
     await advanceForgotPasswordToStepTwo(page, credentials.email);
-    await expect(page.getByLabel("Email")).toHaveJSProperty("readOnly", true);
+    await expect(page.locator("#forgot-email")).toHaveJSProperty("readOnly", true);
   });
 
   test("reset form validates empty token and empty new password", async ({ page }) => {
@@ -66,9 +68,9 @@ test.describe("Auth forgot password", () => {
     const credentials = await getVerifiedTestCredentials();
     await advanceForgotPasswordToStepTwo(page, credentials.email);
 
-    await page.getByRole("button", { name: "Reset password" }).click();
-    await expect(page.getByText("Reset token is required")).toBeVisible();
-    await expect(page.getByText("New password is required")).toBeVisible();
+    await page.getByRole("button", { name: "Оновити пароль" }).click();
+    await expect(page.getByText("Код скидання є обов'язковим")).toBeVisible();
+    await expect(page.getByText("Новий пароль є обов'язковим")).toBeVisible();
   });
 
   test("resend button cooldown behavior is respected", async ({ page }) => {
@@ -77,8 +79,8 @@ test.describe("Auth forgot password", () => {
     const credentials = await getVerifiedTestCredentials();
     await advanceForgotPasswordToStepTwo(page, credentials.email);
 
-    const resendButton = page.getByRole("button", { name: /Did not receive the code\? Send again/i });
+    const resendButton = page.getByRole("button", { name: /Не отримали код\? Надіслати ще раз/i });
     await expect(resendButton).toBeDisabled();
-    await expect(page.getByText(/Available in \d+s/i)).toBeVisible();
+    await expect(page.getByText(/Доступно через \d+ с/i)).toBeVisible();
   });
 });
