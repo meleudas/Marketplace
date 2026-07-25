@@ -56,7 +56,8 @@ public sealed class AwsS3ObjectStorage : IObjectStorage, IDisposable
             Key = objectKey,
             InputStream = content,
             ContentType = contentType,
-            AutoCloseStream = false
+            AutoCloseStream = false,
+            CannedACL = S3CannedACL.PublicRead
         };
         await _client.PutObjectAsync(request, ct);
     }

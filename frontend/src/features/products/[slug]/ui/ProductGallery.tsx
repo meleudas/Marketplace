@@ -54,6 +54,7 @@ export function ProductGallery({ images, alt }: ProductGalleryProps) {
               sizes="100vw"
               className={styles.image}
               priority={index === 0}
+              unoptimized
             />
           </div>
         ))}

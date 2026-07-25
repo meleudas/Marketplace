@@ -303,6 +303,7 @@ export function CartScreen() {
                             fill
                             className={styles.itemImage}
                             sizes="74px"
+                            unoptimized
                           />
                         ) : (
                           <div className={styles.itemImageFallback} />

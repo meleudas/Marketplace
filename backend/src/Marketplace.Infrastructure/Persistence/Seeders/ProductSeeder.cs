@@ -1,7 +1,13 @@
 using System.Text.Json;
+using Marketplace.Application.Common.Options;
+using Marketplace.Application.Common.Ports;
 using Marketplace.Application.Products.Catalog;
+using Marketplace.Application.Products.Ports;
 using Marketplace.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Marketplace.Infrastructure.Persistence.Seeders;
 
@@ -51,7 +57,6 @@ public class ProductSeeder : IDbSeeder
         var usedSlugs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var products = new List<ProductRecord>();
         var details = new List<ProductDetailRecord>();
-        var images = new List<ProductImageRecord>();
 
         for (var bookIndex = 0; bookIndex < bookDefs.Count; bookIndex++)
         {
@@ -130,24 +135,113 @@ public class ProductSeeder : IDbSeeder
             details[i].ProductId = products[i].Id;
 
         context.ProductDetails.AddRange(details);
+        await context.SaveChangesAsync(ct);
 
-        images.AddRange(products.Select(p => new ProductImageRecord
+        await SeedProductImagesAsync(context, sp, products, now, ct);
+    }
+
+    private static async Task SeedProductImagesAsync(
+        ApplicationDbContext context,
+        IServiceProvider sp,
+        IReadOnlyList<ProductRecord> products,
+        DateTime now,
+        CancellationToken ct)
+    {
+        var logger = sp.GetRequiredService<ILogger<ProductSeeder>>();
+        var storageOptions = sp.GetRequiredService<IOptions<StorageOptions>>().Value;
+        if (!storageOptions.Enabled)
         {
-            ProductId = p.Id,
-            ImageUrl = $"https://picsum.photos/seed/marketplace-book-{p.Id}/400/600",
-            ThumbnailUrl = $"https://picsum.photos/seed/marketplace-book-{p.Id}/200/300",
-            OriginalObjectKey = $"products/{p.Id}/original.jpg",
-            ImageObjectKey = $"products/{p.Id}/image.jpg",
-            ThumbnailObjectKey = $"products/{p.Id}/thumb.jpg",
-            AltText = p.Name,
-            SortOrder = 0,
-            IsMain = true,
-            CreatedAt = now,
-            UpdatedAt = now,
-        }));
+            logger.LogWarning(
+                "Storage is disabled; skipping product image seed ({ProductCount} products without images)",
+                products.Count);
+            return;
+        }
+
+        var seedFiles = ResolveSeedImageFiles();
+        if (seedFiles.Count == 0)
+        {
+            logger.LogWarning("No seed product images found under SeedData/ProductImages or repo Image/; skipping image seed");
+            return;
+        }
+
+        var storage = sp.GetRequiredService<IObjectStorage>();
+        var processingDispatcher = sp.GetService<IProductImageProcessingDispatcher>();
+        var images = new List<ProductImageRecord>(products.Count);
+
+        for (var i = 0; i < products.Count; i++)
+        {
+            var product = products[i];
+            var filePath = seedFiles[i % seedFiles.Count];
+            var ext = Path.GetExtension(filePath);
+            if (string.IsNullOrWhiteSpace(ext))
+                ext = ".png";
+
+            var objectKey = $"products/{product.Id}/original/{Guid.NewGuid():N}{ext}";
+            await using (var stream = File.OpenRead(filePath))
+            {
+                await storage.UploadAsync(objectKey, stream, "image/png", ct);
+            }
+
+            var originalUrl = storage.GetPublicUrl(objectKey);
+            var fileSize = new FileInfo(filePath).Length;
+
+            images.Add(new ProductImageRecord
+            {
+                ProductId = product.Id,
+                ImageUrl = originalUrl,
+                ThumbnailUrl = string.Empty,
+                OriginalObjectKey = objectKey,
+                ImageObjectKey = objectKey,
+                ThumbnailObjectKey = string.Empty,
+                AltText = product.Name,
+                SortOrder = 0,
+                IsMain = true,
+                FileSize = fileSize,
+                CreatedAt = now,
+                UpdatedAt = now,
+            });
+
+            if (processingDispatcher is not null)
+                await processingDispatcher.EnqueueDerivativesAsync(product.Id, objectKey, ct);
+        }
 
         context.ProductImages.AddRange(images);
         await context.SaveChangesAsync(ct);
+        logger.LogInformation(
+            "Seeded {ImageCount} product images from {FileCount} local files into object storage",
+            images.Count,
+            seedFiles.Count);
+    }
+
+    private static IReadOnlyList<string> ResolveSeedImageFiles()
+    {
+        foreach (var directory in EnumerateSeedImageDirectories())
+        {
+            if (!Directory.Exists(directory))
+                continue;
+
+            var files = Directory.GetFiles(directory, "*.png", SearchOption.TopDirectoryOnly)
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (files.Length > 0)
+                return files;
+        }
+
+        return [];
+    }
+
+    private static IEnumerable<string> EnumerateSeedImageDirectories()
+    {
+        var relativeSeed = Path.Combine("Persistence", "SeedData", "ProductImages");
+        yield return Path.Combine(AppContext.BaseDirectory, relativeSeed);
+
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            yield return Path.Combine(dir.FullName, relativeSeed);
+            yield return Path.Combine(dir.FullName, "Image");
+            dir = dir.Parent;
+        }
     }
 
     private static List<BookDef> BuildBookDefs()

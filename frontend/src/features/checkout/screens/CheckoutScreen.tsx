@@ -1046,6 +1046,7 @@ export function CheckoutScreen() {
                               fill
                               className={styles.orderImg}
                               sizes="74px"
+                              unoptimized
                             />
                           ) : (
                             <div className={styles.orderImgFallback} />

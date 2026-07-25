@@ -256,6 +256,7 @@ export function CheckoutResultScreen() {
                           width={50}
                           height={70}
                           className={styles.orderItemImage}
+                          unoptimized
                         />
                       ) : (
                         <div className={styles.orderItemImage} style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "#80838d", fontSize: "24px" }}>

@@ -25,6 +25,28 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "cdn-icons-png.flaticon.com",
       },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "9000",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "127.0.0.1",
+        port: "9000",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "**.amazonaws.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "**.cloudfront.net",
+        pathname: "/**",
+      },
     ],
   },
   turbopack: {},

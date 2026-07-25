@@ -40,4 +40,10 @@
     <ProjectReference Include="..\Marketplace.Domain\Marketplace.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Persistence\SeedData\ProductImages\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
