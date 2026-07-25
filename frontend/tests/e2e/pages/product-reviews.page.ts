@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { realisticClick, realisticType } from "../helpers/realistic-pointer";
 
 export class ProductReviewsPage {
   readonly page: Page;
@@ -26,7 +27,14 @@ export class ProductReviewsPage {
     await expect(this.section).toBeVisible({ timeout: 30_000 });
   }
 
-  async scrollToReviews(): Promise<void> {
+  async scrollToReviews(presentationPauseMs = 0): Promise<void> {
+    if (presentationPauseMs > 0) {
+      const writeLink = this.page.getByRole("button", { name: "Написати відгук" });
+      if (await writeLink.isVisible().catch(() => false)) {
+        await this.interact(writeLink, presentationPauseMs);
+        await this.page.waitForTimeout(600);
+      }
+    }
     await this.section.scrollIntoViewIfNeeded();
     await expect(this.form).toBeVisible();
   }
@@ -37,16 +45,34 @@ export class ProductReviewsPage {
     await expect(this.submitButton).toBeDisabled();
   }
 
-  async setRating(stars: number): Promise<void> {
-    await this.form.getByRole("radio", { name: `${stars} з 5` }).click();
+  /** Show that guest cannot write a review (hover locked controls). */
+  async demonstrateGuestBlocked(presentationPauseMs = 500): Promise<void> {
+    await this.expectGuestFormLocked();
+    await this.interact(this.commentInput, presentationPauseMs);
+    await this.page.waitForTimeout(400);
+    await this.interact(this.submitButton, presentationPauseMs);
+    await expect(this.commentInput).toBeDisabled();
+    await expect(this.submitButton).toBeDisabled();
   }
 
-  async fillComment(text: string): Promise<void> {
+  async setRating(stars: number, presentationPauseMs = 0): Promise<void> {
+    const star = this.form.getByRole("radio", { name: `${stars} з 5` });
+    await this.interact(star, presentationPauseMs);
+  }
+
+  async fillComment(text: string, presentationPauseMs = 0): Promise<void> {
+    if (presentationPauseMs > 0) {
+      await realisticType(this.page, this.commentInput, text, {
+        hoverMs: Math.min(Math.max(presentationPauseMs, 350), 600),
+        typeDelayMs: 55,
+      });
+      return;
+    }
     await this.commentInput.fill(text);
   }
 
-  async submit(): Promise<void> {
-    await this.submitButton.click();
+  async submit(presentationPauseMs = 0): Promise<void> {
+    await this.interact(this.submitButton, presentationPauseMs);
   }
 
   reviewByText(comment: string): Locator {
@@ -63,5 +89,15 @@ export class ProductReviewsPage {
 
   async expectReviewCount(comment: string, count: number): Promise<void> {
     await expect(this.reviewByText(comment)).toHaveCount(count);
+  }
+
+  private async interact(target: Locator, presentationPauseMs = 0): Promise<void> {
+    if (presentationPauseMs > 0) {
+      await realisticClick(this.page, target, {
+        hoverMs: Math.min(Math.max(presentationPauseMs, 350), 600),
+      });
+      return;
+    }
+    await target.click();
   }
 }

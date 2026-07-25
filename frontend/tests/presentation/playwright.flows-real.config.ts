@@ -66,20 +66,22 @@ const config: PlaywrightTestConfig = {
   },
 };
 
-// Prefer an already-running Next.js (avoids Windows EADDRINUSE / ::1 races).
-// Set RECORD_START_FRONTEND=1 to let Playwright spawn `next dev`.
-if (process.env.RECORD_START_FRONTEND === "1") {
-  config.webServer = {
-    command: "npx next dev --hostname localhost --port 3000",
-    cwd: frontendRoot,
-    url: baseURL,
-    reuseExistingServer: true,
-    timeout: 180_000,
-    env: {
-      ...process.env,
-      NEXT_PUBLIC_API_URL: apiUrl,
-    },
-  };
-}
+// Production standalone only — `next dev` shows the Next.js issue badge in recordings.
+// Run `npm run build` first (see record:presentation:flows). Set RECORD_REUSE_FRONTEND=1
+// to attach to an already-running prod server on the same URL.
+config.webServer = {
+  command: "node scripts/start-record-frontend.mjs",
+  cwd: frontendRoot,
+  url: baseURL,
+  reuseExistingServer: process.env.RECORD_REUSE_FRONTEND === "1",
+  timeout: 180_000,
+  env: {
+    ...process.env,
+    NODE_ENV: "production",
+    PORT: "3000",
+    HOSTNAME: "127.0.0.1",
+    NEXT_PUBLIC_API_URL: apiUrl,
+  },
+};
 
 export default defineConfig(config);

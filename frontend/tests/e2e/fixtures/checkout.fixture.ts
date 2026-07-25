@@ -92,13 +92,14 @@ export async function seedAuthenticatedCart(
   request: APIRequestContext,
   accessToken: string,
   product?: CartProductFixture,
+  quantity = 1,
 ): Promise<CartProductFixture> {
   await clearAuthenticatedCart(request, accessToken);
   const item = product ?? (await getInStockCatalogProduct(request));
 
   const response = await request.post(`${getApiBaseUrl()}/me/cart/items`, {
     headers: { Authorization: `Bearer ${accessToken}` },
-    data: { productId: item.id, quantity: 1 },
+    data: { productId: item.id, quantity: Math.max(1, quantity) },
   });
 
   if (!response.ok()) {

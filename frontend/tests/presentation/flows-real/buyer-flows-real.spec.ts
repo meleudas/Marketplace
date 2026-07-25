@@ -14,6 +14,7 @@ import {
   writeProofReport,
   type ProofRow,
 } from "../helpers/backend-proof";
+import { presentationLoginOnCurrentPage } from "../helpers/presentation-login";
 import { clearAuthState, loginViaUi } from "../../e2e/fixtures/auth.fixture";
 import {
   getVerifiedTestCredentials,
@@ -21,7 +22,10 @@ import {
 } from "../../e2e/fixtures/api.helper";
 import { getApiBaseUrl } from "../../e2e/fixtures/backend.helper";
 import { getCatalogTestData } from "../../e2e/fixtures/catalog.fixture";
-import { clearAuthenticatedCart } from "../../e2e/fixtures/cart.fixture";
+import {
+  clearAuthenticatedCart,
+  getInStockCatalogProduct,
+} from "../../e2e/fixtures/cart.fixture";
 import {
   getAuthenticatedCartItemCount,
   getOrderPaymentStatus,
@@ -33,16 +37,20 @@ import {
   createUniqueReviewComment,
   ensurePaidPurchaseForProduct,
   getCurrentUserProfile,
+  getLatestPurchasedProduct,
   listProductReviews,
-  loginReviewBuyer,
   prepareReviewProduct,
   purgeProductReviewsForUser,
 } from "../../e2e/fixtures/reviews.fixture";
-import { testUsers } from "../../e2e/fixtures/users.fixture";
 import { CatalogPage } from "../../e2e/pages/catalog.page";
-import { CartPage, CatalogCartActions } from "../../e2e/pages/cart.page";
+import {
+  CartPage,
+  CatalogCartActions,
+  ProductDetailsCartActions,
+} from "../../e2e/pages/cart.page";
 import { CheckoutPage, CheckoutResultPage } from "../../e2e/pages/checkout.page";
 import { ProductReviewsPage } from "../../e2e/pages/product-reviews.page";
+import { realisticClick } from "../../e2e/helpers/realistic-pointer";
 
 const REPO_ROOT = path.resolve(__dirname, "../../../../");
 const PROOF_PATH = path.join(REPO_ROOT, "presentation-assets", "flows", "backend-proof.md");
@@ -69,6 +77,46 @@ type FlowMeta = {
 const proofRows: ProofRow[] = [];
 const flowMetas: FlowMeta[] = [];
 
+const FLOW_ORDER = [
+  "01-catalog",
+  "02-guest-cart",
+  "03-checkout-payment",
+  "04-review",
+] as const;
+
+function readExistingProofRows(proofPath: string): ProofRow[] {
+  if (!fs.existsSync(proofPath)) {
+    return [];
+  }
+
+  const rows: ProofRow[] = [];
+  for (const line of fs.readFileSync(proofPath, "utf8").split(/\r?\n/)) {
+    if (!line.startsWith("| ") || line.startsWith("| Сценарій") || line.startsWith("|---")) {
+      continue;
+    }
+    const cells = line
+      .slice(1, -1)
+      .split("|")
+      .map((cell) => cell.trim());
+    if (cells.length < 4 || !FLOW_ORDER.includes(cells[0] as (typeof FLOW_ORDER)[number])) {
+      continue;
+    }
+    rows.push({
+      scenario: cells[0],
+      endpoints: cells[1] === "—" ? [] : cells[1].split("<br>").filter(Boolean),
+      statuses:
+        cells[2] === "—"
+          ? []
+          : cells[2]
+              .split(",")
+              .map((value) => Number(value.trim()))
+              .filter((value) => Number.isFinite(value)),
+      result: cells[3],
+    });
+  }
+  return rows;
+}
+
 async function assertBackendReady(): Promise<void> {
   const health = await fetch(`${getApiBaseUrl()}/health`, {
     signal: AbortSignal.timeout(5_000),
@@ -87,12 +135,54 @@ test.describe("Buyer flows — real backend", () => {
   });
 
   test.afterAll(() => {
-    writeProofReport(PROOF_PATH, proofRows, {
+    // Merge so re-recording a single scenario keeps other clips' meta/proof.
+    const existingMetas: FlowMeta[] = (() => {
+      if (!fs.existsSync(MANIFEST_META_PATH)) {
+        return [];
+      }
+      try {
+        const parsed = JSON.parse(fs.readFileSync(MANIFEST_META_PATH, "utf8")) as FlowMeta[];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    })();
+
+    const metaById = new Map(existingMetas.map((meta) => [meta.id, meta]));
+    for (const meta of flowMetas) {
+      metaById.set(meta.id, meta);
+    }
+    // Keep only current flow ids (drops retired clips like former 03-cart-merge).
+    const mergedMetas = FLOW_ORDER.filter((id) => metaById.has(id)).map(
+      (id) => metaById.get(id)!,
+    );
+
+    const existingProof = readExistingProofRows(PROOF_PATH);
+    const proofByScenario = new Map(existingProof.map((row) => [row.scenario, row]));
+    // If a prior single-scenario run wiped the proof table, rebuild missing rows from meta.
+    for (const meta of mergedMetas) {
+      if (!proofByScenario.has(meta.id)) {
+        proofByScenario.set(meta.id, {
+          scenario: meta.id,
+          endpoints: meta.endpoints,
+          statuses: [],
+          result: meta.persistenceConfirmed ? "real backend confirmed" : "not recorded",
+        });
+      }
+    }
+    for (const row of proofRows) {
+      proofByScenario.set(row.scenario, row);
+    }
+    const mergedProof = FLOW_ORDER.filter((id) => proofByScenario.has(id)).map(
+      (id) => proofByScenario.get(id)!,
+    );
+
+    writeProofReport(PROOF_PATH, mergedProof, {
       "API base": getApiBaseUrl(),
       Frontend: process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000",
       "Mock routes": "none (page.route not used)",
     });
-    fs.writeFileSync(MANIFEST_META_PATH, JSON.stringify(flowMetas, null, 2), "utf8");
+    fs.writeFileSync(MANIFEST_META_PATH, JSON.stringify(mergedMetas, null, 2), "utf8");
   });
 
   test("01-catalog", async ({ recordClip, request }) => {
@@ -107,17 +197,34 @@ test.describe("Buyer flows — real backend", () => {
         const proof = createApiProofCollector(page);
         const catalog = new CatalogPage(page);
 
-        await catalog.goto();
+        await page.goto("/");
         await hold(page, 2500);
 
-        await catalog.applyFormat("Паперова", "паперовий");
-        await hold(page, 2500);
-        await catalog.applyAuthor(catalogData.author.label, catalogData.author.value);
+        await catalog.openCategoryFromHeader(
+          catalogData.rootCategory.name,
+          catalogData.subcategory.name,
+          catalogData.subcategory.id,
+          1500,
+        );
         await hold(page, 2500);
 
-        await expect(page).toHaveURL(/format=|authors=/);
+        await catalog.applyFormat("Паперова", "паперовий", 500);
+        await hold(page, 2500);
+        await catalog.applyMinimumPrice(100, 500);
+        await hold(page, 2500);
+        await catalog.selectSort("Від найдешевших", "price_asc", 1000);
+        await hold(page, 2500);
+
+        await expect(page).toHaveURL(
+          new RegExp(`/catalog/${catalogData.subcategory.slug}(?:\\?|$)`),
+        );
+        await catalog.expectBrowserSearchParams({
+          format: "паперовий",
+          minPrice: "100",
+          sort: "price_asc",
+        });
+        await catalog.expectSelectedFilter(catalogData.subcategory.name);
         await catalog.expectSelectedFilter("Паперова");
-        await catalog.expectSelectedFilter(catalogData.author.label);
 
         persistence = proof.rows.some(
           (row) =>
@@ -141,11 +248,16 @@ test.describe("Buyer flows — real backend", () => {
       endpoints,
       persistenceConfirmed: persistence,
       status: persistence ? "real backend" : "not recorded",
-      shown: "Каталог → фільтр формату «Паперова» → автор → обрані фільтри / URL",
+      shown: "Головна → каталог у хедері → категорія → формат «Паперова» → ціна від 100 → сортування «Від найдешевших» / URL",
     });
   });
 
-  test("02-guest-cart", async ({ recordClip }) => {
+  test("02-guest-cart", async ({ recordClip, request }) => {
+    const catalogData = await getCatalogTestData(request);
+    const credentials = await getVerifiedTestCredentials();
+    const tokens = await loginUserViaApi(credentials.email, credentials.password);
+    await clearAuthenticatedCart(request, tokens.accessToken);
+
     let persistence = false;
     let endpoints: string[] = [];
     let productSlug = "";
@@ -155,65 +267,38 @@ test.describe("Buyer flows — real backend", () => {
       async (page) => {
         await clearAuthState(page);
         const proof = createApiProofCollector(page);
+        const catalog = new CatalogPage(page);
         const catalogCart = new CatalogCartActions(page);
+        const details = new ProductDetailsCartActions(page);
         const cart = new CartPage(page);
 
-        const product = await catalogCart.addFirstVisibleCatalogProduct();
+        // Continue from the filtered catalog state where 01-catalog ends.
+        await catalog.gotoPresentationEndState(catalogData.subcategory.slug);
+        await hold(page, 2500);
+
+        const product = await catalogCart.openRandomVisibleProduct(500);
         productSlug = product.slug;
-        await hold(page, 2500);
-        await expect(page.getByTestId("header-cart-badge")).toHaveText("1");
-        await catalogCart.goToCartFromDialog();
-        await hold(page, 2500);
-
-        await page.getByRole("button", { name: "Збільшити кількість" }).click();
-        await expect(page.getByTestId("cart-item-quantity").first()).toHaveText("2");
-        await cart.expectHeaderCount(2);
-        await hold(page, 3000);
-
-        const guestCart = await page.evaluate(() => window.localStorage.getItem("guestCart"));
-        persistence = Boolean(guestCart) && proof.rows.some((r) => r.url.includes("/catalog/"));
-        const summary = proof.summarize("02-guest-cart", persistence);
-        endpoints = summary.endpoints;
-        proofRows.push(summary);
-      },
-    );
-
-    flowMetas.push({
-      id: "02-guest-cart",
-      title: "Гостьовий кошик",
-      path: "presentation-assets/flows/02-guest-cart.mp4",
-      durationSec,
-      userEmail: "(guest)",
-      endpoints,
-      persistenceConfirmed: persistence,
-      status: persistence ? "real backend" : "not recorded",
-      shown: `PDP/каталог → додати → діалог/badge → кошик → qty 2 (${productSlug || "product"})`,
-    });
-  });
-
-  test("03-cart-merge", async ({ recordClip, request }) => {
-    const credentials = await getVerifiedTestCredentials();
-    let persistence = false;
-    let endpoints: string[] = [];
-
-    const tokens = await loginUserViaApi(credentials.email, credentials.password);
-    await clearAuthenticatedCart(request, tokens.accessToken);
-
-    const { durationSec } = await recordClip(
-      path.join(ASSETS.flows, "03-cart-merge.mp4"),
-      async (page) => {
-        await clearAuthState(page);
-        const proof = createApiProofCollector(page);
-        const catalogCart = new CatalogCartActions(page);
-        const cart = new CartPage(page);
-
-        const product = await catalogCart.addFirstVisibleCatalogProduct();
-        await catalogCart.dismissAddedDialogContinueShopping();
-        await cart.expectHeaderCount(1);
         await hold(page, 2000);
 
-        await loginViaUi(page, credentials);
-        await hold(page, 2000);
+        await details.setQuantity(3, 450);
+        await hold(page, 800);
+        await details.addToCart(500);
+        await hold(page, 1500);
+        await expect(page.getByTestId("header-cart-badge")).toHaveText("3");
+
+        await details.goToCartFromDialog(500);
+        await hold(page, 2500);
+        await cart.expectProductInCart(product, 3);
+        await cart.expectHeaderCount(3);
+
+        await cart.clickCheckoutCta(500);
+        await expect(page).toHaveURL(/\/auth\/login\?.*redirect=/);
+        await hold(page, 1500);
+
+        await presentationLoginOnCurrentPage(page, credentials, {
+          expectPath: /\/checkout/,
+        });
+        await hold(page, 2500);
 
         await expect
           .poll(async () => page.evaluate(() => window.localStorage.getItem("guestCart")), {
@@ -221,112 +306,48 @@ test.describe("Buyer flows — real backend", () => {
           })
           .toBeNull();
 
-        await cart.expectHeaderCount(1);
-        await cart.goto();
-        await cart.expectProductInCart(product, 1);
-        await hold(page, 3000);
-
-        const serverCount = await getAuthenticatedCartItemCount(
-          request,
-          (await page.evaluate(() => window.localStorage.getItem("accessToken")))!,
-        );
-        persistence = serverCount >= 1;
-        const summary = proof.summarize("03-cart-merge", persistence);
-        endpoints = summary.endpoints;
-        proofRows.push(summary);
-      },
-    );
-
-    flowMetas.push({
-      id: "03-cart-merge",
-      title: "Login і merge гостьового кошика",
-      path: "presentation-assets/flows/03-cart-merge.mp4",
-      durationSec,
-      userEmail: credentials.email,
-      endpoints,
-      persistenceConfirmed: persistence,
-      status: persistence ? "real backend" : "not recorded",
-      shown: "Guest add → login → guestCart очищено → серверний кошик з позицією",
-    });
-  });
-
-  test("04-checkout", async ({ recordClip, request }) => {
-    const credentials = await getVerifiedTestCredentials();
-    let persistence = false;
-    let endpoints: string[] = [];
-
-    const { durationSec } = await recordClip(
-      path.join(ASSETS.flows, "04-checkout.mp4"),
-      async (page) => {
-        await clearAuthState(page);
-        const proof = createApiProofCollector(page);
-        await loginViaUi(page, credentials);
         const accessToken = (await page.evaluate(() =>
           window.localStorage.getItem("accessToken"),
         ))!;
-        await seedAuthenticatedCart(request, accessToken);
-
-        const checkout = new CheckoutPage(page);
-        await checkout.goto();
-        await checkout.expectLoaded();
-        await hold(page, 2000);
-
-        await checkout.clearContactFields();
-        await checkout.submit();
-        await checkout.expectValidationError(/обов'язкові контактні дані/i);
-        await hold(page, 2500);
-
-        await checkout.fillContacts();
-        await checkout.fillUkrPoshtaDelivery();
-        await checkout.selectCashPayment();
-        await hold(page, 2000);
-        await checkout.submit();
-        await checkout.expectOrderCreated();
-        await hold(page, 3000);
-
-        await expect
-          .poll(async () => getAuthenticatedCartItemCount(request, accessToken), {
-            timeout: 15_000,
-          })
-          .toBe(0);
-
-        persistence = proof.rows.some(
-          (row) =>
-            row.url.includes("/me/cart/checkout") &&
-            row.method === "POST" &&
-            row.status >= 200 &&
-            row.status < 300,
-        );
-        const summary = proof.summarize("04-checkout", persistence);
+        const serverCount = await getAuthenticatedCartItemCount(request, accessToken);
+        persistence = serverCount >= 3;
+        const summary = proof.summarize("02-guest-cart", persistence);
         endpoints = summary.endpoints;
         proofRows.push(summary);
       },
     );
 
+    // Retired clip from the former split scenarios.
+    const retiredMergeClip = path.join(ASSETS.flows, "03-cart-merge.mp4");
+    if (fs.existsSync(retiredMergeClip)) {
+      fs.unlinkSync(retiredMergeClip);
+    }
+
     flowMetas.push({
-      id: "04-checkout",
-      title: "Checkout (validation + cash)",
-      path: "presentation-assets/flows/04-checkout.mp4",
+      id: "02-guest-cart",
+      title: "Гостьовий кошик і login merge",
+      path: "presentation-assets/flows/02-guest-cart.mp4",
       durationSec,
       userEmail: credentials.email,
       endpoints,
       persistenceConfirmed: persistence,
       status: persistence ? "real backend" : "not recorded",
-      shown: "Checkout → validation error → контакти/Укрпошта/Cash → успішне замовлення",
+      shown: `Кінець 01 → PDP (${productSlug || "product"}) qty 3 → кошик → оформити → успішний login`,
     });
   });
 
-  test("05-payment-result", async ({ recordClip, request }) => {
+  test("03-checkout-payment", async ({ recordClip, request }) => {
     test.skip(skipIfLiqPaySandboxUnavailable(), "LiqPay sandbox private key is not configured");
 
     const credentials = await getVerifiedTestCredentials();
     let persistence = false;
     let endpoints: string[] = [];
+    let deliveryNote = "";
     let note =
       "Після реального redirect на LiqPay sandbox підписаний webhook доставлено на backend endpoint (localhost callback недоступний з хмари LiqPay).";
 
     const { durationSec } = await recordClip(
-      path.join(ASSETS.flows, "05-payment-result.mp4"),
+      path.join(ASSETS.flows, "03-checkout-payment.mp4"),
       async (page) => {
         await clearAuthState(page);
         const proof = createApiProofCollector(page);
@@ -334,16 +355,39 @@ test.describe("Buyer flows — real backend", () => {
         const accessToken = (await page.evaluate(() =>
           window.localStorage.getItem("accessToken"),
         ))!;
-        await seedAuthenticatedCart(request, accessToken);
+        // Same cart shape as the end of 02-guest-cart (qty 3 after merge).
+        await seedAuthenticatedCart(request, accessToken, undefined, 3);
 
+        const cart = new CartPage(page);
         const checkout = new CheckoutPage(page);
         const resultPage = new CheckoutResultPage(page);
 
-        await checkout.goto();
+        // Recording starts in the cart (continuation after login merge).
+        await cart.goto();
+        await cart.expectHeaderCount(3);
+        await hold(page, 2500);
+
+        await cart.clickCheckoutCta(500);
         await checkout.expectLoaded();
-        await checkout.fillContacts();
-        await checkout.fillUkrPoshtaDelivery();
-        await checkout.selectCardPayment();
+        await hold(page, 1500);
+
+        // First/last name come from the profile — only ensure phone if missing.
+        await checkout.awaitPrefillContacts(undefined, 500);
+        await hold(page, 600);
+        await checkout.fillMiddleName("Іванівна", 500);
+        await hold(page, 800);
+
+        const delivery = await checkout.fillNovaPoshtaDelivery({
+          cityQuery: "Львів",
+          branchFilter: "Поштомат",
+          presentationPauseMs: 500,
+        });
+        deliveryNote = `${delivery.city} / ${delivery.branch}`;
+        await hold(page, 1000);
+
+        await checkout.selectCardPayment(500);
+        await hold(page, 1000);
+        await checkout.selectGiftWrap(500);
         await hold(page, 1500);
 
         const checkoutPostPromise = page.waitForResponse(
@@ -353,15 +397,13 @@ test.describe("Buyer flows — real backend", () => {
           { timeout: 45_000 },
         );
 
-        await checkout.submit();
+        await checkout.submit(500);
         const checkoutResponse = await checkoutPostPromise;
         expect(checkoutResponse.status()).toBeGreaterThanOrEqual(200);
         expect(checkoutResponse.status()).toBeLessThan(400);
 
         // LiqPay navigation often drops Network.getResponseBody — resolve order via API.
-        await page
-          .waitForURL(/liqpay\.ua/i, { timeout: 30_000 })
-          .catch(() => undefined);
+        await page.waitForURL(/liqpay\.ua/i, { timeout: 30_000 }).catch(() => undefined);
         if (/liqpay\.ua/i.test(page.url())) {
           await hold(page, 3500);
         } else {
@@ -404,7 +446,7 @@ test.describe("Buyer flows — real backend", () => {
 
         const status = await getOrderPaymentStatus(request, accessToken, orderNumber);
         persistence = Boolean(status && /completed|paid|success|captured/i.test(status));
-        const summary = proof.summarize("05-payment-result", persistence);
+        const summary = proof.summarize("03-checkout-payment", persistence);
         endpoints = summary.endpoints;
         if (!endpoints.some((e) => e.includes("/integrations/liqpay/webhook"))) {
           endpoints = [...endpoints, "POST /integrations/liqpay/webhook"];
@@ -414,81 +456,125 @@ test.describe("Buyer flows — real backend", () => {
       },
     );
 
+    for (const retired of ["04-checkout.mp4", "05-payment-result.mp4"]) {
+      const retiredPath = path.join(ASSETS.flows, retired);
+      if (fs.existsSync(retiredPath)) {
+        fs.unlinkSync(retiredPath);
+      }
+    }
+
     flowMetas.push({
-      id: "05-payment-result",
-      title: "Card payment (LiqPay sandbox) + result",
-      path: "presentation-assets/flows/05-payment-result.mp4",
+      id: "03-checkout-payment",
+      title: "Checkout Nova Poshta + card payment",
+      path: "presentation-assets/flows/03-checkout-payment.mp4",
       durationSec,
       userEmail: credentials.email,
       endpoints,
       persistenceConfirmed: persistence,
       status: persistence ? "real backend" : "not recorded",
-      shown: "Checkout Card → LiqPay sandbox → webhook → «Оплачено успішно!»",
+      shown: `Кошик → оформити → по батькові → НП (${deliveryNote || "місто/поштомат"}) → Card → подарункова упаковка → LiqPay → «Оплачено успішно!»`,
       note,
     });
   });
 
-  test("06-review", async ({ recordClip, request }) => {
+  test("04-review", async ({ recordClip, request }) => {
     test.skip(skipIfLiqPaySandboxUnavailable(), "LiqPay sandbox private key is not configured");
 
-    const buyer = await loginReviewBuyer();
-    const product = await prepareReviewProduct(request);
-    const profile = await getCurrentUserProfile(request, buyer.accessToken);
-    purgeProductReviewsForUser(product.id, profile.id);
-    await ensurePaidPurchaseForProduct(request, buyer.accessToken, product);
+    const credentials = await getVerifiedTestCredentials();
+    const tokens = await loginUserViaApi(credentials.email, credentials.password);
+    const profile = await getCurrentUserProfile(request, tokens.accessToken);
+
+    // Prefer the book purchased in scenario 03; seed a paid purchase if missing.
+    let purchased = await getLatestPurchasedProduct(request, tokens.accessToken);
+    if (!purchased) {
+      purchased = await prepareReviewProduct(request);
+      await ensurePaidPurchaseForProduct(request, tokens.accessToken, purchased);
+    }
+    purgeProductReviewsForUser(purchased.id, profile.id);
+
+    // A different book for the guest "cannot review" attempt.
+    const guestBrowseProduct = await getInStockCatalogProduct(request);
+    const guestSlug =
+      guestBrowseProduct.id === purchased.id
+        ? (await prepareReviewProduct(request)).slug
+        : guestBrowseProduct.slug;
 
     let persistence = false;
     let endpoints: string[] = [];
     const comment = createUniqueReviewComment("presentation");
 
     const { durationSec } = await recordClip(
-      path.join(ASSETS.flows, "06-review.mp4"),
+      path.join(ASSETS.flows, "04-review.mp4"),
       async (page) => {
         await clearAuthState(page);
         const proof = createApiProofCollector(page);
-        await loginViaUi(page, {
-          email: testUsers.reviewBuyer.email,
-          password: testUsers.reviewBuyer.password,
-        });
-
         const reviews = new ProductReviewsPage(page);
-        await reviews.gotoProduct(product.slug);
-        await hold(page, 2000);
-        await reviews.scrollToReviews();
-        await hold(page, 2000);
 
-        await reviews.setRating(5);
-        await reviews.fillComment(comment);
+        // Guest tries to leave a review on some book — form is locked.
+        await reviews.gotoProduct(guestSlug);
+        await hold(page, 2000);
+        await reviews.scrollToReviews(500);
         await hold(page, 1500);
-        await reviews.submit();
+        await reviews.demonstrateGuestBlocked(500);
+        await hold(page, 1500);
+
+        const profileLink = page.getByRole("link", { name: /Профіль/ });
+        await realisticClick(page, profileLink, { hoverMs: 450 });
+        await page.waitForURL(/\/auth\/login|\/me/, { timeout: 30_000 });
+        if (!/\/auth\/login/.test(page.url())) {
+          await page.goto("/auth/login");
+        }
+        await hold(page, 1000);
+
+        await presentationLoginOnCurrentPage(page, credentials);
+        await hold(page, 1500);
+
+        // Logged-in buyer reviews the purchased book from the previous scenario.
+        await reviews.gotoProduct(purchased!.slug);
+        await hold(page, 2000);
+        await reviews.scrollToReviews(500);
+        await hold(page, 1500);
+
+        await expect(reviews.formTitle).toHaveText("Залишити відгук");
+        await reviews.setRating(5, 450);
+        await hold(page, 600);
+        await reviews.fillComment(comment, 500);
+        await hold(page, 1200);
+        await reviews.submit(500);
         await reviews.expectReviewVisible(comment);
         await hold(page, 3000);
 
-        const apiReviews = await listProductReviews(request, product.id);
+        const apiReviews = await listProductReviews(request, purchased!.id);
         persistence = apiReviews.some((review) => review.comment === comment);
-        const summary = proof.summarize("06-review", persistence);
+        const summary = proof.summarize("04-review", persistence);
         endpoints = summary.endpoints;
         proofRows.push(summary);
       },
     );
 
-    // Best-effort cleanup so re-runs stay stable.
     try {
-      purgeProductReviewsForUser(product.id, profile.id);
+      purgeProductReviewsForUser(purchased.id, profile.id);
     } catch {
       // ignore
     }
 
+    for (const retired of ["06-review.mp4"]) {
+      const retiredPath = path.join(ASSETS.flows, retired);
+      if (fs.existsSync(retiredPath)) {
+        fs.unlinkSync(retiredPath);
+      }
+    }
+
     flowMetas.push({
-      id: "06-review",
-      title: "Створення відгуку після покупки",
-      path: "presentation-assets/flows/06-review.mp4",
+      id: "04-review",
+      title: "Відгук після покупки",
+      path: "presentation-assets/flows/04-review.mp4",
       durationSec,
-      userEmail: testUsers.reviewBuyer.email,
+      userEmail: credentials.email,
       endpoints,
       persistenceConfirmed: persistence,
       status: persistence ? "real backend" : "not recorded",
-      shown: `PDP ${product.slug} → рейтинг 5 + comment → відгук у списку (підтверджено API)`,
+      shown: `Guest PDP → locked review → login → PDP ${purchased.slug} → рейтинг 5 + comment`,
     });
   });
 });

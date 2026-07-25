@@ -17,7 +17,7 @@
     "build-storybook": "storybook build",
     "record:presentation": "npm run record:presentation:storybook && npm run record:presentation:flows",
     "record:presentation:storybook": "playwright test -c tests/presentation/playwright.storybook.config.ts",
-    "record:presentation:flows": "playwright test -c tests/presentation/playwright.flows-real.config.ts"
+    "record:presentation:flows": "npm run build && playwright test -c tests/presentation/playwright.flows-real.config.ts"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",

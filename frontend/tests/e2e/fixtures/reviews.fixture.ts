@@ -232,6 +232,69 @@ export async function prepareReviewProduct(
   return getInStockCatalogProduct(request);
 }
 
+/**
+ * Resolves a purchased catalog product from the buyer's latest order
+ * (used so presentation scenario 04 continues from scenario 03).
+ */
+export async function getLatestPurchasedProduct(
+  request: APIRequestContext,
+  accessToken: string,
+): Promise<CartProductFixture | null> {
+  const ordersResponse = await request.get(`${getApiBaseUrl()}/me/orders`, {
+    headers: authHeaders(accessToken),
+    params: { page: 1, pageSize: 5 },
+  });
+  if (!ordersResponse.ok()) {
+    return null;
+  }
+
+  const ordersPayload = (await ordersResponse.json()) as {
+    items?: Array<{ orderId: number }>;
+  };
+  const latest = ordersPayload.items?.[0];
+  if (!latest?.orderId) {
+    return null;
+  }
+
+  const detailsResponse = await request.get(
+    `${getApiBaseUrl()}/me/orders/${latest.orderId}`,
+    { headers: authHeaders(accessToken) },
+  );
+  if (!detailsResponse.ok()) {
+    return null;
+  }
+
+  const details = (await detailsResponse.json()) as {
+    items?: Array<{ productId: number; productName: string; priceAtMoment?: number }>;
+  };
+  const line = details.items?.[0];
+  if (!line?.productId) {
+    return null;
+  }
+
+  const searchResponse = await request.get(`${getApiBaseUrl()}/catalog/products/search`, {
+    params: { page: 1, pageSize: 100 },
+  });
+  if (!searchResponse.ok()) {
+    return null;
+  }
+
+  const search = (await searchResponse.json()) as {
+    items?: Array<{ id: number; name: string; slug: string; price: number }>;
+  };
+  const match = (search.items ?? []).find((item) => item.id === line.productId);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    id: match.id,
+    name: match.name || line.productName,
+    slug: match.slug,
+    price: match.price || line.priceAtMoment || 0,
+  };
+}
+
 export function formatExpectedReviewDate(isoDate: string): string {
   return new Date(isoDate).toLocaleDateString("uk-UA", {
     day: "numeric",

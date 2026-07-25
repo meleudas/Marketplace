@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page, type Response } from "@playwright/test";
 import type { CatalogSearchFixture } from "../fixtures/catalog.fixture";
+import { realisticClick, realisticType } from "../helpers/realistic-pointer";
 
 type SearchRequestPredicate = (url: URL) => boolean;
 
@@ -31,6 +32,21 @@ export class CatalogPage {
     await this.waitUntilLoaded();
   }
 
+  /** Land on the filtered catalog state that ends the 01-catalog presentation clip. */
+  async gotoPresentationEndState(subcategorySlug: string): Promise<void> {
+    const params = new URLSearchParams({
+      format: "паперовий",
+      minPrice: "100",
+      sort: "price_asc",
+    });
+    await this.goto(`/catalog/${subcategorySlug}?${params.toString()}`);
+    await this.expectBrowserSearchParams({
+      format: "паперовий",
+      minPrice: "100",
+      sort: "price_asc",
+    });
+  }
+
   async waitUntilLoaded(): Promise<void> {
     await expect(this.heading).toBeVisible();
     await expect(this.page.getByText(/^Знайдено \d+ товар/)).toBeVisible();
@@ -43,15 +59,26 @@ export class CatalogPage {
     rootName: string,
     subcategoryName: string,
     subcategoryId: number,
+    presentationPauseMs = 0,
   ): Promise<void> {
-    await this.page.getByRole("button", { name: "Каталог", exact: true }).click();
+    const catalogButton = this.page.getByRole("button", { name: "Каталог", exact: true });
+    await this.interact(catalogButton, presentationPauseMs);
     const menu = this.page.getByRole("dialog");
     await expect(menu.getByRole("heading", { name: "Каталог", exact: true })).toBeVisible();
-    await menu.getByRole("button", { name: rootName, exact: true }).click();
-    await expect(menu.getByRole("heading", { name: rootName, exact: true })).toBeVisible();
+    if (presentationPauseMs > 0) {
+      await this.page.waitForTimeout(presentationPauseMs);
+    }
 
+    const rootButton = menu.getByRole("button", { name: rootName, exact: true });
+    await this.interact(rootButton, presentationPauseMs);
+    await expect(menu.getByRole("heading", { name: rootName, exact: true })).toBeVisible();
+    if (presentationPauseMs > 0) {
+      await this.page.waitForTimeout(presentationPauseMs);
+    }
+
+    const subcategoryButton = menu.getByRole("button", { name: subcategoryName, exact: true });
     await this.waitForSearchRequest(
-      () => menu.getByRole("button", { name: subcategoryName, exact: true }).click(),
+      () => this.interact(subcategoryButton, presentationPauseMs),
       (url) =>
         (url.searchParams.get("pageSize") === "20" || url.searchParams.get("pageSize") === "21") &&
         url.searchParams.getAll("categoryIds").includes(String(subcategoryId)),
@@ -75,10 +102,11 @@ export class CatalogPage {
   async applyFormat(
     label: "Електронна" | "Паперова",
     value: "електронний" | "паперовий",
+    presentationPauseMs = 0,
   ): Promise<CatalogSearchFixture> {
     const checkbox = this.sidebar.getByRole("checkbox", { name: label, exact: true });
     return this.waitForSearch(
-      () => this.checkSidebarCheckbox(checkbox),
+      () => this.checkSidebarCheckbox(checkbox, presentationPauseMs),
       (url) => url.searchParams.get("format") === value,
     );
   }
@@ -97,12 +125,18 @@ export class CatalogPage {
     );
   }
 
-  async applyMinimumPrice(minPrice: number): Promise<CatalogSearchFixture> {
+  async applyMinimumPrice(minPrice: number, presentationPauseMs = 0): Promise<CatalogSearchFixture> {
     const input = this.sidebar.getByLabel("Від", { exact: true });
     return this.waitForSearch(
       async () => {
         await expect(this.sidebar).not.toHaveAttribute("aria-busy", "true");
-        await input.fill(String(minPrice));
+        if (presentationPauseMs > 0) {
+          await realisticType(this.page, input, String(minPrice), {
+            hoverMs: Math.min(presentationPauseMs, 500),
+          });
+        } else {
+          await input.fill(String(minPrice));
+        }
         await input.blur();
       },
       (url) => url.searchParams.get("minPrice") === String(minPrice),
@@ -137,6 +171,7 @@ export class CatalogPage {
   async selectSort(
     label: "За популярністю" | "За новизною" | "Від найдешевших" | "Від найдорожчих",
     value: "relevance" | "newest" | "price_asc" | "price_desc",
+    presentationPauseMs = 0,
   ): Promise<CatalogSearchFixture> {
     return this.waitForSearch(
       async () => {
@@ -144,8 +179,14 @@ export class CatalogPage {
           hasText: /За популярністю|За новизною|Від найдешевших|Від найдорожчих/,
         });
         await expect(trigger).toBeVisible();
-        await trigger.click();
-        await this.page.getByRole("listbox").getByRole("button", { name: label, exact: true }).click();
+        await this.interact(trigger, presentationPauseMs);
+        const listbox = this.page.getByRole("listbox");
+        await expect(listbox).toBeVisible();
+        if (presentationPauseMs > 0) {
+          await this.page.waitForTimeout(presentationPauseMs);
+        }
+        const option = listbox.getByRole("button", { name: label, exact: true });
+        await this.interact(option, presentationPauseMs);
       },
       (url) => url.searchParams.get("sort") === value,
     );
@@ -201,15 +242,30 @@ export class CatalogPage {
     return result;
   }
 
-  private async checkSidebarCheckbox(checkbox: Locator): Promise<void> {
+  private async checkSidebarCheckbox(
+    checkbox: Locator,
+    presentationPauseMs = 0,
+  ): Promise<void> {
     await expect(async () => {
       await expect(this.sidebar).not.toHaveAttribute("aria-busy", "true");
       if (!(await checkbox.isChecked())) {
-        // Native input is visually hidden; the label receives the click.
-        await checkbox.locator("xpath=..").click();
+        // Native input is visually hidden; the label receives the click / hover.
+        const label = checkbox.locator("xpath=..");
+        await this.interact(label, presentationPauseMs);
       }
       await expect(checkbox).toBeChecked();
     }).toPass({ timeout: 15_000 });
+  }
+
+  /** Instant click in e2e; hover → press → release when recording presentations. */
+  private async interact(target: Locator, presentationPauseMs = 0): Promise<void> {
+    if (presentationPauseMs > 0) {
+      await realisticClick(this.page, target, {
+        hoverMs: Math.min(Math.max(presentationPauseMs, 350), 600),
+      });
+      return;
+    }
+    await target.click();
   }
 
   private async waitForSearchRequest(
