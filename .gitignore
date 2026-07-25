@@ -1,12 +1,21 @@
 **/.env
 **/.env.*
+.env
+.env.*
+.env*
 !.env.example
+secrets.json
+appsettings.*.local.json
 
 # Build output
 bin/
 obj/
 out/
 artifacts/
+build
+.next/
+.turbo/
+.vercel/
 
 # .NET user files
 *.user
@@ -26,37 +35,36 @@ artifacts/
 .DS_Store
 Thumbs.db
 desktop.ini
+*.pem
 
 # Test and coverage
 TestResults/
 coverage/
 coverage.*
+/coverage
 *.coverage
 *.coveragexml
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/playwright/.cache/
+frontend/tests/e2e/.auth/
 
 # Logs
 *.log
 logs/
 debug-*.log
-
-# Environment and secrets
-.env
-.env.*
-!.env.example
-secrets.json
-appsettings.*.local.json
-
-# Docker local data and overrides
-docker-compose.override.yml
-
-# Package manager caches
-node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+.pnpm-debug.log*
 
-# dependencies
+# Docker local data and overrides
+docker-compose.override.yml
+
+# Package manager
+node_modules/
 /node_modules
 /.pnp
 .pnp.*
@@ -66,41 +74,29 @@ pnpm-debug.log*
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
-frontend/test-results/
-frontend/playwright-report/
-frontend/blob-report/
-frontend/playwright/.cache/
-frontend/tests/e2e/.auth/
-
-# next.js
-.next/
-out/
-.turbo/
-.vercel/
+# TypeScript / Next.js
 *.tsbuildinfo
 next-env.d.ts
 
-# production
-build
+*storybook.log
+frontend/storybook-static/
+frontend/tests/presentation/.record-raw/
+frontend/tests/presentation/.record-raw-storybook/
+frontend/tests/presentation/.record-raw-flows-real/
 
-# misc
-.DS_Store
-*.pem
+# Frontend presentation videos & markdown (keep frontend/README.md)
+frontend/**/*.mp4
+frontend/**/*.webm
+frontend/**/*.md
+!frontend/README.md
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+presentation-assets/**/*.mp4
+presentation-assets/**/*.webm
+presentation-assets/**/*.md
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# Root-level frontend presentation docs
+frontend-*.md
+design-system-audit.md
+presentation-rework-plan.md
+storybook-result.md
+video-manifest.md

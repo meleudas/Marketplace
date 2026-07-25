@@ -39,7 +39,8 @@
   color: var(--input-placeholder-color);
 }
 
-.control:hover .field:not(:focus):not(:disabled):not(.fieldError) {
+.control:hover .field:not(:focus):not(:disabled):not(.fieldError),
+.controlForceHover .field:not(:focus):not(:disabled):not(.fieldError) {
   border-color: var(--input-border-hover);
 }
 

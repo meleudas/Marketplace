@@ -1,0 +1,133 @@
+[
+  {
+    "id": "01-catalog",
+    "title": "Каталог і фільтри",
+    "path": "presentation-assets/flows/01-catalog.mp4",
+    "durationSec": 17.8,
+    "userEmail": "(guest)",
+    "endpoints": [
+      "GET /catalog/authors",
+      "GET /catalog/categories",
+      "GET /catalog/products/search"
+    ],
+    "persistenceConfirmed": true,
+    "status": "real backend",
+    "shown": "Каталог → фільтр формату «Паперова» → автор → обрані фільтри / URL"
+  },
+  {
+    "id": "02-guest-cart",
+    "title": "Гостьовий кошик",
+    "path": "presentation-assets/flows/02-guest-cart.mp4",
+    "durationSec": 12.73,
+    "userEmail": "(guest)",
+    "endpoints": [
+      "GET /catalog/authors",
+      "GET /catalog/categories",
+      "GET /catalog/products/search",
+      "GET /catalog/products",
+      "GET /catalog/products/romany-lisova-pisnia-paper-komubuk"
+    ],
+    "persistenceConfirmed": true,
+    "status": "real backend",
+    "shown": "PDP/каталог → додати → діалог/badge → кошик → qty 2 (romany-lisova-pisnia-paper-komubuk)"
+  },
+  {
+    "id": "03-cart-merge",
+    "title": "Login і merge гостьового кошика",
+    "path": "presentation-assets/flows/03-cart-merge.mp4",
+    "durationSec": 11.57,
+    "userEmail": "user50@bookmarket.ua",
+    "endpoints": [
+      "GET /catalog/categories",
+      "GET /catalog/authors",
+      "GET /catalog/products/search",
+      "POST /auth/login",
+      "GET /users/me",
+      "POST /me/cart/items",
+      "GET /me/cart",
+      "GET /catalog/products/on-sale",
+      "GET /catalog/recommendations/me",
+      "GET /catalog/products/new",
+      "GET /catalog/products/popular",
+      "GET /catalog/products",
+      "GET /catalog/products/romany-lisova-pisnia-paper-komubuk"
+    ],
+    "persistenceConfirmed": true,
+    "status": "real backend",
+    "shown": "Guest add → login → guestCart очищено → серверний кошик з позицією"
+  },
+  {
+    "id": "04-checkout",
+    "title": "Checkout (validation + cash)",
+    "path": "presentation-assets/flows/04-checkout.mp4",
+    "durationSec": 13.97,
+    "userEmail": "user50@bookmarket.ua",
+    "endpoints": [
+      "GET /catalog/categories",
+      "POST /auth/login",
+      "GET /users/me",
+      "GET /me/cart",
+      "GET /catalog/recommendations/me",
+      "GET /catalog/products/on-sale",
+      "GET /catalog/products/popular",
+      "GET /catalog/products/search",
+      "GET /catalog/products/new",
+      "GET /shipping/methods",
+      "GET /catalog/products",
+      "POST /me/cart/checkout"
+    ],
+    "persistenceConfirmed": true,
+    "status": "real backend",
+    "shown": "Checkout → validation error → контакти/Укрпошта/Cash → успішне замовлення"
+  },
+  {
+    "id": "05-payment-result",
+    "title": "Card payment (LiqPay sandbox) + result",
+    "path": "presentation-assets/flows/05-payment-result.mp4",
+    "durationSec": 18.03,
+    "userEmail": "user50@bookmarket.ua",
+    "endpoints": [
+      "GET /catalog/categories",
+      "POST /auth/login",
+      "GET /users/me",
+      "GET /me/cart",
+      "GET /catalog/products/on-sale",
+      "GET /catalog/recommendations/me",
+      "GET /catalog/products/search",
+      "GET /catalog/products/new",
+      "GET /catalog/products/popular",
+      "GET /shipping/methods",
+      "GET /catalog/products",
+      "POST /me/cart/checkout",
+      "GET /me/orders",
+      "GET /me/orders/75",
+      "POST /integrations/liqpay/webhook"
+    ],
+    "persistenceConfirmed": true,
+    "status": "real backend",
+    "shown": "Checkout Card → LiqPay sandbox → webhook → «Оплачено успішно!»",
+    "note": "Після реального redirect на LiqPay sandbox підписаний webhook доставлено на backend endpoint (localhost callback недоступний з хмари LiqPay)."
+  },
+  {
+    "id": "06-review",
+    "title": "Створення відгуку після покупки",
+    "path": "presentation-assets/flows/06-review.mp4",
+    "durationSec": 11.43,
+    "userEmail": "user51@bookmarket.ua",
+    "endpoints": [
+      "GET /catalog/categories",
+      "POST /auth/login",
+      "GET /users/me",
+      "GET /me/cart",
+      "GET /shipping/methods",
+      "GET /catalog/products/romany-lisova-pisnia-paper-komubuk",
+      "GET /catalog/products/search",
+      "GET /products/14/reviews",
+      "GET /catalog/products/romany-lisova-pisnia-paper-komubuk/similar",
+      "POST /products/14/reviews"
+    ],
+    "persistenceConfirmed": true,
+    "status": "real backend",
+    "shown": "PDP romany-lisova-pisnia-paper-komubuk → рейтинг 5 + comment → відгук у списку (підтверджено API)"
+  }
+]
