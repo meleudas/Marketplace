@@ -24,6 +24,8 @@ export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   type?: InputHTMLAttributes<HTMLInputElement>["type"];
   leadingIcon?: ReactNode;
   trailingIcon?: ReactNode;
+  /** Storybook / demos: keep hover border without relying on pointer :hover. */
+  forceHover?: boolean;
 }
 
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function TextField(
@@ -35,6 +37,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
     type,
     leadingIcon,
     trailingIcon,
+    forceHover = false,
     id,
     className,
     inputMode,
@@ -62,6 +65,10 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
     .filter(Boolean)
     .join(" ");
 
+  const controlClasses = [styles.control, forceHover ? styles.controlForceHover : ""]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div className={[styles.wrapper, className ?? ""].filter(Boolean).join(" ")}>
       {label ? (
@@ -70,7 +77,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
         </label>
       ) : null}
 
-      <div className={styles.control}>
+      <div className={controlClasses} data-testid="text-field-control">
         {leadingIcon ? (
           <span className={`${styles.adornment} ${styles.leading}`} aria-hidden="true">
             {leadingIcon}

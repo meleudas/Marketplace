@@ -18,11 +18,6 @@
   min-height: 40vh;
 }
 
-.previewButton {
-  width: 100% !important;
-  max-width: none !important;
-}
-
 .headline {
   display: grid;
   gap: var(--space-4);
@@ -85,11 +80,83 @@
   color: var(--color-error);
 }
 
-.section {
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-16);
+  padding: var(--space-32) var(--space-24);
+  text-align: center;
+}
+
+.errorCat {
+  width: 120px;
+  height: auto;
+  opacity: 0.6;
+}
+
+.errorBody {
   display: grid;
-  gap: var(--space-12);
+  gap: var(--space-8);
+}
+
+.errorTitle {
+  margin: 0;
+  font-family: var(--font-primary), sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-white);
+}
+
+.errorText {
+  margin: 0;
+  font-family: var(--font-primary), sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--color-neutral-600);
+}
+
+.errorLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 40px;
+  padding: 0 var(--space-20);
+  margin: var(--space-8) auto 0;
+  border: 1px solid rgb(163 194 224 / 0.3);
+  border-radius: var(--radius-sm);
+  background: rgb(163 194 224 / 0.08);
+  font-family: var(--font-primary), sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-primary-light-blue);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--ui-transition-fast);
+}
+
+.errorLink:hover {
+  background: rgb(163 194 224 / 0.16);
+}
+
+@media (min-width: 1024px) {
+  .errorState {
+    padding: var(--space-48) var(--space-32);
+  }
+
+  .errorCat {
+    width: 160px;
+  }
+
+  .errorTitle {
+    font-size: 24px;
+  }
+}
+
+.section {
   padding-block: var(--space-8);
-  border-top: 1px solid var(--color-neutral-800);
+  border-top: 1px solid rgb(163 194 224 / 0.12);
 }
 
 .sectionTitle {
@@ -324,10 +391,45 @@
 .breadcrumbs,
 .statusRow,
 .author,
-.skuBadge,
 .desktopCharacteristics,
 .authorSection {
   display: none;
+}
+
+.tagGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  padding-top: var(--space-4);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 var(--space-10);
+  border-radius: 6px;
+  background: rgb(163 194 224 / 0.12);
+  border: 1px solid rgb(163 194 224 / 0.2);
+  font-family: var(--font-primary), sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-primary-light-blue);
+}
+
+.tagOutOfStock {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 var(--space-10);
+  border-radius: 6px;
+  background: rgb(220 54 46 / 0.12);
+  border: 1px solid rgb(220 54 46 / 0.3);
+  font-family: var(--font-primary), sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-error);
 }
 
 .breadcrumbLink,
@@ -409,10 +511,6 @@
     flex-direction: column;
     gap: var(--space-16);
     min-width: 0;
-  }
-
-  .previewButton {
-    display: none;
   }
 
   .headline {
@@ -505,19 +603,40 @@
     gap: var(--space-16);
   }
 
-  .skuBadge {
-    display: inline-flex;
-    align-self: flex-start;
+  .tagGroup {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    min-height: 36px;
-    padding: 0 var(--space-16);
-    border-radius: var(--radius-sm);
-    background: var(--button-gradient-discount);
-    box-shadow: var(--button-shadow-discount-drop);
+    gap: var(--space-8);
+    padding-top: var(--space-4);
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 var(--space-10);
+    border-radius: 6px;
+    background: rgb(163 194 224 / 0.12);
+    border: 1px solid rgb(163 194 224 / 0.2);
     font-family: var(--font-primary), sans-serif;
-    font-size: var(--typography-body2-font-size);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-primary-light-blue);
+  }
+
+  .tagOutOfStock {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 var(--space-10);
+    border-radius: 6px;
+    background: rgb(220 54 46 / 0.12);
+    border: 1px solid rgb(220 54 46 / 0.3);
+    font-family: var(--font-primary), sans-serif;
+    font-size: 12px;
     font-weight: 600;
-    color: var(--color-white);
+    color: var(--color-error);
   }
 
   .desktopCharacteristics {
@@ -589,10 +708,7 @@
   .descriptionWrap > section {
     position: relative;
     overflow: hidden;
-    background:
-      radial-gradient(circle at 0% 0%, rgb(83 93 223 / 0.18), transparent 42%),
-      radial-gradient(circle at 100% 100%, rgb(238 2 144 / 0.12), transparent 38%),
-      #2f2f2f;
+    background: #2f2f2f;
     border: 1px solid rgb(163 194 224 / 0.24);
     box-shadow: 0 0 0 1px rgb(83 93 223 / 0.08);
   }

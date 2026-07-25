@@ -211,7 +211,7 @@ export function CheckoutResultScreen() {
                   <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <h1 className={styles.title}>Оплачено успішно!</h1>
+              <h1 className={styles.title} data-testid="checkout-result-title">Оплачено успішно!</h1>
               <p className={styles.subtitle}>Дякуємо за покупку. Ваше замовлення прийнято в обробку.</p>
             </>
           )}
@@ -224,7 +224,7 @@ export function CheckoutResultScreen() {
                   <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <h1 className={styles.title}>Оплата не вдалася</h1>
+              <h1 className={styles.title} data-testid="checkout-result-title">Оплата не вдалася</h1>
               <p className={styles.subtitle}>Кошти не були списані. Будь ласка, спробуйте оплатити замовлення знову в кабінеті.</p>
             </>
           )}
@@ -236,7 +236,7 @@ export function CheckoutResultScreen() {
                   <path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
-              <h1 className={styles.title}>Очікує підтвердження</h1>
+              <h1 className={styles.title} data-testid="checkout-result-title">Очікує підтвердження</h1>
               <p className={styles.subtitle}>Оплата обробляється банком. Ми надішлемо вам сповіщення, щойно отримаємо підтвердження платежу.</p>
             </>
           )}

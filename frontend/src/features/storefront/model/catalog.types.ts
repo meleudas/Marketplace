@@ -66,6 +66,7 @@ export interface CatalogProductListItemDto {
   createdAt: string;
   updatedAt: string;
   imageUrls: string[];
+  author?: string;
 }
 
 export interface ProductSearchResultDto {

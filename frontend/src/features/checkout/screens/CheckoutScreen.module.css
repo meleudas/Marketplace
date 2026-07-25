@@ -662,10 +662,10 @@
 
 .orderItemBottom {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
-    padding-left: 12px;
-    gap: 16px;
+    padding: 0 12px;
+    gap: 12px;
 }
 
 .qtyEditor {
@@ -740,6 +740,8 @@
     font-weight: 600;
     line-height: 19.36px;
     color: #ffffff;
+    margin-left: auto;
+    white-space: nowrap;
 }
 
 .itemsTotalRow {

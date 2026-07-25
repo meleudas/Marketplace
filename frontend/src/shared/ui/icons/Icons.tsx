@@ -168,9 +168,9 @@ export function MicrophoneIcon(props: IconProps) {
   );
 }
 
-export function SearchIcon(props: IconProps) {
+export function SearchIcon({ width = 24, height = 24, ...props }: IconProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden {...props}>
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden {...props} width={width} height={height}>
       <path
         fillRule="evenodd"
         clipRule="evenodd"
@@ -464,6 +464,34 @@ export function GiftIcon(props: IconProps) {
           <stop offset="1" stop-color="#535DDF" />
         </linearGradient>
       </defs>
+    </svg>
+  );
+}
+
+export function LogOutIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden {...props}>
+      <path
+        d="M15 17L20 12L15 7"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M20 12H9"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9 21H6C4.89543 21 4 20.1046 4 19V5C4 3.89543 4.89543 3 6 3H9"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

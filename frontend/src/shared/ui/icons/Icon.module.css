@@ -1,5 +1,7 @@
 .icon {
-  width: var(--space-24);
-  height: var(--space-24);
+  width: 24px;
+  height: 24px;
+  max-width: 24px;
+  max-height: 24px;
   flex-shrink: 0;
 }

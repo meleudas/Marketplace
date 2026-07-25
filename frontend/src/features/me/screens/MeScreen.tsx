@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/features/auth/model/auth.store";
 import { PageLayout } from "@/shared/ui/PageLayout";
@@ -9,6 +10,7 @@ import {
   ChevronRightIcon,
   EditIcon,
   GiftIcon,
+  LogOutIcon,
   PlusIcon,
   ShopIcon,
   TrashIcon,
@@ -28,6 +30,7 @@ import {
   getNormalizedStatus,
   getStatusClass,
   getStatusLabel,
+  type OrderStatusClassNames,
 } from "../lib/order-status";
 import styles from "./MeScreen.module.css";
 
@@ -69,6 +72,19 @@ function BackNav() {
       <ChevronLeftIcon className={styles.backNavIcon} />
       <span className={styles.backNavTitle}>Профіль</span>
     </Link>
+  );
+}
+
+interface LogoutSectionProps {
+  onLogout: () => void;
+}
+
+function LogoutSection({ onLogout }: LogoutSectionProps) {
+  return (
+    <button type="button" onClick={onLogout} className={styles.logoutButton}>
+      <LogOutIcon className={styles.logoutIcon} />
+      <span>Вийти з профілю</span>
+    </button>
   );
 }
 
@@ -244,7 +260,7 @@ function OrdersSection({ apiOrders }: OrdersSectionProps) {
               </div>
               <div className={styles.orderButtonRight}>
                 <span className={styles.orderButtonPrice}>{order.totalPrice} грн.</span>
-                <span className={`${styles.orderStatusBadge} ${getStatusClass(order.status, styles)}`}>
+                <span className={`${styles.orderStatusBadge} ${getStatusClass(order.status, styles as unknown as OrderStatusClassNames)}`}>
                   {getStatusLabel(order.status)}
                 </span>
               </div>
@@ -435,11 +451,19 @@ function CertificatesSection() {
 
 
 export function MeScreen() {
+  const router = useRouter();
   const user = useAuth((state) => state.user);
   const isAuthenticated = useAuth((state) => state.isAuthenticated);
   const initialized = useAuth((state) => state.initialized);
   const loading = useAuth((state) => state.loading);
   const loadMe = useAuth((state) => state.loadMe);
+  const logout = useAuth((state) => state.logout);
+
+  const handleLogout = useCallback(() => {
+    void logout().then(() => {
+      router.push("/");
+    });
+  }, [logout, router]);
 
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [orders, setOrders] = useState<OrderListItem[]>([]);
@@ -479,7 +503,7 @@ export function MeScreen() {
           birthday: user.birthday ? new Date(user.birthday).toISOString().split("T")[0] : prev.birthday,
           gender: prev.gender,
           phone: prev.phone,
-          email: prev.email || user.email,
+          email: prev.email || user.email || "",
         };
       });
     });
@@ -673,7 +697,7 @@ export function MeScreen() {
             <h1 className={styles.authTitle}>Профіль</h1>
             <p className={styles.authSubtitle}>Увійдіть, щоб переглянути свій профіль</p>
             <div className={styles.authActions}>
-              <Link href="/auth" className={styles.signInButton}>
+              <Link href="/auth/login" className={styles.signInButton}>
                 Увійти
               </Link>
               <Link href="/" className={styles.backButton}>
@@ -721,6 +745,7 @@ export function MeScreen() {
               <CertificatesSection />
             </div>
           </div>
+          <LogoutSection onLogout={handleLogout} />
         </div>
       </div>
 

@@ -9,12 +9,14 @@ import { addGuestCartItem } from "@/features/cart/lib/guest-cart.storage";
 import type { AddedToCartProduct } from "@/features/cart/model/added-to-cart.types";
 import { useCartStore } from "@/features/cart/model/cart.store";
 
-export type AddToCartInput = Pick<AddedToCartProduct, "id" | "title" | "imageUrl" | "price">;
+export type AddToCartInput = Pick<AddedToCartProduct, "id" | "title" | "imageUrl" | "price"> & {
+  quantity?: number;
+};
 
 export function useAddToCart() {
   const router = useRouter();
   const pathname = usePathname();
-  const isAuthenticated = useAuth((state) => state.isAuthenticated);
+  const loadMe = useAuth((state) => state.loadMe);
   const loadCart = useCartStore((state) => state.loadCart);
   const setTotalItems = useCartStore((state) => state.setTotalItems);
   const [addingProductId, setAddingProductId] = useState<string | null>(null);
@@ -31,15 +33,22 @@ export function useAddToCart() {
         return;
       }
 
+      const quantity = product.quantity && product.quantity > 0 ? product.quantity : 1;
       setAddingProductId(product.id);
 
       try {
+        if (!useAuth.getState().initialized) {
+          await loadMe();
+        }
+
+        const isAuthenticated = useAuth.getState().isAuthenticated;
+
         if (isAuthenticated) {
-          const cart = await addCartItem({ productId: numericProductId, quantity: 1 });
+          const cart = await addCartItem({ productId: numericProductId, quantity });
           setTotalItems(cart.totalItems);
           await loadCart();
         } else {
-          addGuestCartItem(numericProductId, 1);
+          addGuestCartItem(numericProductId, quantity);
         }
 
         setAddedProduct({
@@ -53,7 +62,7 @@ export function useAddToCart() {
 
         if (status === 401) {
           const redirect = encodeURIComponent(pathname || "/");
-          router.push(`/auth?redirect=${redirect}`);
+          router.push(`/auth/login?redirect=${redirect}`);
           return;
         }
 
@@ -62,7 +71,7 @@ export function useAddToCart() {
         setAddingProductId(null);
       }
     },
-    [isAuthenticated, loadCart, pathname, router, setTotalItems],
+    [loadCart, loadMe, pathname, router, setTotalItems],
   );
 
   return { addToCart, addingProductId, addedProduct, dismissAddedDialog };

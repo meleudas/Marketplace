@@ -1,0 +1,99 @@
+[
+  {
+    "id": "01-catalog",
+    "title": "Каталог і фільтри",
+    "path": "presentation-assets/flows/01-catalog.mp4",
+    "durationSec": 31.77,
+    "userEmail": "(guest)",
+    "endpoints": [
+      "GET /catalog/categories",
+      "GET /catalog/products/on-sale",
+      "GET /catalog/products/search",
+      "GET /catalog/products/popular",
+      "GET /catalog/products/new",
+      "GET /catalog/authors"
+    ],
+    "persistenceConfirmed": true,
+    "status": "real backend",
+    "shown": "Головна → каталог у хедері → категорія → формат «Паперова» → ціна від 100 → сортування «Від найдешевших» / URL"
+  },
+  {
+    "id": "02-guest-cart",
+    "title": "Гостьовий кошик і login merge",
+    "path": "presentation-assets/flows/02-guest-cart.mp4",
+    "durationSec": 29.77,
+    "userEmail": "user50@bookmarket.ua",
+    "endpoints": [
+      "GET /catalog/categories",
+      "GET /catalog/authors",
+      "GET /catalog/products/search",
+      "GET /shipping/methods",
+      "GET /catalog/products/romany-zemlia-paper-chorni-vivtsi",
+      "GET /products/39/reviews",
+      "GET /catalog/products/romany-zemlia-paper-chorni-vivtsi/similar",
+      "GET /catalog/products",
+      "POST /auth/login",
+      "GET /users/me",
+      "GET /me/cart",
+      "POST /me/cart/items"
+    ],
+    "persistenceConfirmed": true,
+    "status": "real backend",
+    "shown": "Кінець 01 → PDP (romany-zemlia-paper-chorni-vivtsi) qty 3 → кошик → оформити → успішний login"
+  },
+  {
+    "id": "03-checkout-payment",
+    "title": "Checkout Nova Poshta + card payment",
+    "path": "presentation-assets/flows/03-checkout-payment.mp4",
+    "durationSec": 40.97,
+    "userEmail": "user50@bookmarket.ua",
+    "endpoints": [
+      "GET /catalog/categories",
+      "POST /auth/login",
+      "GET /users/me",
+      "GET /me/cart",
+      "GET /catalog/products/on-sale",
+      "GET /catalog/recommendations/me",
+      "GET /catalog/products/new",
+      "GET /catalog/products/search",
+      "GET /catalog/products/popular",
+      "GET /catalog/products",
+      "GET /catalog/products/romany-lisova-pisnia-paper-kyievo-mohylianska-akademiia",
+      "GET /shipping/methods",
+      "POST /me/cart/checkout",
+      "GET /me/orders",
+      "GET /me/orders/80",
+      "POST /integrations/liqpay/webhook"
+    ],
+    "persistenceConfirmed": true,
+    "status": "real backend",
+    "shown": "Кошик → оформити → по батькові → НП (Львів / Поштомат \"Нова Пошта\" №1414: вул. Назарука, 1, під’їзд №1 (ТІЛЬКИ ДЛЯ МЕШКАНЦІВ)) → Card → подарункова упаковка → LiqPay → «Оплачено успішно!»",
+    "note": "Після реального redirect на LiqPay sandbox підписаний webhook доставлено на backend endpoint (localhost callback недоступний з хмари LiqPay)."
+  },
+  {
+    "id": "04-review",
+    "title": "Відгук після покупки",
+    "path": "presentation-assets/flows/04-review.mp4",
+    "durationSec": 36.83,
+    "userEmail": "user50@bookmarket.ua",
+    "endpoints": [
+      "GET /catalog/categories",
+      "GET /shipping/methods",
+      "GET /catalog/products/romany-lisova-pisnia-paper-kyievo-mohylianska-akademiia",
+      "GET /catalog/products/search",
+      "GET /products/15/reviews",
+      "GET /catalog/products/romany-lisova-pisnia-paper-kyievo-mohylianska-akademiia/similar",
+      "POST /auth/login",
+      "GET /users/me",
+      "GET /me/cart",
+      "GET /catalog/products/on-sale",
+      "GET /catalog/recommendations/me",
+      "GET /catalog/products/new",
+      "GET /catalog/products/popular",
+      "POST /products/15/reviews"
+    ],
+    "persistenceConfirmed": true,
+    "status": "real backend",
+    "shown": "Guest PDP → locked review → login → PDP romany-lisova-pisnia-paper-kyievo-mohylianska-akademiia → рейтинг 5 + comment"
+  }
+]

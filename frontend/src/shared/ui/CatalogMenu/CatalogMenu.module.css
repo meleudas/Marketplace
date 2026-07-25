@@ -4,10 +4,11 @@
   z-index: 200;
   min-height: 100vh;
   overflow-y: auto;
-  background: var(--color-bg);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: var(--color-text);
   font-family: var(--font-primary);
-  isolation: isolate;
 }
 
 .desktopShell {
@@ -15,7 +16,9 @@
   inset: 0;
   z-index: 200;
   pointer-events: none;
-  background: transparent;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .panel {

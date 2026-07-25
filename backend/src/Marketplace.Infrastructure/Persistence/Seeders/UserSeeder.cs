@@ -55,6 +55,24 @@ public class UserSeeder : IDbSeeder
             }));
         }
 
+        users.Add((
+            new ApplicationUser
+            {
+                UserName = "twofa@bookmarket.ua",
+                Email = "twofa@bookmarket.ua",
+                EmailConfirmed = true,
+                TwoFactorEnabled = true,
+            },
+            new MarketplaceUserRecord
+            {
+                FirstName = "Тест",
+                LastName = "Двофакторний",
+                Role = 1,
+                IsVerified = true,
+                CreatedAt = now,
+                UpdatedAt = now,
+            }));
+
         for (int i = 0; i < 198; i++)
         {
             var fn = firstNames[i % firstNames.Length];

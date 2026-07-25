@@ -46,28 +46,29 @@ const DEFAULT_SECTIONS: FooterSection[] = [
   {
     title: "Book Stop",
     links: [
-      { label: "Проєкти", href: "#" },
-      { label: "Події", href: "#" },
-      { label: "Партнери", href: "#" },
+      { label: "Проєкти", href: "/projects" },
+      { label: "Події", href: "/events" },
+      { label: "Партнери", href: "/partners" },
       { label: "Про нас", href: "/about" },
     ],
   },
   {
     title: "Сервіси",
     links: [
-      { label: "Повернення товару", href: "#" },
-      { label: "Доставка і оплата", href: "#" },
-      { label: "Умови", href: "#" },
-      { label: "Контакти", href: "#" },
+      { label: "Доставка і оплата", href: "/delivery-payment" },
+      { label: "Повернення товару", href: "/returns" },
+      { label: "Зворотний зв'язок", href: "/feedback" },
+      { label: "Умови використання сайта", href: "/terms" },
+      { label: "Публічний договір(оферта)", href: "/offer" },
     ],
   },
   {
     title: "Пропозиції",
     links: [
-      { label: "Перепродажі", href: "#" },
-      { label: "Програма лояльності", href: "#" },
-      { label: "Акції", href: "#" },
-      { label: "Бестселери", href: "#" },
+      { label: "Перепродажі", href: "/resales" },
+      { label: "Програма лояльності", href: "/loyalty" },
+      { label: "Акції", href: "/sales" },
+      { label: "Бестселери", href: "/bestsellers" },
     ],
   },
 ];
@@ -77,40 +78,40 @@ const DEFAULT_DESKTOP_SECTIONS: FooterSection[] = [
     title: "Book Top",
     links: [
       { label: "Про нас", href: "/about" },
-      { label: "Блог", href: "#" },
-      { label: "Партнери", href: "#" },
-      { label: "Проєкти", href: "#" },
-      { label: "Події в мережі книгарень", href: "#" },
-      { label: "Контакти магазинів", href: "#" },
+      { label: "Блог", href: "/blog" },
+      { label: "Партнери", href: "/partners" },
+      { label: "Проєкти", href: "/projects" },
+      { label: "Події в мережі книгарень", href: "/events" },
+      { label: "Контакти магазинів", href: "/contacts" },
     ],
   },
   {
     title: "Сервіси",
     links: [
-      { label: "Доставка і оплата", href: "#" },
-      { label: "Повернення товару", href: "#" },
-      { label: "Зворотний зв'язок", href: "#" },
-      { label: "Умови використання сайта", href: "#" },
-      { label: "Публічний договір(оферта)", href: "#" },
-      { label: "Карта сайту", href: "#" },
+      { label: "Доставка і оплата", href: "/delivery-payment" },
+      { label: "Повернення товару", href: "/returns" },
+      { label: "Зворотний зв'язок", href: "/feedback" },
+      { label: "Умови використання сайта", href: "/terms" },
+      { label: "Публічний договір(оферта)", href: "/offer" },
+      { label: "Карта сайту", href: "/sitemap" },
     ],
   },
   {
     title: "Пропозиції",
     links: [
-      { label: "Акції", href: "#" },
-      { label: "Бестселери", href: "#" },
-      { label: "Перепродажі", href: "#" },
-      { label: "Електронні книги", href: "#" },
-      { label: "Програма лояльності", href: "#" },
+      { label: "Акції", href: "/sales" },
+      { label: "Бестселери", href: "/bestsellers" },
+      { label: "Перепродажі", href: "/resales" },
+      { label: "Електронні книги", href: "/catalog?format=електронний" },
+      { label: "Програма лояльності", href: "/loyalty" },
     ],
   },
 ];
 
 const DEFAULT_SOCIAL_LINKS: FooterSocialLink[] = [
-  { label: "Instagram", href: "#", icon: "instagram" },
-  { label: "Facebook", href: "#", icon: "facebook" },
-  { label: "Viber", href: "#", icon: "viber" },
+  { label: "Instagram", href: "https://instagram.com/booktop.ua", icon: "instagram" },
+  { label: "Facebook", href: "https://facebook.com/booktop.ua", icon: "facebook" },
+  { label: "Viber", href: "https://viber.com/booktop.ua", icon: "viber" },
   { label: "Email", href: "mailto:info@booktop.ua", icon: "email" },
 ];
 
@@ -126,22 +127,18 @@ const SOCIAL_ICONS = {
   viber: ViberIcon,
 } as const;
 
-const ACTIVE_FOOTER_PATH = "/about";
-
-function isActiveFooterLink(href: string): boolean {
-  return href === ACTIVE_FOOTER_PATH;
-}
+// All footer links with real hrefs render as <Link>; only "#" stays as <span>.
 
 function FooterLinkItem({ link, className }: { link: FooterLink; className: string }) {
-  if (isActiveFooterLink(link.href)) {
-    return (
-      <Link href={link.href} className={className}>
-        {link.label}
-      </Link>
-    );
+  if (link.href === "#" || link.href === "") {
+    return <span className={className}>{link.label}</span>;
   }
 
-  return <span className={className}>{link.label}</span>;
+  return (
+    <Link href={link.href} className={className}>
+      {link.label}
+    </Link>
+  );
 }
 
 function FooterSectionBlock({ section }: { section: FooterSection }) {
@@ -159,13 +156,27 @@ function FooterSectionBlock({ section }: { section: FooterSection }) {
   );
 }
 
-function DesktopContactItem({ label, icon }: { label: string; icon: ReactNode }) {
-  return (
-    <div className={styles.desktopContactItem}>
+function DesktopContactItem({ label, icon, href }: { label: string; icon: ReactNode; href?: string }) {
+  const content = (
+    <>
       <span className={styles.socialLink} aria-hidden="true">
         {icon}
       </span>
       <span className={styles.desktopContactLabel}>{label}</span>
+    </>
+  );
+
+  if (href) {
+    return (
+      <a href={href} className={styles.desktopContactItem} target="_blank" rel="noopener noreferrer">
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <div className={styles.desktopContactItem}>
+      {content}
     </div>
   );
 }
@@ -192,14 +203,16 @@ export function Footer({
               {socialLinks.map((item) => {
                 const Icon = SOCIAL_ICONS[item.icon];
                 return (
-                  <span
+                  <a
                     key={item.label}
+                    href={item.href}
                     className={styles.socialLink}
-                    role="img"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     aria-label={item.label}
                   >
                     <Icon className={iconStyles.icon} />
-                  </span>
+                  </a>
                 );
               })}
             </div>
@@ -223,6 +236,31 @@ export function Footer({
         </div>
 
         <div className={styles.desktopContent}>
+          <FooterCatIllustration className={styles.desktopCat} />
+          <div className={styles.desktopTopRow}>
+            <Link href={homeHref} className={styles.logoLink} aria-label="BOOK TOP — на головну">
+              <BookTopLogo className={styles.logo} />
+            </Link>
+
+            <div className={styles.social}>
+              {socialLinks.map((item) => {
+                const Icon = SOCIAL_ICONS[item.icon];
+                return (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    className={styles.socialLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={item.label}
+                  >
+                    <Icon className={iconStyles.icon} />
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+
           <div className={styles.desktopGrid}>
             {desktopSections.map((section) => (
               <nav
@@ -242,25 +280,12 @@ export function Footer({
             ))}
 
             <div className={styles.desktopContacts}>
-              <ul className={styles.desktopContactList}>
-                {socialLinks.map((item) => {
-                  const Icon = SOCIAL_ICONS[item.icon];
-                  return (
-                    <li key={item.label}>
-                      <DesktopContactItem
-                        label={item.label}
-                        icon={<Icon className={iconStyles.icon} />}
-                      />
-                    </li>
-                  );
-                })}
-              </ul>
-
               <ul className={styles.desktopPhoneList}>
                 {contactPhones.map((phone) => (
                   <li key={phone.label}>
                     <DesktopContactItem
                       label={phone.label}
+                      href={phone.href}
                       icon={<PhoneIcon className={iconStyles.icon} />}
                     />
                   </li>

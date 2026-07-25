@@ -15,6 +15,7 @@ import {
 import {
   getStatusClass,
   getStatusLabel,
+  type OrderStatusClassNames,
 } from "../lib/order-status";
 import styles from "./MeScreen.module.css";
 
@@ -87,7 +88,7 @@ export function MeOrderDetailScreen({ orderId }: MeOrderDetailScreenProps) {
             <h1 className={styles.authTitle}>Профіль</h1>
             <p className={styles.authSubtitle}>Увійдіть, щоб переглянути замовлення</p>
             <div className={styles.authActions}>
-              <Link href="/auth" className={styles.signInButton}>
+              <Link href="/auth/login" className={styles.signInButton}>
                 Увійти
               </Link>
               <Link href="/" className={styles.backButton}>
@@ -175,7 +176,7 @@ export function MeOrderDetailScreen({ orderId }: MeOrderDetailScreenProps) {
                   <h2 className={styles.sectionTitle} style={{ margin: 0 }}>
                     Замовлення №{orderDetails.orderNumber}
                   </h2>
-                  <span className={`${styles.orderStatusBadge} ${getStatusClass(orderDetails.status, styles)}`}>
+                  <span className={`${styles.orderStatusBadge} ${getStatusClass(orderDetails.status, styles as unknown as OrderStatusClassNames)}`}>
                     {getStatusLabel(orderDetails.status)}
                   </span>
                 </div>

@@ -72,6 +72,33 @@
   opacity: 0.8;
 }
 
+.logoutButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 20px;
+  border: none;
+  border-radius: 8px;
+  background: #2f2f2f;
+  color: #dc362e;
+  font-family: var(--font-primary);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.logoutButton:hover {
+  background: #383838;
+}
+
+.logoutIcon {
+  width: 20px;
+  height: 20px;
+}
+
 .backNavIcon {
   width: 32px;
   height: 32px;

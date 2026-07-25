@@ -32,7 +32,7 @@ export default async function globalSetup(): Promise<void> {
 
     console.warn(
       `[E2E] Seed user ${testUsers.verified.email} is unavailable. ` +
-        "Run: docker compose --profile tools run --rm db-seed",
+        "Ensure the API has run UserSeeder (admin@bookmarket.ua / user50@bookmarket.ua, password BookMarket1!).",
     );
   }
 }

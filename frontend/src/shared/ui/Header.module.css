@@ -77,13 +77,44 @@
 
 .searchWrap {
   order: 4;
-  flex: 1 1 100%;
-  width: 100%;
+  flex: 0 0 auto;
+  width: auto;
   min-width: 0;
+}
+
+@media (max-width: 1023px) {
+  .searchWrap {
+    display: none;
+  }
 }
 
 .primarySearch {
   width: 100%;
+}
+
+.mobileSearchBtn {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .primarySearch {
+    display: none;
+  }
+
+  .mobileSearchBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--header-icon-action-size);
+    height: var(--header-icon-action-size);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    color: var(--color-white);
+    background: transparent;
+    cursor: pointer;
+    order: 2;
+  }
 }
 
 .iconAction {
@@ -100,6 +131,14 @@
   cursor: pointer;
   text-decoration: none;
   transition: opacity var(--ui-transition-fast);
+}
+
+.iconAction svg {
+  width: 24px;
+  height: 24px;
+  max-width: 24px;
+  max-height: 24px;
+  flex-shrink: 0;
 }
 
 .iconAction:hover {
@@ -164,10 +203,10 @@
 
 .search input {
   height: var(--header-search-height);
-  border-color: rgb(124 144 224 / 0.85);
+  border-color: rgb(124 144 224 / 0.35);
   border-radius: var(--header-search-radius);
   background: #050508;
-  box-shadow: 0 0 0 1px rgb(83 93 223 / 0.18);
+  box-shadow: 0 0 0 1px rgb(83 93 223 / 0.08);
 }
 
 .primarySearch input::placeholder {
@@ -176,10 +215,10 @@
 
 .search input:focus,
 .primarySearch input:focus {
-  border-color: var(--color-primary-blue);
+  border-color: rgb(124 144 224 / 0.3);
   box-shadow:
-    0 0 0 1px rgb(83 93 223 / 0.32),
-    0 0 0 3px rgb(83 93 223 / 0.12);
+    0 0 0 1px rgb(124 144 224 / 0.1);
+  background: #0a0a11;
 }
 
 .searchDropdown {
@@ -195,9 +234,7 @@
   overscroll-behavior: none;
   touch-action: none;
   color: var(--color-text);
-  background:
-    radial-gradient(circle at 20% 14%, rgb(83 93 223 / 0.28) 0, transparent 28%),
-    linear-gradient(180deg, #171622 0%, #0b1026 38%, #08083d 100%);
+  background: #131318;
 }
 
 .searchSheetInner {
@@ -499,9 +536,7 @@
     padding: 12px 16px;
     border: 1px solid rgb(255 255 255 / 0.08);
     border-radius: 12px;
-    background:
-      radial-gradient(circle at 30% 10%, rgb(83 93 223 / 0.18) 0, transparent 40%),
-      linear-gradient(180deg, #171622 0%, #0b1026 50%, #08083d 100%);
+    background: #131318;
     box-shadow: 0 20px 60px rgb(0 0 0 / 0.6);
     overscroll-behavior: contain;
   }
