@@ -224,5 +224,9 @@
 2. Redis degraded — перевірити `ConnectionStrings:Redis`, redeploy після відновлення; моніторити cache miss ratio.
 3. Elasticsearch degraded — `Elasticsearch:Enabled=false` тимчасово або відновити кластер; перевірити `catalog_search_fallback_total`.
 4. Storage degraded — для MinIO: credentials/`Storage:Endpoint`; для AwsS3: IAM role / bucket policy / `Storage:Region` / `Storage:Bucket`.
+   - Probe викликає `HeadBucket`. **403 Forbidden / AccessDenied** = немає прав у principal (або невірний bucket/region), а не «бакет не існує».
+   - Checklist: `Storage:Provider=AwsS3`; `AccessKey`/`SecretKey` **порожні** при IAM role (не лишати `minioadmin`); `Bucket`/`Region` точні; `CreateBucketIfMissing=false` у prod; `PublicReadObjects=false` (публічний read — через bucket policy / CloudFront, не object ACL).
+   - Мінімальна IAM policy (task/instance role): `s3:ListBucket`, `s3:GetBucketLocation`, `s3:HeadBucket` на `arn:aws:s3:::BUCKET`; `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject` на `arn:aws:s3:::BUCKET/*`.
+   - Перевірка з того ж середовища: `aws s3api head-bucket --bucket BUCKET` — якщо CLI теж 403, чинити IAM, не health-код.
 5. Queue degraded — `GET /admin/outbox` stats, DLQ replay; перевірити Hangfire worker + `outbox_dispatch_errors_total`.
 6. Liveness (`/health`, `/health/live`) лише для restart pod — не використовувати для traffic routing.

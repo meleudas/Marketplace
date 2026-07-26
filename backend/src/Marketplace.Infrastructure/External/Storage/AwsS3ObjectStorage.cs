@@ -31,6 +31,15 @@ public sealed class AwsS3ObjectStorage : IObjectStorage, IDisposable
             await _client.HeadBucketAsync(new HeadBucketRequest { BucketName = _options.Bucket }, ct);
             return;
         }
+        catch (AmazonS3Exception ex) when (IsAccessDenied(ex))
+        {
+            throw new InvalidOperationException(
+                $"S3 AccessDenied/Forbidden for bucket '{_options.Bucket}' (region '{_options.Region}'). " +
+                "Check IAM role/policy (s3:ListBucket, s3:HeadBucket on the bucket ARN), " +
+                "bucket name/region, and that Storage:AccessKey/SecretKey are empty when using IAM " +
+                "(do not pass MinIO minioadmin keys with Provider=AwsS3).",
+                ex);
+        }
         catch (AmazonS3Exception ex) when (IsMissingBucket(ex))
         {
             if (!_options.CreateBucketIfMissing)
@@ -56,9 +65,12 @@ public sealed class AwsS3ObjectStorage : IObjectStorage, IDisposable
             Key = objectKey,
             InputStream = content,
             ContentType = contentType,
-            AutoCloseStream = false,
-            CannedACL = S3CannedACL.PublicRead
+            AutoCloseStream = false
         };
+
+        if (_options.PublicReadObjects)
+            request.CannedACL = S3CannedACL.PublicRead;
+
         await _client.PutObjectAsync(request, ct);
     }
 
@@ -148,4 +160,9 @@ public sealed class AwsS3ObjectStorage : IObjectStorage, IDisposable
         ex.StatusCode == System.Net.HttpStatusCode.NotFound
         || string.Equals(ex.ErrorCode, "NoSuchBucket", StringComparison.OrdinalIgnoreCase)
         || string.Equals(ex.ErrorCode, "NotFound", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsAccessDenied(AmazonS3Exception ex) =>
+        ex.StatusCode == System.Net.HttpStatusCode.Forbidden
+        || string.Equals(ex.ErrorCode, "AccessDenied", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(ex.ErrorCode, "Forbidden", StringComparison.OrdinalIgnoreCase);
 }

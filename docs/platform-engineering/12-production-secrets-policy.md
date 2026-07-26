@@ -25,6 +25,14 @@
 | Postgres | `POSTGRES_PASSWORD` | Так (compose) | Scheduled + on incident |
 | ClickHouse | `CLICKHOUSE_PASSWORD` | Якщо ClickHouse enabled | Scheduled |
 
+### AWS S3 (Provider=AwsS3) — Forbidden / AccessDenied
+
+`/health/ready` → `storage` degraded з **403** зазвичай означає відмову на `HeadBucket`, не відсутність bucket.
+
+- **Не** передавати `STORAGE__ACCESSKEY` / `STORAGE__SECRETKEY` з MinIO (`minioadmin`) при `AwsS3` — лишити порожніми для IAM role.
+- `STORAGE__PUBLICREADOBJECTS` за замовчуванням `false`. Не вмикати object ACL `public-read`, якщо на bucket увімкнений Block Public Access; публічний доступ — через bucket policy / CloudFront + `STORAGE__PUBLICBASEURL`.
+- Task role: `s3:ListBucket`, `s3:GetBucketLocation`, `s3:HeadBucket` на `arn:aws:s3:::BUCKET`; `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject` на `arn:aws:s3:::BUCKET/*`.
+
 ## Заборонені значення (Production)
 
 | Поле | Заборонено |

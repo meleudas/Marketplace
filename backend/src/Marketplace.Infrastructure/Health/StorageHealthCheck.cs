@@ -28,7 +28,10 @@ public sealed class StorageHealthCheck : IHealthCheck
         }
         catch (Exception ex)
         {
-            return HealthCheckResult.Degraded("Object storage check failed", ex);
+            var message = string.IsNullOrWhiteSpace(ex.Message)
+                ? "Object storage check failed"
+                : $"Object storage check failed: {ex.Message}";
+            return HealthCheckResult.Degraded(message, ex);
         }
     }
 }

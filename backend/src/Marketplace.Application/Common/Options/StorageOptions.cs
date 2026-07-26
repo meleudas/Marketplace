@@ -32,6 +32,12 @@ public sealed class StorageOptions
     /// </summary>
     public bool CreateBucketIfMissing { get; set; } = true;
 
+    /// <summary>
+    /// When true, PutObject uses canned ACL <c>public-read</c>.
+    /// Default false — use bucket policy / CloudFront for public media (compatible with Block Public Access).
+    /// </summary>
+    public bool PublicReadObjects { get; set; }
+
     public string PublicBaseUrl { get; set; } = "http://localhost:9000";
     public int PresignedGetTtlMinutes { get; set; } = 60;
     public long MaxUploadBytes { get; set; } = 10 * 1024 * 1024;
