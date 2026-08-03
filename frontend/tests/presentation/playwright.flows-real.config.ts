@@ -50,8 +50,9 @@ const config: PlaywrightTestConfig = {
   testMatch: ["**/*.spec.ts"],
   fullyParallel: false,
   workers: 1,
-  timeout: 180_000,
-  expect: { timeout: 30_000 },
+  // Seeded catalog search can be slow right after a full DB recreate.
+  timeout: 300_000,
+  expect: { timeout: 45_000 },
   retries: 0,
   reporter: [["list"]],
   outputDir: path.join(__dirname, ".record-raw-flows-real"),

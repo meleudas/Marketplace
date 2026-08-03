@@ -34,10 +34,11 @@ import {
   skipIfLiqPaySandboxUnavailable,
 } from "../../e2e/fixtures/checkout.fixture";
 import {
-  createUniqueReviewComment,
+  clearReviewCreateRateLimit,
   ensurePaidPurchaseForProduct,
   getCurrentUserProfile,
   getLatestPurchasedProduct,
+  getUnpurchasedCatalogProduct,
   listProductReviews,
   prepareReviewProduct,
   purgeProductReviewsForUser,
@@ -237,6 +238,7 @@ test.describe("Buyer flows — real backend", () => {
         proofRows.push(summary);
         await hold(page, 3000);
       },
+      { addressBar: true },
     );
 
     flowMetas.push({
@@ -492,16 +494,19 @@ test.describe("Buyer flows — real backend", () => {
     }
     purgeProductReviewsForUser(purchased.id, profile.id);
 
-    // A different book for the guest "cannot review" attempt.
-    const guestBrowseProduct = await getInStockCatalogProduct(request);
-    const guestSlug =
-      guestBrowseProduct.id === purchased.id
-        ? (await prepareReviewProduct(request)).slug
-        : guestBrowseProduct.slug;
+    // A book the buyer has never purchased — for guest lock + "verified purchase required".
+    const guestBrowseProduct = await getUnpurchasedCatalogProduct(
+      request,
+      tokens.accessToken,
+      [purchased.id],
+    );
+    const guestSlug = guestBrowseProduct.slug;
+    purgeProductReviewsForUser(guestBrowseProduct.id, profile.id);
 
     let persistence = false;
     let endpoints: string[] = [];
-    const comment = createUniqueReviewComment("presentation");
+    const comment =
+      "Чудова книга — легкий стиль і сильна атмосфера. Читала на одному диханні, щиро рекомендую!";
 
     const { durationSec } = await recordClip(
       path.join(ASSETS.flows, "04-review.mp4"),
@@ -510,39 +515,54 @@ test.describe("Buyer flows — real backend", () => {
         const proof = createApiProofCollector(page);
         const reviews = new ProductReviewsPage(page);
 
-        // Guest tries to leave a review on some book — form is locked.
+        // Guest tries to leave a review on some book — form is locked (keep open brisk).
         await reviews.gotoProduct(guestSlug);
-        await hold(page, 2000);
-        await reviews.scrollToReviews(500);
-        await hold(page, 1500);
-        await reviews.demonstrateGuestBlocked(500);
-        await hold(page, 1500);
+        await hold(page, 400);
+        await reviews.scrollToReviews(300);
+        await hold(page, 200);
+        await reviews.demonstrateGuestBlocked(300, { highlightMs: 900 });
+        await hold(page, 250);
 
         const profileLink = page.getByRole("link", { name: /Профіль/ });
-        await realisticClick(page, profileLink, { hoverMs: 450 });
+        await realisticClick(page, profileLink, { hoverMs: 350 });
         await page.waitForURL(/\/auth\/login|\/me/, { timeout: 30_000 });
         if (!/\/auth\/login/.test(page.url())) {
           await page.goto("/auth/login");
         }
-        await hold(page, 1000);
+        await hold(page, 500);
 
         await presentationLoginOnCurrentPage(page, credentials);
-        await hold(page, 1500);
+        await hold(page, 900);
 
-        // Logged-in buyer reviews the purchased book from the previous scenario.
+        // Logged in, but this book was not purchased — review must be rejected.
+        await reviews.gotoProduct(guestSlug);
+        await hold(page, 700);
+        await reviews.scrollToReviews(300);
+        await hold(page, 400);
+        await expect(reviews.formTitle).toHaveText("Залишити відгук");
+        await reviews.setRating(5, 350);
+        await hold(page, 300);
+        await reviews.fillComment("Спроба відгуку без покупки", 350);
+        await hold(page, 400);
+        await reviews.submit(350);
+        await reviews.expectPurchaseRequiredError();
+        await hold(page, 1800);
+
+        // Purchased book from the previous scenario — review succeeds.
+        clearReviewCreateRateLimit(profile.id, purchased!.id);
         await reviews.gotoProduct(purchased!.slug);
-        await hold(page, 2000);
-        await reviews.scrollToReviews(500);
-        await hold(page, 1500);
+        await hold(page, 800);
+        await reviews.scrollToReviews(300);
+        await hold(page, 600);
 
         await expect(reviews.formTitle).toHaveText("Залишити відгук");
-        await reviews.setRating(5, 450);
-        await hold(page, 600);
-        await reviews.fillComment(comment, 500);
-        await hold(page, 1200);
-        await reviews.submit(500);
+        await reviews.setRating(5, 350);
+        await hold(page, 350);
+        await reviews.fillComment(comment, 400);
+        await hold(page, 800);
+        await reviews.submit(350);
         await reviews.expectReviewVisible(comment);
-        await hold(page, 3000);
+        await hold(page, 2500);
 
         const apiReviews = await listProductReviews(request, purchased!.id);
         persistence = apiReviews.some((review) => review.comment === comment);
@@ -574,7 +594,7 @@ test.describe("Buyer flows — real backend", () => {
       endpoints,
       persistenceConfirmed: persistence,
       status: persistence ? "real backend" : "not recorded",
-      shown: `Guest PDP → locked review → login → PDP ${purchased.slug} → рейтинг 5 + comment`,
+      shown: `Guest locked → login → відгук без покупки (помилка) → PDP ${purchased.slug} → успішний відгук`,
     });
   });
 });

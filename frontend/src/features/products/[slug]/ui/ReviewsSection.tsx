@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, useCallback, useEffect, useState } from "react";
+import type { AxiosError } from "axios";
 import { useAuth } from "@/features/auth/model/auth.store";
 import {
   createProductReview,
@@ -10,6 +11,27 @@ import {
 import { Button, Spinner } from "@/shared/ui";
 import { StarRating } from "./StarRating";
 import styles from "./ReviewsSection.module.css";
+
+function mapReviewSubmitError(error: unknown): string {
+  const axiosError = error as AxiosError;
+  const data = axiosError.response?.data as { detail?: string; title?: string } | string | undefined;
+  const raw =
+    typeof data === "string"
+      ? data
+      : data && typeof data === "object"
+        ? (data.detail ?? data.title ?? "")
+        : "";
+  const normalized = raw.toLowerCase();
+
+  if (normalized.includes("verified purchase")) {
+    return "Не можна залишити відгук до книги, яку ви не купували.";
+  }
+  if (normalized.includes("already exists")) {
+    return "Ви вже залишили відгук до цієї книги.";
+  }
+
+  return "Не вдалося надіслати відгук. Спробуйте пізніше.";
+}
 
 interface ReviewsSectionProps {
   productId: number;
@@ -27,7 +49,36 @@ function formatReviewDate(value: string): string {
   });
 }
 
-function ReviewCard({ review }: { review: ProductReviewDto }) {
+const GUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Backend may persist Identity.Name / user id as author; show a human label instead. */
+function resolveReviewAuthorName(
+  review: ProductReviewDto,
+  currentUser: { id: string; firstName: string; lastName: string } | null,
+): string {
+  const raw = review.userName?.trim() ?? "";
+  if (raw && !GUID_RE.test(raw)) {
+    return raw;
+  }
+
+  if (currentUser && review.userId === currentUser.id) {
+    const ownName = currentUser.firstName.trim() || currentUser.lastName.trim();
+    if (ownName) {
+      return ownName;
+    }
+  }
+
+  return "Покупець";
+}
+
+function ReviewCard({
+  review,
+  currentUser,
+}: {
+  review: ProductReviewDto;
+  currentUser: { id: string; firstName: string; lastName: string } | null;
+}) {
   const [expanded, setExpanded] = useState(false);
   const isLong = review.comment.length > COMMENT_EXPAND_THRESHOLD;
 
@@ -40,7 +91,7 @@ function ReviewCard({ review }: { review: ProductReviewDto }) {
       <div className={styles.cardHeader}>
         <div className={styles.cardHeaderMeta}>
           <span className={styles.author} data-testid="product-review-author">
-            {review.userName}
+            {resolveReviewAuthorName(review, currentUser)}
           </span>
           <span className={styles.date} data-testid="product-review-date">
             {formatReviewDate(review.createdAt)}
@@ -75,7 +126,10 @@ export const ReviewsSection = forwardRef<HTMLElement, ReviewsSectionProps>(funct
   { productId },
   ref,
 ) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const currentUser = user
+    ? { id: user.id, firstName: user.firstName, lastName: user.lastName }
+    : null;
 
   const [allReviews, setAllReviews] = useState<ProductReviewDto[]>([]);
   const [page, setPage] = useState(1);
@@ -129,8 +183,8 @@ export const ReviewsSection = forwardRef<HTMLElement, ReviewsSectionProps>(funct
       setFormRating(0);
       setFormComment("");
       await loadReviews();
-    } catch {
-      setSubmitError("Не вдалося надіслати відгук. Спробуйте пізніше.");
+    } catch (error) {
+      setSubmitError(mapReviewSubmitError(error));
     } finally {
       setSubmitting(false);
     }
@@ -200,7 +254,7 @@ export const ReviewsSection = forwardRef<HTMLElement, ReviewsSectionProps>(funct
             <>
               <div className={styles.list}>
                 {visibleReviews.map((review) => (
-                  <ReviewCard review={review} key={review.id} />
+                  <ReviewCard review={review} currentUser={currentUser} key={review.id} />
                 ))}
               </div>
 

@@ -96,7 +96,7 @@ test.describe.serial("Product reviews on /products/:slug", () => {
     await reviews.submit();
 
     await expect(reviews.errorAlert).toBeVisible({ timeout: 15_000 });
-    await expect(reviews.errorAlert).toHaveText(/Не вдалося надіслати відгук/i);
+    await expect(reviews.errorAlert).toHaveText(/не купували/i);
   });
 
   test("buyer can leave a review and sees text, author, and date", async ({ page, request }) => {
@@ -113,7 +113,7 @@ test.describe.serial("Product reviews on /products/:slug", () => {
     await reviews.submit();
 
     const item = await reviews.expectReviewVisible(createdComment);
-    await expect(item.getByTestId("product-review-author")).toHaveText(profile.id);
+    await expect(item.getByTestId("product-review-author")).toHaveText(profile.firstName);
 
     const apiReviews = await listProductReviews(request, product.id);
     const created = apiReviews.find((review) => review.comment === createdComment);
@@ -158,7 +158,7 @@ test.describe.serial("Product reviews on /products/:slug", () => {
     await reviews.fillComment(createUniqueReviewComment("second-attempt"));
     await reviews.submit();
     await expect(reviews.errorAlert).toBeVisible({ timeout: 15_000 });
-    await expect(reviews.errorAlert).toHaveText(/Не вдалося надіслати відгук/i);
+    await expect(reviews.errorAlert).toHaveText(/вже залишили відгук/i);
 
     const after = await listProductReviews(request, product.id);
     expect(after.filter((review) => review.userId === profile.id)).toHaveLength(1);

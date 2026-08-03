@@ -15,17 +15,9 @@ export async function hold(page: Page, ms: number): Promise<void> {
   await page.waitForTimeout(ms);
 }
 
-type RecordClipFixtures = {
-  recordClip: (
-    absolutePath: string,
-    run: (page: Page) => Promise<void>,
-    options?: { width?: number; height?: number },
-  ) => Promise<{ durationSec: number }>;
-};
-
 const BROWSER_CHROME_HEIGHT = 52;
 
-async function installBrowserChrome(page: Page): Promise<void> {
+async function installAddressBar(page: Page): Promise<void> {
   await page.addInitScript(({ height }) => {
     const install = () => {
       if (document.getElementById("recording-browser-chrome")) {
@@ -84,7 +76,6 @@ async function installBrowserChrome(page: Page): Promise<void> {
 
       const address = chrome.querySelector(".recording-browser-address") as HTMLElement;
       const updateAddress = () => {
-        // Real browsers show decoded Unicode in the omnibox; href is percent-encoded.
         try {
           address.textContent = decodeURI(window.location.href);
         } catch {
@@ -138,6 +129,21 @@ async function installBrowserChrome(page: Page): Promise<void> {
   }, { height: BROWSER_CHROME_HEIGHT });
 }
 
+type RecordClipOptions = {
+  width?: number;
+  height?: number;
+  /** Show fake address bar so URL changes are visible (e.g. catalog filters). */
+  addressBar?: boolean;
+};
+
+type RecordClipFixtures = {
+  recordClip: (
+    absolutePath: string,
+    run: (page: Page) => Promise<void>,
+    options?: RecordClipOptions,
+  ) => Promise<{ durationSec: number }>;
+};
+
 export const test = base.extend<RecordClipFixtures>({
   // Playwright fixture setter (not React's `use` hook).
   recordClip: async ({ browser, baseURL }, provide) => {
@@ -155,7 +161,9 @@ export const test = base.extend<RecordClipFixtures>({
       });
 
       const page = await context.newPage();
-      await installBrowserChrome(page);
+      if (options?.addressBar) {
+        await installAddressBar(page);
+      }
 
       try {
         await run(page);

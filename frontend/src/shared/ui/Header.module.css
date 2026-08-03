@@ -356,7 +356,9 @@
   transition: opacity var(--ui-transition-fast);
 }
 
-.previewItem:hover {
+.previewItem:hover,
+.previewItemForceHover,
+.previewItemSelected {
   opacity: 0.8;
 }
 

@@ -36,6 +36,24 @@ async function setTextFieldStep(
   await expect(page.getByTestId("text-field-tour")).toHaveAttribute("data-tour-step", step);
 }
 
+async function setHeaderSearchStep(
+  page: import("@playwright/test").Page,
+  step:
+    | "idle"
+    | "hoverField"
+    | "focus"
+    | "typing"
+    | "loading"
+    | "results"
+    | "hoverResult"
+    | "selectResult",
+) {
+  await page.evaluate((next) => {
+    window.__headerSearchTourSetStep?.(next);
+  }, step);
+  await expect(page.getByTestId("header-search-tour")).toHaveAttribute("data-tour-step", step);
+}
+
 test.describe("Storybook presentation clips", () => {
   test("01-product-card-states", async ({ recordClip }) => {
     await recordClip(path.join(ASSETS.storybook, "01-product-card-states.webm"), async (page) => {
@@ -87,6 +105,46 @@ test.describe("Storybook presentation clips", () => {
 
       await setTextFieldStep(page, "error");
       await hold(page, 3200);
+    });
+  });
+
+  test("03-header-search", async ({ recordClip }) => {
+    await recordClip(path.join(ASSETS.storybook, "03-header-search.webm"), async (page) => {
+      await page.setViewportSize({ width: 1280, height: 720 });
+      await openStory(page, "shared-headersearch--presentation-tour");
+      await expect(page.getByTestId("header-search-tour")).toBeVisible();
+      await expect(page.getByLabel("Пошук")).toBeVisible();
+
+      await setHeaderSearchStep(page, "idle");
+      await hold(page, 1600);
+
+      await setHeaderSearchStep(page, "hoverField");
+      await page.getByLabel("Пошук").hover();
+      await hold(page, 1600);
+
+      await setHeaderSearchStep(page, "focus");
+      await page.getByLabel("Пошук").click();
+      await hold(page, 1400);
+
+      await setHeaderSearchStep(page, "typing");
+      await hold(page, 1200);
+
+      await setHeaderSearchStep(page, "loading");
+      await hold(page, 1400);
+
+      await setHeaderSearchStep(page, "results");
+      await expect(page.getByTestId("header-search-dropdown")).toBeVisible();
+      await hold(page, 1800);
+
+      await setHeaderSearchStep(page, "hoverResult");
+      const result = page.getByTestId("header-search-result-primary");
+      await expect(result).toBeVisible();
+      await result.hover();
+      await hold(page, 1800);
+
+      // Visual “click” state only — do not navigate (avoids blank story page).
+      await setHeaderSearchStep(page, "selectResult");
+      await hold(page, 1800);
     });
   });
 });
